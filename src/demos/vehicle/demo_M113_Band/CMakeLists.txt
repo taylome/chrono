@@ -4,7 +4,7 @@
 # FEA and MKL Chrono modules.
 #=============================================================================
 
-if(NOT ENABLE_MODULE_IRRLICHT OR NOT ENABLE_MODULE_FEA OR NOT ENABLE_MODULE_MKL)
+if(NOT ENABLE_MODULE_IRRLICHT OR NOT ENABLE_MODULE_FEA OR NOT ENABLE_MODULE_MKL OR NOT ENABLE_MODULE_MATLAB)
     RETURN()
 endif()
 
@@ -21,6 +21,7 @@ set(DEMOS
 
 include_directories(${CH_IRRLICHTINC})
 include_directories(${CH_MKL_INCLUDES})
+include_directories(${CH_MATLABINC})
 
 set(COMPILER_FLAGS "${CH_CXX_FLAGS} ${CH_IRRLICHT_CXX_FLAGS} ${CH_MKL_CXX_FLAGS}")
 set(LINKER_FLAGS "${CH_LINKERFLAG_EXE} ${CH_MKL_LINK_FLAGS}")
@@ -30,7 +31,8 @@ set(LIBRARIES
     ChronoEngine_vehicle
     ChronoModels_vehicle
     ChronoEngine_fea
-    ChronoEngine_mkl)
+    ChronoEngine_mkl
+	ChronoEngine_matlab)
 
 #--------------------------------------------------------------
 # Add executables

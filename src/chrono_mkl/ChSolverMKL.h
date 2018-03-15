@@ -15,6 +15,8 @@
 #ifndef CHSOLVERMKL_H
 #define CHSOLVERMKL_H
 
+//#define PARDISOMATRIXOUTPUT
+
 #include "chrono/core/ChMatrixDynamic.h"
 #include "chrono/core/ChSparseMatrix.h"
 #include "chrono/core/ChTimer.h"
@@ -176,10 +178,50 @@ class ChSolverMKL : public ChSolver {
 
         m_timer_setup_assembly.stop();
 
+#ifdef PARDISOMATRIXOUTPUT
+        char filename_pre[100];
+        sprintf(filename_pre, "matrix_prefactorization_%04d", m_solve_call + 1);
+        std::string filename_string = filename_pre;
+        std::string out_dir = "C:/Chrono/Build_Chrono_Fork/bin/RelWithDebInfo/DEMO_OUTPUT/" + filename_string;
+        if (ChFileutils::MakeDirectory(out_dir.c_str()) < 0) {
+            std::cout << "Error creating directory " << out_dir << std::endl;
+        }
+        else {
+            //m_mat.ExportToDatFile(out_dir, 15);
+            m_mat.ExportToDatFile(out_dir, std::numeric_limits<long double>::digits10 + 1);
+            GetLog() << "Matrix Exported to " << out_dir;
+            if(m_mat.IsRowMajor())
+                cout<< " in Row Major Format\n";
+            else
+                cout << " in Column Major Format\n";
+
+        }
+#endif
+
         // Perform the factorization with the Pardiso sparse direct solver.
         m_timer_setup_solvercall.start();
         int pardiso_message_phase12 = m_engine.PardisoCall(ChMklEngine::phase_t::ANALYSIS_NUMFACTORIZATION, 0);
         m_timer_setup_solvercall.stop();
+
+#ifdef PARDISOMATRIXOUTPUT
+        char filename_post[100];
+        sprintf(filename_post, "matrix_postfactorization_%04d", m_solve_call + 1);
+        std::string filename_string_post = filename_post;
+        std::string out_dir_post = "C:/Chrono/Build_Chrono_Fork/bin/RelWithDebInfo/DEMO_OUTPUT/" + filename_string_post;
+        if (ChFileutils::MakeDirectory(out_dir_post.c_str()) < 0) {
+            std::cout << "Error creating directory " << out_dir_post << std::endl;
+        }
+        else {
+            //m_mat.ExportToDatFile(out_dir, 15);
+            m_mat.ExportToDatFile(out_dir_post, std::numeric_limits<long double>::digits10 + 1);
+            GetLog() << "Matrix Exported to " << out_dir_post;
+            if (m_mat.IsRowMajor())
+                cout << " in Row Major Format\n";
+            else
+                cout << " in Column Major Format\n";
+
+        }
+#endif
 
         m_setup_call++;
 
@@ -208,15 +250,54 @@ class ChSolverMKL : public ChSolver {
         m_engine.SetSolutionVector(m_sol);
         m_timer_solve_assembly.stop();
 
+#ifdef PARDISOMATRIXOUTPUT
+        char filename_RHS[100];
+        sprintf(filename_RHS, "C:/Chrono/Build_Chrono_Fork/bin/RelWithDebInfo/DEMO_OUTPUT/RHS_Soln_%04d", m_solve_call + 1);
+        std::string out_dir = filename_RHS;
+        if (ChFileutils::MakeDirectory(out_dir.c_str()) < 0) {
+            std::cout << "Error creating directory " << out_dir << std::endl;
+        }
+        else {
+            std::ofstream rhs_file;
+            rhs_file.open(out_dir + "/rhs.dat");
+            //rhs_file << std::scientific << std::setprecision(15);
+            rhs_file << std::scientific << std::setprecision(std::numeric_limits<long double>::digits10 + 1);
+
+            for (auto idx = 0; idx < m_rhs.GetRows(); idx++) {
+                rhs_file << m_rhs(idx) << "\n";
+            }
+
+            rhs_file.close();
+        }
+#endif
+
         // Solve the problem using Pardiso.
         m_timer_solve_solvercall.start();
         int pardiso_message_phase33 = m_engine.PardisoCall(ChMklEngine::phase_t::SOLVE, 0);
         m_timer_solve_solvercall.stop();
 
+#ifdef PARDISOMATRIXOUTPUT
+        {
+            std::ofstream soln_file;
+            soln_file.open(out_dir + "/soln.dat");
+            //soln_file << std::scientific << std::setprecision(15);
+            soln_file << std::scientific << std::setprecision(std::numeric_limits<long double>::digits10 + 1);
+
+            for (auto idx = 0; idx < m_sol.GetRows(); idx++) {
+                soln_file << m_sol(idx) << "\n";
+            }
+
+            soln_file.close();
+        }
+#endif
+
+        //m_engine.PrintPardisoParameters();
+        //GetLog() << "\n";
+
         m_solve_call++;
 
         if (pardiso_message_phase33) {
-            GetLog() << "Pardiso solve+refine error code = " << pardiso_message_phase33 << "\n";
+            GetLog() << "Pardiso solve+refine error code = " << pardiso_message_phase33 << "   on MKL solve call # " << m_solve_call << "\n";
             return -1.0;
         }
 

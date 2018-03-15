@@ -272,7 +272,9 @@ double ChMklEngine::GetResidualNorm() const {
 }
 
 void ChMklEngine::PrintPardisoParameters() const {
+    printf("\nMatix type: %d", m_type);
     printf("\n[6] Number of iterative refinement steps performed: %d", m_iparm[6]);
+    printf("\n[7] Maximum number of iterative refinement steps that the solver will perform. %d", m_iparm[7]);
     if (m_type == 11 || m_type == 13 || m_type == -2 || m_type == -4 || m_type == -6)
         printf("\n[13] Number of perturbed pivots: %d", m_iparm[13]);
     if (m_last_phase == 11 || m_last_phase == 12 || m_last_phase == 13) {

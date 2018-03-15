@@ -18,6 +18,7 @@
 
 #include "chrono/core/ChFileutils.h"
 #include "chrono/utils/ChUtilsInputOutput.h"
+#include "chrono/core/ChTimer.h"
 
 #include "chrono_vehicle/ChVehicleModelData.h"
 #include "chrono_vehicle/terrain/RigidTerrain.h"
@@ -26,8 +27,13 @@
 #include "chrono_models/vehicle/m113/M113_Vehicle.h"
 
 #include "chrono_mkl/ChSolverMKL.h"
+#include "chrono_matlab/ChSolverMatlab.h"
 
-#define USE_IRRLICHT
+#define USE_SOLVER_MKL
+//#define USE_SOLVER_MATLAB
+//#define USE_SOLVER_MUMPS
+
+//#define USE_IRRLICHT
 #undef USE_IRRLICHT
 #ifdef USE_IRRLICHT
 #include "chrono_vehicle/driver/ChIrrGuiDriver.h"
@@ -59,7 +65,7 @@ double terrainWidth = 100.0;   // size in Y direction
 double t_end = 1.0;
 
 // Simulation step size
-double step_size = 5e-5;
+double step_size = 1e-5;
 
 // Time interval between two render frames
 double render_step_size = 1.0 / 50;  // FPS = 50
@@ -110,15 +116,30 @@ int main(int argc, char* argv[]) {
     // --------------------------
 
     ChassisCollisionType chassis_collision_type = ChassisCollisionType::PRIMITIVES;
-    M113_Vehicle vehicle(false, TrackShoeType::BAND_BUSHING, ChMaterialSurface::SMC, chassis_collision_type);
+    M113_Vehicle vehicle(false, TrackShoeType::BAND_ANCF, ChMaterialSurface::SMC, chassis_collision_type);
 
     // ------------------------------
     // Solver and integrator settings
     // ------------------------------
 
+#ifdef USE_SOLVER_MKL
     auto mkl_solver = std::make_shared<ChSolverMKL<>>();
     mkl_solver->SetSparsityPatternLock(true);
     vehicle.GetSystem()->SetSolver(mkl_solver);
+    mkl_solver->SetVerbose(false);
+#endif // USE_SOLVER_MKL
+
+#ifdef USE_SOLVER_MATLAB
+    GetLog() << "(please wait few seconds: Matlab engine must be loaded)\n\n";
+
+    // This is the object that you can use to access the Matlab engine.
+    // As soon as created, it loads the Matlab engine (if troubles happen, it
+    // throws exception).
+
+    ChMatlabEngine matlab_engine;
+    auto matlab_solver = std::make_shared<ChSolverMatlab>(matlab_engine);
+    vehicle.GetSystem()->SetSolver(matlab_solver);
+#endif // USE_SOLVER_MATLAB
 
     vehicle.GetSystem()->SetTimestepperType(ChTimestepper::Type::HHT);
     auto integrator = std::static_pointer_cast<ChTimestepperHHT>(vehicle.GetSystem()->GetTimestepper());
@@ -293,8 +314,12 @@ int main(int argc, char* argv[]) {
     // Initialize simulation frame counter
     int step_number = 0;
     int render_frame = 0;
+    ChTimer<> timer_loop;
 
     while (step_number < sim_steps) {
+        timer_loop.reset();
+        timer_loop.start();
+
         // Debugging output
         if (dbg_output) {
             cout << "Time: " << vehicle.GetSystem()->GetChTime() << endl;
@@ -393,21 +418,52 @@ int main(int argc, char* argv[]) {
         step_number++;
 
         double step_timing = vehicle.GetSystem()->GetTimerStep();
-        total_timing += step_timing;
+
+        timer_loop.stop();
+        double loop_timing = timer_loop.GetTimeSeconds();
+        total_timing += loop_timing;
 
         std::cout << "Step: " << step_number;
         std::cout << "   Time: " << time;
         std::cout << "   Number of Iterations: " << integrator->GetNumIterations();
         std::cout << "   Step Time: " << step_timing;
+        std::cout << "   Loop Time: " << loop_timing;
         std::cout << "   Total Time: " << total_timing;
         std::cout << std::endl;
 
+#ifdef USE_SOLVER_MKL
+        std::cout << "   GetTimerStep(): " << vehicle.GetSystem()->GetTimerStep() << "    [All Below = " << vehicle.GetSystem()->GetTimerSetup()
+            + vehicle.GetSystem()->GetTimerSolver() 
+            + vehicle.GetSystem()->GetTimerCollisionBroad() 
+            + vehicle.GetSystem()->GetTimerCollisionNarrow()
+            + vehicle.GetSystem()->GetTimerUpdate()
+            << "] " << endl;
+        std::cout << "     GetTimerSetup(): " << vehicle.GetSystem()->GetTimerSetup() 
+            << "    [Assembly+SolverCall = " << mkl_solver->GetTimeSetup_Assembly() + mkl_solver->GetTimeSetup_SolverCall() << "] "<< endl;
+        std::cout << "       GetTimeSetup_Assembly(): " << mkl_solver->GetTimeSetup_Assembly() << endl;
+        std::cout << "       GetTimeSetup_SolverCall(): " << mkl_solver->GetTimeSetup_SolverCall() << endl;
+        std::cout << "     GetTimerSolver(): " << vehicle.GetSystem()->GetTimerSolver() 
+            << "    [Assembly+SolverCall = " << mkl_solver->GetTimeSolve_Assembly() + mkl_solver->GetTimeSolve_SolverCall() << "] " << endl;
+        std::cout << "       GetTimeSolve_Assembly(): " << mkl_solver->GetTimeSolve_Assembly() << endl;
+        std::cout << "       GetTimeSolve_SolverCall(): " << mkl_solver->GetTimeSolve_SolverCall() << endl;
+        std::cout << "     GetTimerCollisionBroad(): " << vehicle.GetSystem()->GetTimerCollisionBroad() << endl;
+        std::cout << "     GetTimerCollisionNarrow(): " << vehicle.GetSystem()->GetTimerCollisionNarrow() << endl;
+        std::cout << "     GetTimerUpdate(): " << vehicle.GetSystem()->GetTimerUpdate() << endl;
+
+        mkl_solver->ResetTimers();
+#endif        
+        
         // if (time > 1.0) {
+        //    break;
+        //}
+
+        
+        //if (step_number > 0) {
         //    break;
         //}
     }
 
-    vehicle.WriteContacts("M113_contacts.out");
+    //vehicle.WriteContacts("M113_contacts.out");
 
     return 0;
 }
