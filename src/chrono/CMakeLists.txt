@@ -454,6 +454,37 @@ source_group(fea\\nodes FILES
 
 set(ChronoEngine_fea_elements_SOURCES
     fea/ChElementBeamANCF.cpp
+    fea/ChElementBeamANCF_MT01.cpp
+    fea/ChElementBeamANCF_MT02.cpp
+    fea/ChElementBeamANCF_MT03.cpp	
+    fea/ChElementBeamANCF_MT04.cpp
+    fea/ChElementBeamANCF_MT05.cpp
+    fea/ChElementBeamANCF_MT06.cpp
+    fea/ChElementBeamANCF_MT07.cpp
+    fea/ChElementBeamANCF_MT08.cpp
+    fea/ChElementBeamANCF_MT09.cpp
+    fea/ChElementBeamANCF_MT10.cpp
+    fea/ChElementBeamANCF_MT11.cpp
+    fea/ChElementBeamANCF_MT12.cpp
+    fea/ChElementBeamANCF_MT13.cpp
+    fea/ChElementBeamANCF_MT14.cpp
+    fea/ChElementBeamANCF_MT15.cpp
+    fea/ChElementBeamANCF_MT16.cpp
+    fea/ChElementBeamANCF_MT17.cpp
+    fea/ChElementBeamANCF_MT18.cpp	
+    fea/ChElementBeamANCF_MT19.cpp
+    fea/ChElementBeamANCF_MT20.cpp
+    fea/ChElementBeamANCF_MT21.cpp
+    fea/ChElementBeamANCF_MT22.cpp
+    fea/ChElementBeamANCF_MT23.cpp
+    fea/ChElementBeamANCF_MT24.cpp
+    fea/ChElementBeamANCF_MT25.cpp
+    fea/ChElementBeamANCF_MT26.cpp
+    fea/ChElementBeamANCF_MT27.cpp
+    fea/ChElementBeamANCF_MT28.cpp
+    fea/ChElementBeamANCF_MT30.cpp
+    fea/ChElementBeamANCF_MT31.cpp
+    fea/ChElementBeamANCF_MT32.cpp
     fea/ChElementBeamEuler.cpp
     fea/ChElementCableANCF.cpp
     fea/ChElementGeneric.cpp
@@ -479,6 +510,37 @@ set(ChronoEngine_fea_elements_HEADERS
     fea/ChElementBar.h
     fea/ChElementBeam.h
     fea/ChElementBeamANCF.h
+    fea/ChElementBeamANCF_MT01.h
+    fea/ChElementBeamANCF_MT02.h
+    fea/ChElementBeamANCF_MT03.h	
+    fea/ChElementBeamANCF_MT04.h
+    fea/ChElementBeamANCF_MT05.h	
+    fea/ChElementBeamANCF_MT06.h
+    fea/ChElementBeamANCF_MT07.h
+    fea/ChElementBeamANCF_MT08.h
+    fea/ChElementBeamANCF_MT09.h
+    fea/ChElementBeamANCF_MT10.h
+    fea/ChElementBeamANCF_MT11.h
+    fea/ChElementBeamANCF_MT12.h
+    fea/ChElementBeamANCF_MT13.h
+    fea/ChElementBeamANCF_MT14.h
+    fea/ChElementBeamANCF_MT15.h
+    fea/ChElementBeamANCF_MT16.h
+    fea/ChElementBeamANCF_MT17.h
+    fea/ChElementBeamANCF_MT18.h
+    fea/ChElementBeamANCF_MT19.h
+    fea/ChElementBeamANCF_MT20.h
+    fea/ChElementBeamANCF_MT21.h
+    fea/ChElementBeamANCF_MT22.h
+    fea/ChElementBeamANCF_MT23.h
+    fea/ChElementBeamANCF_MT24.h
+    fea/ChElementBeamANCF_MT25.h
+    fea/ChElementBeamANCF_MT26.h
+    fea/ChElementBeamANCF_MT27.h
+    fea/ChElementBeamANCF_MT28.h
+    fea/ChElementBeamANCF_MT30.h
+    fea/ChElementBeamANCF_MT31.h
+    fea/ChElementBeamANCF_MT32.h
     fea/ChElementBeamEuler.h
     fea/ChElementBeamIGA.h
     fea/ChElementCableANCF.h

@@ -22,6 +22,7 @@
 
 #include "benchmark/benchmark.h"
 #include "chrono/physics/ChSystem.h"
+#include "chrono/solver/ChDirectSolverLS.h"
 
 namespace chrono {
 namespace utils {
@@ -42,15 +43,25 @@ class ChBenchmarkTest {
     void Simulate(int num_steps);
     void ResetTimers();
 
-    double m_timer_step;              ///< time for performing simulation
-    double m_timer_advance;           ///< time for integration
-    double m_timer_jacobian;          ///< time for evaluating/loading Jacobian data
-    double m_timer_setup;             ///< time for solver setup
-    double m_timer_solver;            ///< time for solver solve
-    double m_timer_collision;         ///< time for collision detection
-    double m_timer_collision_broad;   ///< time for broad-phase collision
-    double m_timer_collision_narrow;  ///< time for narrow-phase collision
-    double m_timer_update;            ///< time for system update
+    double m_timer_step;                      ///< time for performing simulation
+    double m_timer_advance;                   ///< time for integration
+    double m_timer_jacobian;                  ///< time for evaluating/loading Jacobian data
+    double m_timer_setup;                     ///< time for solver setup
+    double m_timer_setup_assembly;            ///< time for solver setup assembly
+    double m_timer_setup_solver;              ///< time for solver setup solver call
+    double m_timer_solver;                    ///< time for solver solve
+    double m_timer_solver_assembly;           ///< time for solver solve assembly
+    double m_timer_solver_solver;             ///< time for solver solve solver call
+    double m_timer_collision;                 ///< time for collision detection
+    double m_timer_collision_broad;           ///< time for broad-phase collision
+    double m_timer_collision_narrow;          ///< time for narrow-phase collision
+    double m_timer_update;                    ///< time for system update
+    double m_timer_fea_internal_frc;          ///< time for FEA internal force calculations
+    double m_timer_fea_jacobian;              ///< time for FEA Jacobian calculations
+    unsigned int m_counter_fea_internal_frc;  ///< counter for the number of times the FEA internal force function is
+                                              ///< directly called
+    unsigned int
+        m_counter_KRM_load;  ///< counter for the number of times the FEA Jacobian evaluation is directly called
 };
 
 inline ChBenchmarkTest::ChBenchmarkTest()
@@ -58,16 +69,34 @@ inline ChBenchmarkTest::ChBenchmarkTest()
       m_timer_advance(0),
       m_timer_jacobian(0),
       m_timer_setup(0),
+      m_timer_setup_assembly(0),
+      m_timer_setup_solver(0),
       m_timer_solver(0),
+      m_timer_solver_assembly(0),
+      m_timer_solver_solver(0),
       m_timer_collision(0),
       m_timer_collision_broad(0),
       m_timer_collision_narrow(0),
-      m_timer_update(0) {}
+      m_timer_update(0),
+      m_timer_fea_internal_frc(0),
+      m_timer_fea_jacobian(0),
+      m_counter_fea_internal_frc(0),
+      m_counter_KRM_load(0) {}
 
 inline void ChBenchmarkTest::Simulate(int num_steps) {
     ////std::cout << "  simulate from t=" << GetSystem()->GetChTime() << " for steps=" << num_steps << std::endl;
     ResetTimers();
+    auto LS = std::dynamic_pointer_cast<ChDirectSolverLS>(GetSystem()->GetSolver());
     for (int i = 0; i < num_steps; i++) {
+        auto MeshList = GetSystem()->Get_meshlist();
+        for (auto& Mesh : MeshList) {
+            Mesh->ResetTimers();
+            Mesh->ResetCounters();
+        }
+        if (LS != NULL) {  // Direct Solver
+            LS->ResetTimers();
+        }
+
         ExecuteStep();
         m_timer_step += GetSystem()->GetTimerStep();
         m_timer_advance += GetSystem()->GetTimerAdvance();
@@ -78,6 +107,21 @@ inline void ChBenchmarkTest::Simulate(int num_steps) {
         m_timer_collision_broad += GetSystem()->GetTimerCollisionBroad();
         m_timer_collision_narrow += GetSystem()->GetTimerCollisionNarrow();
         m_timer_update += GetSystem()->GetTimerUpdate();
+
+        if (LS != NULL) {  // Direct Solver
+            m_timer_setup_assembly += LS->GetTimeSetup_Assembly();
+            m_timer_setup_solver += LS->GetTimeSetup_SolverCall();
+            m_timer_solver_assembly += LS->GetTimeSolve_Assembly();
+            m_timer_solver_solver += LS->GetTimeSolve_SolverCall();
+        }
+        // Accumulate the internal force and Jacobian timers across all the FEA mesh containers
+        // auto MeshList = GetSystem()->Get_meshlist();
+        for (auto& Mesh : MeshList) {
+            m_timer_fea_internal_frc += Mesh->GetTimeInternalForces();
+            m_timer_fea_jacobian += Mesh->GetTimeJacobianLoad();
+            m_counter_fea_internal_frc += Mesh->GetNumCallsInternalForces();
+            m_counter_KRM_load += Mesh->GetNumCallsJacobianLoad();
+        }
     }
 }
 
@@ -86,11 +130,19 @@ inline void ChBenchmarkTest::ResetTimers() {
     m_timer_advance = 0;
     m_timer_jacobian = 0;
     m_timer_setup = 0;
+    m_timer_setup_assembly = 0;
+    m_timer_setup_solver = 0;
     m_timer_solver = 0;
+    m_timer_solver_assembly = 0;
+    m_timer_solver_solver = 0;
     m_timer_collision = 0;
     m_timer_collision_broad = 0;
     m_timer_collision_narrow = 0;
     m_timer_update = 0;
+    m_timer_fea_internal_frc = 0;
+    m_timer_fea_jacobian = 0;
+    m_counter_fea_internal_frc = 0;
+    m_counter_KRM_load = 0;
 }
 
 // =============================================================================
@@ -159,10 +211,18 @@ class ChBenchmarkFixture : public ::benchmark::Fixture {
         st.counters["Step_Update"] = m_test->m_timer_update * 1e3;
         st.counters["LS_Jacobian"] = m_test->m_timer_jacobian * 1e3;
         st.counters["LS_Setup"] = m_test->m_timer_setup * 1e3;
+        st.counters["LS_Setup_Asm"] = m_test->m_timer_setup_assembly * 1e3;
+        st.counters["LS_Setup_Solver"] = m_test->m_timer_setup_solver * 1e3;
         st.counters["LS_Solve"] = m_test->m_timer_solver * 1e3;
+        st.counters["LS_Solve_Asm"] = m_test->m_timer_solver_assembly * 1e3;
+        st.counters["LS_Solve_Solver"] = m_test->m_timer_solver_solver * 1e3;
         st.counters["CD_Total"] = m_test->m_timer_collision * 1e3;
         st.counters["CD_Broad"] = m_test->m_timer_collision_broad * 1e3;
         st.counters["CD_Narrow"] = m_test->m_timer_collision_narrow * 1e3;
+        st.counters["FEA_InternalFrc"] = m_test->m_timer_fea_internal_frc * 1e3;
+        st.counters["FEA_Jacobian"] = m_test->m_timer_fea_jacobian * 1e3;
+        st.counters["FEA_InternalFrc_Calls"] = m_test->m_counter_fea_internal_frc;
+        st.counters["FEA_Jacobian_Calls"] = m_test->m_counter_KRM_load;
     }
 
     void Reset(int num_init_steps) {
