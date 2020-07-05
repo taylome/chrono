@@ -106,8 +106,8 @@ class ANCFBeamTest {
 
     ~ANCFBeamTest() { delete m_system; }
 
-    ChSystem* GetSystem() override { return m_system; }
-    void ExecuteStep() override { m_system->DoStepDynamics(1e-2); }
+    ChSystem* GetSystem() { return m_system; }
+    void ExecuteStep() { m_system->DoStepDynamics(1e-2); }
 
     void SimulateVis();
     void NonlinearStatics() { m_system->DoStaticNonlinear(50); }
