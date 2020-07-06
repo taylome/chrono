@@ -232,7 +232,7 @@ void ChElementBeamANCF_MT07::PrecomputeInternalForceMatricesWeights() {
                 double xi = GQTable->Lroots[GQ_idx_xi][it_xi];
                 double eta = GQTable->Lroots[GQ_idx_eta_zeta][it_eta];
                 double zeta = GQTable->Lroots[GQ_idx_eta_zeta][it_zeta];
-                unsigned int index =
+                auto index =
                     it_zeta + it_eta * GQTable->Lroots[GQ_idx_eta_zeta].size() +
                     it_xi * GQTable->Lroots[GQ_idx_eta_zeta].size() * GQTable->Lroots[GQ_idx_eta_zeta].size();
                 ChMatrix33<double>
@@ -281,6 +281,8 @@ void ChElementBeamANCF_MT07::SetAlphaDamp(double a) {
     m_Alpha = a;
     if (std::abs(m_Alpha) > 1e-10)
         m_damping_enabled = true;
+    else
+        m_damping_enabled = false;
 }
 
 void ChElementBeamANCF_MT07::ComputeInternalForces(ChVectorDynamic<>& Fi) {

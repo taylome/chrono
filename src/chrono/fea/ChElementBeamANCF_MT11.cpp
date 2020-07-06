@@ -294,7 +294,7 @@ void ChElementBeamANCF_MT11::PrecomputeInternalForceMatricesWeights() {
                 double xi = GQTable->Lroots[GQ_idx_xi][it_xi];
                 double eta = GQTable->Lroots[GQ_idx_eta_zeta][it_eta];
                 double zeta = GQTable->Lroots[GQ_idx_eta_zeta][it_zeta];
-                unsigned int index = it_zeta + it_eta*GQTable->Lroots[GQ_idx_eta_zeta].size() + it_xi*GQTable->Lroots[GQ_idx_eta_zeta].size()*GQTable->Lroots[GQ_idx_eta_zeta].size();
+                auto index = it_zeta + it_eta*GQTable->Lroots[GQ_idx_eta_zeta].size() + it_xi*GQTable->Lroots[GQ_idx_eta_zeta].size()*GQTable->Lroots[GQ_idx_eta_zeta].size();
                 ChMatrix33<double> J_0xi;               //Element Jacobian between the reference configuration and normalized configuration
                 ChMatrixNM<double, 9, 3> Sxi_D;         //Matrix of normalized shape function derivatives
 
@@ -340,6 +340,8 @@ void ChElementBeamANCF_MT11::SetAlphaDamp(double a) {
     m_Alpha = a;
     if (std::abs(m_Alpha) > 1e-10)
         m_damping_enabled = true;
+    else
+        m_damping_enabled = false;
 }
 
 void ChElementBeamANCF_MT11::ComputeInternalForces(ChVectorDynamic<>& Fi) {
@@ -652,11 +654,11 @@ void ChElementBeamANCF_MT11::ComputeInternalJacobianSingleGQPnt(ChMatrixNM<doubl
         Scaled_Combined_partial_epsilon_partial_e.row(1) = partial_e_tempReshaped.transpose();
         partial_e_temp = D0(2)*Sxi_D_0xi.col(2)*Scaled_Combined_F.col(2).transpose();
         Scaled_Combined_partial_epsilon_partial_e.row(2) = partial_e_tempReshaped.transpose();
-        partial_e_temp = D0(3)*Sxi_D_0xi.col(2)*Scaled_Combined_F.col(1).transpose() + Sxi_D_0xi.col(1)*Scaled_Combined_F.col(2).transpose();
+        partial_e_temp = D0(3)*(Sxi_D_0xi.col(2)*Scaled_Combined_F.col(1).transpose() + Sxi_D_0xi.col(1)*Scaled_Combined_F.col(2).transpose());
         Scaled_Combined_partial_epsilon_partial_e.row(3) = partial_e_tempReshaped.transpose();
-        partial_e_temp = D0(4)*Sxi_D_0xi.col(2)*Scaled_Combined_F.col(0).transpose() + Sxi_D_0xi.col(0)*Scaled_Combined_F.col(2).transpose();
+        partial_e_temp = D0(4)*(Sxi_D_0xi.col(2)*Scaled_Combined_F.col(0).transpose() + Sxi_D_0xi.col(0)*Scaled_Combined_F.col(2).transpose());
         Scaled_Combined_partial_epsilon_partial_e.row(4) = partial_e_tempReshaped.transpose();
-        partial_e_temp = D0(5)*Sxi_D_0xi.col(1)*Scaled_Combined_F.col(0).transpose() + Sxi_D_0xi.col(0)*Scaled_Combined_F.col(1).transpose();
+        partial_e_temp = D0(5)*(Sxi_D_0xi.col(1)*Scaled_Combined_F.col(0).transpose() + Sxi_D_0xi.col(0)*Scaled_Combined_F.col(1).transpose());
         Scaled_Combined_partial_epsilon_partial_e.row(5) = partial_e_tempReshaped.transpose();
     }
     else {                          //No damping, so just a linear elastic material law

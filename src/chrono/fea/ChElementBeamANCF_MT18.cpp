@@ -295,7 +295,7 @@ void ChElementBeamANCF_MT18::PrecomputeInternalForceMatricesWeights() {
                 double xi = GQTable->Lroots[GQ_idx_xi][it_xi];
                 double eta = GQTable->Lroots[GQ_idx_eta_zeta][it_eta];
                 double zeta = GQTable->Lroots[GQ_idx_eta_zeta][it_zeta];
-                unsigned int index = it_zeta + it_eta*GQTable->Lroots[GQ_idx_eta_zeta].size() + it_xi*GQTable->Lroots[GQ_idx_eta_zeta].size()*GQTable->Lroots[GQ_idx_eta_zeta].size();
+                auto index = it_zeta + it_eta*GQTable->Lroots[GQ_idx_eta_zeta].size() + it_xi*GQTable->Lroots[GQ_idx_eta_zeta].size()*GQTable->Lroots[GQ_idx_eta_zeta].size();
                 ChMatrix33<double> J_0xi;               //Element Jacobian between the reference configuration and normalized configuration
                 ChMatrixNMc<double, 9, 3> Sxi_D;         //Matrix of normalized shape function derivatives
 
@@ -341,6 +341,8 @@ void ChElementBeamANCF_MT18::SetAlphaDamp(double a) {
     m_Alpha = a;
     if (std::abs(m_Alpha) > 1e-10)
         m_damping_enabled = true;
+    else
+        m_damping_enabled = false;
 }
 
 void ChElementBeamANCF_MT18::ComputeInternalForces(ChVectorDynamic<>& Fi) {
@@ -651,12 +653,12 @@ void ChElementBeamANCF_MT18::ComputeInternalJacobianSingleGQPnt(ChMatrixNM<doubl
         partial_e_tempB = Sxi_D_0xiReshaped*Scaled_Combined_Fcol1transpose;
         partial_e_tempC = Sxi_D_0xiReshaped*Scaled_Combined_Fcol2transpose;
 
-        Scaled_Combined_partial_epsilon_partial_e.row(0) = partial_e_tempReshapedA.block(0, 0, 1, 27);
-        Scaled_Combined_partial_epsilon_partial_e.row(1) = partial_e_tempReshapedB.block(0, 27, 1, 27);
-        Scaled_Combined_partial_epsilon_partial_e.row(2) = partial_e_tempReshapedC.block(0, 54, 1, 27);
-        Scaled_Combined_partial_epsilon_partial_e.row(3).noalias() = partial_e_tempReshapedB.block(0, 54, 1, 27) + partial_e_tempReshapedC.block(0, 27, 1, 27);
-        Scaled_Combined_partial_epsilon_partial_e.row(4).noalias() = partial_e_tempReshapedA.block(0, 54, 1, 27) + partial_e_tempReshapedC.block(0, 0, 1, 27);
-        Scaled_Combined_partial_epsilon_partial_e.row(5).noalias() = partial_e_tempReshapedA.block(0, 27, 1, 27) + partial_e_tempReshapedB.block(0, 0, 1, 27);
+        Scaled_Combined_partial_epsilon_partial_e.row(0) = D0(0)*partial_e_tempReshapedA.block(0, 0, 1, 27);
+        Scaled_Combined_partial_epsilon_partial_e.row(1) = D0(1)*partial_e_tempReshapedB.block(0, 27, 1, 27);
+        Scaled_Combined_partial_epsilon_partial_e.row(2) = D0(2)*partial_e_tempReshapedC.block(0, 54, 1, 27);
+        Scaled_Combined_partial_epsilon_partial_e.row(3).noalias() = D0(3)*(partial_e_tempReshapedB.block(0, 54, 1, 27) + partial_e_tempReshapedC.block(0, 27, 1, 27));
+        Scaled_Combined_partial_epsilon_partial_e.row(4).noalias() = D0(4)*(partial_e_tempReshapedA.block(0, 54, 1, 27) + partial_e_tempReshapedC.block(0, 0, 1, 27));
+        Scaled_Combined_partial_epsilon_partial_e.row(5).noalias() = D0(5)*(partial_e_tempReshapedA.block(0, 27, 1, 27) + partial_e_tempReshapedB.block(0, 0, 1, 27));
 
         //Calculate and accumulate the dense component of the Jacobian.
         Jac_Dense += partial_epsilon_partial_e.transpose()*Scaled_Combined_partial_epsilon_partial_e;

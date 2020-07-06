@@ -60,10 +60,18 @@
 #include "chrono/physics/ChLoadContainer.h"
 #include "chrono/fea/ChLoadsBeam.h"
 
-
 using namespace chrono;
 using namespace chrono::fea;
 
+// =============================================================================
+
+void print_green(std::string text) {
+    std::cout << "\033[1;32m" << text << "\033[0m";
+}
+
+void print_red(std::string text) {
+    std::cout << "\033[1;31m" << text << "\033[0m";
+}
 
 // =============================================================================
 
@@ -74,7 +82,22 @@ public:
 
     ~ANCFBeamTest() { delete m_system; }
 
-    bool RunElementChecks(bool verbose);
+    bool RunElementChecks(int msglvl);
+
+    bool MassMatrixCheck(int msglvl);
+
+    bool GeneralizedGravityForceCheck(int msglvl);
+
+    bool GeneralizedInternalForceNoDispNoVelCheck(int msglvl);
+    bool GeneralizedInternalForceSmallDispNoVelCheck(int msglvl);
+    bool GeneralizedInternalForceNoDispSmallVelCheck(int msglvl);
+
+    bool JacobianNoDispNoVelNoDampingCheck(int msglvl);
+    bool JacobianSmallDispNoVelNoDampingCheck(int msglvl);
+
+    bool JacobianNoDispNoVelWithDampingCheck(int msglvl);
+    bool JacobianSmallDispNoVelWithDampingCheck(int msglvl);
+    bool JacobianNoDispSmallVelWithDampingCheck(int msglvl);
 
 protected:
     ChSystemSMC* m_system;
@@ -160,9 +183,26 @@ ANCFBeamTest<ElementVersion, MaterialVersion>::ANCFBeamTest() {
 }
 
 template <typename ElementVersion, typename MaterialVersion>
-bool ANCFBeamTest<ElementVersion, MaterialVersion>::RunElementChecks(bool verbose) {
+bool ANCFBeamTest<ElementVersion, MaterialVersion>::RunElementChecks(int msglvl) {
+    bool tests_passed = true;
+    tests_passed = (tests_passed & MassMatrixCheck(msglvl));
+    tests_passed = (tests_passed & GeneralizedGravityForceCheck(msglvl));
+    tests_passed = (tests_passed & GeneralizedInternalForceNoDispNoVelCheck(msglvl));
+    tests_passed = (tests_passed & GeneralizedInternalForceSmallDispNoVelCheck(msglvl));
+    tests_passed = (tests_passed & GeneralizedInternalForceNoDispSmallVelCheck(msglvl));
+    tests_passed = (tests_passed & JacobianNoDispNoVelNoDampingCheck(msglvl));
+    tests_passed = (tests_passed & JacobianSmallDispNoVelNoDampingCheck(msglvl));
+    tests_passed = (tests_passed & JacobianNoDispNoVelWithDampingCheck(msglvl));
+    tests_passed = (tests_passed & JacobianSmallDispNoVelWithDampingCheck(msglvl));
+    tests_passed = (tests_passed & JacobianNoDispSmallVelWithDampingCheck(msglvl));
+
+    return(tests_passed);
+}
+
+template <typename ElementVersion, typename MaterialVersion>
+bool ANCFBeamTest<ElementVersion, MaterialVersion>::MassMatrixCheck(int msglvl) {
     // =============================================================================
-    //  Check the Mass Matrix and Generalized Force due to Gravity
+    //  Check the Mass Matrix
     //  (Result should be nearly exact - No expected error)
     // =============================================================================
     ChMatrixNM<double, 27, 27> Expected_MassMatrix;
@@ -205,19 +245,32 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::RunElementChecks(bool verbos
         }
     }
 
-    if (verbose) {
+    double MaxAbsError = (MassMatrix - Expected_MassMatrix).cwiseAbs().maxCoeff();
+    bool passed_test = (MaxAbsError <= 0.01);
+
+    if (msglvl>=2) {
         std::cout << "Mass Matrix = " << std::endl;
         std::cout << MassMatrix << std::endl;
 
         std::cout << "Mass Matrix (Compact Form) = " << std::endl;
         std::cout << MassMatrix_compact << std::endl;
     }
-    std::cout << "Mass Matrix (Max Abs Error) = "
-        << (MassMatrix - Expected_MassMatrix).cwiseAbs().maxCoeff() << std::endl;
+    if (msglvl >= 1) {
+        std::cout << "Mass Matrix (Max Abs Error) = " << MaxAbsError;
 
+        if (passed_test)
+            std::cout << " - Test PASSED" << std::endl;
+        else
+            print_red(" - Test FAILED\n");
+    }
 
+    return (passed_test);
+}
+
+template <typename ElementVersion, typename MaterialVersion>
+bool ANCFBeamTest<ElementVersion, MaterialVersion>::GeneralizedGravityForceCheck(int msglvl) {
     // =============================================================================
-    //  Check the Mass Matrix and Generalized Force due to Gravity
+    //  Generalized Force due to Gravity
     //  (Result should be nearly exact - No expected error)
     // =============================================================================
     ChVectorN<double, 27> Expected_InternalForceDueToGravity;
@@ -262,29 +315,62 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::RunElementChecks(bool verbos
 
     ChVectorDynamic<double> InternalForceDueToGravity = InternalForceNoDispNoVelWithGravity - InternalForceNoDispNoVelNoGravity;
 
-    if (verbose) {
+    double MaxAbsError = (InternalForceDueToGravity - Expected_InternalForceDueToGravity).cwiseAbs().maxCoeff();
+    bool passed_test = (MaxAbsError <= 0.01);
+
+    if (msglvl >= 2) {
         std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
         std::cout << "Generalized Force due to Gravity = " << std::endl;
         std::cout << InternalForceDueToGravity << std::endl;
     }
-    std::cout << "Generalized Force due to Gravity (Max Abs Error) = "
-        << (InternalForceDueToGravity - Expected_InternalForceDueToGravity).cwiseAbs().maxCoeff() << std::endl;
+    if (msglvl >= 1) {
+        std::cout << "Generalized Force due to Gravity (Max Abs Error) = " << MaxAbsError;
 
+        if (passed_test)
+            std::cout << " - Test PASSED" << std::endl;
+        else
+            print_red(" - Test FAILED\n");
+    }
 
+    return (passed_test);
+}
+
+template <typename ElementVersion, typename MaterialVersion>
+bool ANCFBeamTest<ElementVersion, MaterialVersion>::GeneralizedInternalForceNoDispNoVelCheck(int msglvl) {
     // =============================================================================
-    //  Check the Internal Force at Zero Displacement 
+    //  Check the Internal Force at Zero Displacement, Zero Velocity
     //  (should equal all 0's by definition)
+    //  (Assumes that the element has not been changed from the initialized state)
     // =============================================================================
 
-    if (verbose) {
+    ChVectorDynamic<double> InternalForceNoDispNoVelNoGravity;
+    InternalForceNoDispNoVelNoGravity.resize(27);
+    m_element->SetGravityOn(false);
+    m_element->ComputeInternalForces(InternalForceNoDispNoVelNoGravity);
+
+    double MaxAbsError = InternalForceNoDispNoVelNoGravity.cwiseAbs().maxCoeff();
+    bool passed_test = (MaxAbsError <= 0.01);
+
+    if (msglvl >= 2) {
         std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
         std::cout << "Generalized Internal Force - No Displacement, No Velocity = " << std::endl;
         std::cout << InternalForceNoDispNoVelNoGravity << std::endl;
     }
-    std::cout << "Generalized Internal Force - No Displacement, No Velocity (Max Abs Error) = "
-        << InternalForceNoDispNoVelNoGravity.cwiseAbs().maxCoeff() << std::endl;
+    if (msglvl >= 1) {
+        std::cout << "Generalized Internal Force - No Displacement, No Velocity (Max Abs Error) = "
+            << MaxAbsError;
 
+        if (passed_test)
+            std::cout << " - Test PASSED" << std::endl;
+        else
+            print_red(" - Test FAILED\n");
+    }
 
+    return (passed_test);
+}
+
+template <typename ElementVersion, typename MaterialVersion>
+bool ANCFBeamTest<ElementVersion, MaterialVersion>::GeneralizedInternalForceSmallDispNoVelCheck(int msglvl) {
     // =============================================================================
     //  Check the Internal Force at a Given Displacement 
     //  (some small error expected depending on the formulation/steps used)
@@ -320,7 +406,8 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::RunElementChecks(bool verbos
         0,
         -2756.35997988939;
 
-
+    //Setup the test conditions
+    ChVector<double> OriginalPos = m_nodeC->GetPos();
     m_nodeC->SetPos(ChVector<>(m_nodeC->GetPos().x(), m_nodeC->GetPos().y(), 0.001));
 
     ChVectorDynamic<double> InternalForceSmallDispNoVelNoGravity;
@@ -328,24 +415,39 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::RunElementChecks(bool verbos
     m_element->SetGravityOn(false);
     m_element->ComputeInternalForces(InternalForceSmallDispNoVelNoGravity);
 
-    m_nodeC->SetPos(ChVector<>(m_nodeC->GetPos().x(), m_nodeC->GetPos().y(), 0.0));
-    
-    if (verbose) {
+    //Reset the element conditions back to its original values
+    m_nodeC->SetPos(OriginalPos);
+
+    double MaxAbsError = (InternalForceSmallDispNoVelNoGravity - Expected_InternalForceSmallDispNoVelNoGravity).cwiseAbs().maxCoeff();
+    bool passed_test = (MaxAbsError <= 0.01*Expected_InternalForceSmallDispNoVelNoGravity.cwiseAbs().maxCoeff());
+
+    if (msglvl >= 2) {
         std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
         std::cout << "Generalized Internal Force - Small Displacement, No Velocity = " << std::endl;
         std::cout << InternalForceSmallDispNoVelNoGravity << std::endl;
     }
-    std::cout << "Generalized Internal Force - Small Displacement, No Velocity (Max Abs Error) = "
-        << (InternalForceSmallDispNoVelNoGravity - Expected_InternalForceSmallDispNoVelNoGravity).cwiseAbs().maxCoeff() << std::endl;
+    if (msglvl >= 1) {
+        std::cout << "Generalized Internal Force - Small Displacement, No Velocity (Max Abs Error) = "
+            << MaxAbsError;
 
+        if (passed_test)
+            std::cout << " - Test PASSED" << std::endl;
+        else
+            print_red(" - Test FAILED\n");
+    }
 
+    return (passed_test);
+}
+
+template <typename ElementVersion, typename MaterialVersion>
+bool ANCFBeamTest<ElementVersion, MaterialVersion>::GeneralizedInternalForceNoDispSmallVelCheck(int msglvl) {
     // =============================================================================
     //  Check the Internal Force at a No Displacement with a Given Nodal Velocity
     //  (some small error expected depending on the formulation/steps used)
     // =============================================================================
 
-    ChVectorN<double, 27> Expected_InternalForceSmallDispSmallVelNoGravity;
-    Expected_InternalForceSmallDispSmallVelNoGravity <<
+    ChVectorN<double, 27> Expected_InternalForceNoDispSmallVelNoGravity;
+    Expected_InternalForceNoDispSmallVelNoGravity <<
         0,
         0,
         18300.6535947712,
@@ -374,29 +476,48 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::RunElementChecks(bool verbos
         0,
         0;
 
+    //Setup the test conditions
+    ChVector<double> OriginalVel = m_nodeC->GetPos_dt();
     m_nodeC->SetPos_dt(ChVector<>(0.0, 0.0, 0.001));
     m_element->SetAlphaDamp(0.01);
 
-    ChVectorDynamic<double> InternalForceSmallDispSmallVelNoGravity;
-    InternalForceSmallDispSmallVelNoGravity.resize(27);
+    ChVectorDynamic<double> InternalForceNoDispSmallVelNoGravity;
+    InternalForceNoDispSmallVelNoGravity.resize(27);
     m_element->SetGravityOn(false);
-    m_element->ComputeInternalForces(InternalForceSmallDispSmallVelNoGravity);
+    m_element->ComputeInternalForces(InternalForceNoDispSmallVelNoGravity);
 
-    m_nodeC->SetPos_dt(ChVector<>(0.0, 0.0, 0.0));
+    //Reset the element conditions back to its original values
+    m_nodeC->SetPos_dt(OriginalVel);
     m_element->SetAlphaDamp(0.0);
 
-    if (verbose) {
-        std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
-        std::cout << "Generalized Internal Force - No Displacement, Small Velocity = " << std::endl;
-        std::cout << InternalForceSmallDispSmallVelNoGravity << std::endl;
-    }
-    std::cout << "Generalized Internal Force - No Displacement, Small Velocity (Max Abs Error) = "
-        << (InternalForceSmallDispSmallVelNoGravity - Expected_InternalForceSmallDispSmallVelNoGravity).cwiseAbs().maxCoeff() << std::endl;
-    
+    double MaxAbsError = (InternalForceNoDispSmallVelNoGravity - Expected_InternalForceNoDispSmallVelNoGravity).cwiseAbs().maxCoeff();
+    bool passed_test = (MaxAbsError <= 0.01*Expected_InternalForceNoDispSmallVelNoGravity.cwiseAbs().maxCoeff());
 
+    if (msglvl >= 2) {
+        std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
+        std::cout << "Generalized Internal Force - No Displacement, Small Velocity With Damping = " << std::endl;
+        std::cout << InternalForceNoDispSmallVelNoGravity << std::endl;
+    }
+    if (msglvl >= 1) {
+        std::cout << "Generalized Internal Force - No Displacement, Small Velocity With Damping (Max Abs Error) = "
+            << MaxAbsError;
+
+        if (passed_test)
+            std::cout << " - Test PASSED" << std::endl;
+        else
+            print_red(" - Test FAILED\n");
+    }
+
+    return (passed_test);
+
+}
+
+template <typename ElementVersion, typename MaterialVersion>
+bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelNoDampingCheck(int msglvl) {
     // =============================================================================
     //  Check the Jacobian at No Displacement/Velocity - No Damping
     //  (some small error expected depending on the formulation/steps used)
+    //  (The R contribution should be all zeros since Damping is not enabled)
     // =============================================================================
     ChMatrixNM<double, 27, 27> Expected_JacobianK_NoDispNoVelNoDamping;
     Expected_JacobianK_NoDispNoVelNoDamping <<
@@ -431,63 +552,259 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::RunElementChecks(bool verbos
 
     //Ensure that the internal force is recalculated in case the results are expected
     //by the Jacobian Calculation
+    ChVectorDynamic<double> InternalForceNoDispNoVelNoGravity;
+    InternalForceNoDispNoVelNoGravity.resize(27);
+    m_element->SetGravityOn(false);
     m_element->ComputeInternalForces(InternalForceNoDispNoVelNoGravity);
 
     ChMatrixDynamic<double> JacobianK_NoDispNoVelNoDamping;
     JacobianK_NoDispNoVelNoDamping.resize(27, 27);
-    m_element->ComputeKRMmatricesGlobal(JacobianK_NoDispNoVelNoDamping, 1, 0, 0);
+    m_element->ComputeKRMmatricesGlobal(JacobianK_NoDispNoVelNoDamping, 1.0, 0.0, 0.0);
 
     ChMatrixDynamic<double> JacobianR_NoDispNoVelNoDamping;
     JacobianR_NoDispNoVelNoDamping.resize(27, 27);
-    m_element->ComputeKRMmatricesGlobal(JacobianR_NoDispNoVelNoDamping, 0, 1, 0);
+    m_element->ComputeKRMmatricesGlobal(JacobianR_NoDispNoVelNoDamping, 0.0, 1.0, 0.0);
 
-    double zeros_max_error = 0;
-    double max_percent_error = 0;
-    ChMatrixDynamic<double> percent_error_matrix;
-    percent_error_matrix.resize(27, 27);
+    bool passed_tests = true;
+
+    double small_terms_JacK = 1e-4*Expected_JacobianK_NoDispNoVelNoDamping.cwiseAbs().maxCoeff();
+    double zeros_max_error_JacK = 0;
+    double max_percent_error_JacK = 0;
+    ChMatrixDynamic<double> percent_error_matrix_JacK;
+    percent_error_matrix_JacK.resize(27, 27);
+    double MaxAbsError_JacR = JacobianR_NoDispNoVelNoDamping.cwiseAbs().maxCoeff();
+    
     for (auto i = 0; i < Expected_JacobianK_NoDispNoVelNoDamping.rows(); i++) {
         for (auto j = 0; j < Expected_JacobianK_NoDispNoVelNoDamping.cols(); j++) {
-            if (std::abs(Expected_JacobianK_NoDispNoVelNoDamping(i, j)) < 100) {
+            if (std::abs(Expected_JacobianK_NoDispNoVelNoDamping(i, j)) < small_terms_JacK) {
                 double error = std::abs(JacobianK_NoDispNoVelNoDamping(i, j) - Expected_JacobianK_NoDispNoVelNoDamping(i, j));
-                if (error > zeros_max_error)
-                    zeros_max_error = error;
-                percent_error_matrix(i, j) = 0.0;
+                if (error > zeros_max_error_JacK)
+                    zeros_max_error_JacK = error;
+                percent_error_matrix_JacK(i, j) = 0.0;
             }
             else {
                 double percent_error = std::abs((JacobianK_NoDispNoVelNoDamping(i, j) - Expected_JacobianK_NoDispNoVelNoDamping(i, j)) / Expected_JacobianK_NoDispNoVelNoDamping(i, j));
-                if (percent_error > max_percent_error)
-                    max_percent_error = percent_error;
-                percent_error_matrix(i, j) = percent_error;
+                if (percent_error > max_percent_error_JacK)
+                    max_percent_error_JacK = percent_error;
+                percent_error_matrix_JacK(i, j) = percent_error;
             }
         }
     }
 
-    verbose = true;
-    if (verbose) {
+
+    if (msglvl >= 2) {
         std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
         std::cout << "Jacobian K Term - No Displacement, No Velocity, No Damping = " << std::endl;
         std::cout << JacobianK_NoDispNoVelNoDamping << std::endl;
         std::cout << "Expected Jacobian K Term - No Displacement, No Velocity, No Damping = " << std::endl;
         std::cout << Expected_JacobianK_NoDispNoVelNoDamping << std::endl;
         std::cout << "Percent Error Jacobian K Term - No Displacement, No Velocity, No Damping = " << std::endl;
-        std::cout << percent_error_matrix << std::endl;
+        std::cout << percent_error_matrix_JacK << std::endl;
     }
-    std::cout << "Jacobian K Term - No Displacement, No Velocity, No Damping (Max Abs Error) = "
-        << (JacobianK_NoDispNoVelNoDamping - Expected_JacobianK_NoDispNoVelNoDamping).cwiseAbs().maxCoeff() << std::endl;
-    std::cout << "Jacobian K Term - No Displacement, No Velocity, No Damping (Max Abs Error - Only Terms < 100) = "
-        << zeros_max_error << std::endl;
-    std::cout << "Jacobian K Term - No Displacement, No Velocity, No Damping (Max Abs % Error - Only Terms >= 100) = "
-        << max_percent_error*100 << "%" << std::endl;
+    if (msglvl >= 1) {
+        std::cout << "Jacobian K Term - No Displacement, No Velocity, No Damping (Max Abs Error) = "
+            << (JacobianK_NoDispNoVelNoDamping - Expected_JacobianK_NoDispNoVelNoDamping).cwiseAbs().maxCoeff() << std::endl;
 
-    if (verbose) {
+        std::cout << "Jacobian K Term - No Displacement, No Velocity, No Damping (Max Abs Error - Only Smaller Terms) = "
+            << zeros_max_error_JacK;
+        if (zeros_max_error_JacK / JacobianK_NoDispNoVelNoDamping.cwiseAbs().maxCoeff() > 0.0001) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
+
+        std::cout << "Jacobian K Term - No Displacement, No Velocity, No Damping (Max Abs % Error - Only Larger Terms) = "
+            << max_percent_error_JacK * 100 << "%";
+        if (max_percent_error_JacK > 0.01) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
+    }
+    if (zeros_max_error_JacK / JacobianK_NoDispNoVelNoDamping.cwiseAbs().maxCoeff() > 0.0001) {
+        passed_tests = false;
+    }
+    if (max_percent_error_JacK > 0.01) {
+        passed_tests = false;
+    }
+
+    if (msglvl >= 2) {
         std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
         std::cout << "Jacobian R Term - No Displacement, No Velocity, No Damping = " << std::endl;
         std::cout << JacobianR_NoDispNoVelNoDamping << std::endl;
     }
-    std::cout << "Jacobian R Term - No Displacement, No Velocity, No Damping (Max Abs Error) = "
-        << JacobianR_NoDispNoVelNoDamping.cwiseAbs().maxCoeff() << std::endl;
-    
+    if (msglvl >= 1) {
+        std::cout << "Jacobian R Term - No Displacement, No Velocity, No Damping (Max Abs Error) = "
+            << MaxAbsError_JacR;
 
+        if (MaxAbsError_JacR > 0.01) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
+    }
+    if (MaxAbsError_JacR > 0.01) {
+        passed_tests = false;
+    }
+
+    return(passed_tests);
+}
+
+template <typename ElementVersion, typename MaterialVersion>
+bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelNoDampingCheck(int msglvl) {
+    // =============================================================================
+    //  Check the Jacobian at Small Displacement No Velocity - No Damping
+    //  (some small error expected depending on the formulation/steps used)
+    // =============================================================================
+    ChMatrixNM<double, 27, 27> Expected_JacobianK_SmallDispNoVelNoDamping;
+    Expected_JacobianK_SmallDispNoVelNoDamping <<
+        6596179476.92308, 0, 15076923.0769231, 0, -605769230.769231, 0, -1006535.94771242, 0, -605769230.769231, 942318246.153846, 0, 0, 0, 201923076.923077, 0, -91503.2679738562, 0, 201923076.923077, -7538497723.07692, 0, -15076923.0769231, 0, -807692307.692308, 0, -732026.143790850, 0, -807692307.692308,
+        0, 1601332820.31171, 0, -343137254.901961, 0, -1006535.94771242, 0, -1006535.94771242, 0, 0, 228768723.780794, 0, 114379084.967320, 0, -91503.2679738562, 0, -91503.2679738562, 0, 0, -1830101544.09251, 0, -457516339.869281, 0, -732026.143790850, 0, -732026.143790850, 0,
+        15076923.0769231, 0, 1601384081.85018, 0, -1776923.07692308, 0, -343137254.901961, 0, -3789994.97234791, 0, 0, 228789831.473102, 0, -161538.461538462, 0, 114379084.967320, 0, -344544.997486174, -15076923.0769231, 0, -1830173913.32328, 0, -1292307.69230769, 0, -457516339.869281, 0, -2756359.97988939,
+        0, -343137254.901961, 0, 95587447.9430870, 0, 283843.137254902, 0, 0, 0, 0, -114379084.967320, 0, -22292615.5883359, 0, 0, 0, 0, 0, 0, 457516339.869281, 0, 41085221.8433384, 0, 173673.202614379, 0, 0, 0,
+        -605769230.769231, 0, -1776923.07692308, 0, 378258346.216926, 0, 0, 0, 161538461.538462, -201923076.923077, 0, -161538.461538462, 0, -94040269.3506955, 0, 0, 0, -40384615.3846154, 807692307.692308, 0, 1938461.53846154, 0, 186936738.518384, 0, 0, 0, 80769230.7692308,
+        0, -1006535.94771242, 0, 283843.137254902, 0, 109028549.895961, 0, 107692307.692308, 0, 0, -91503.2679738562, 0, 0, 0, -26732720.8390816, 0, -26923076.9230769, 0, 0, 1098039.21568627, 0, 173673.202614379, 0, 52321622.8284900, 0, 53846153.8461539, 0,
+        -1006535.94771242, 0, -343137254.901961, 0, 0, 0, 95587447.9430870, 0, 283843.137254902, -91503.2679738562, 0, -114379084.967320, 0, 0, 0, -22292615.5883359, 0, 0, 1098039.21568627, 0, 457516339.869281, 0, 0, 0, 41085221.8433384, 0, 173673.202614379,
+        0, -1006535.94771242, 0, 0, 0, 107692307.692308, 0, 109027576.986157, 0, 0, -91503.2679738562, 0, 0, 0, -26923076.9230769, 0, -26732577.0430032, 0, 0, 1098039.21568627, 0, 0, 0, 53846153.8461539, 0, 52321353.9029998, 0,
+        -605769230.769231, 0, -3789994.97234791, 0, 161538461.538462, 0, 283843.137254902, 0, 378259319.126730, -201923076.923077, 0, -344544.997486174, 0, -40384615.3846154, 0, 0, 0, -94040413.1467739, 807692307.692308, 0, 4134539.96983409, 0, 80769230.7692308, 0, 173673.202614379, 0, 186937007.443875,
+        942318246.153846, 0, 0, 0, -201923076.923077, 0, -91503.2679738562, 0, -201923076.923077, 6596179476.92308, 0, -15076923.0769231, 0, 605769230.769231, 0, -1006535.94771242, 0, 605769230.769231, -7538497723.07692, 0, 15076923.0769231, 0, 807692307.692308, 0, -732026.143790850, 0, 807692307.692308,
+        0, 228768723.780794, 0, -114379084.967320, 0, -91503.2679738562, 0, -91503.2679738562, 0, 0, 1601332820.31171, 0, 343137254.901961, 0, -1006535.94771242, 0, -1006535.94771242, 0, 0, -1830101544.09251, 0, 457516339.869281, 0, -732026.143790850, 0, -732026.143790850, 0,
+        0, 0, 228789831.473102, 0, -161538.461538462, 0, -114379084.967320, 0, -344544.997486174, -15076923.0769231, 0, 1601384081.85018, 0, -1776923.07692308, 0, 343137254.901961, 0, -3789994.97234791, 15076923.0769231, 0, -1830173913.32328, 0, -1292307.69230769, 0, 457516339.869281, 0, -2756359.97988939,
+        0, 114379084.967320, 0, -22292615.5883359, 0, 0, 0, 0, 0, 0, 343137254.901961, 0, 95587447.9430870, 0, -283843.137254902, 0, 0, 0, 0, -457516339.869281, 0, 41085221.8433384, 0, -173673.202614379, 0, 0, 0,
+        201923076.923077, 0, -161538.461538462, 0, -94040269.3506955, 0, 0, 0, -40384615.3846154, 605769230.769231, 0, -1776923.07692308, 0, 378258346.216926, 0, 0, 0, 161538461.538462, -807692307.692308, 0, 1938461.53846154, 0, 186936738.518384, 0, 0, 0, 80769230.7692308,
+        0, -91503.2679738562, 0, 0, 0, -26732720.8390816, 0, -26923076.9230769, 0, 0, -1006535.94771242, 0, -283843.137254902, 0, 109028549.895961, 0, 107692307.692308, 0, 0, 1098039.21568627, 0, -173673.202614379, 0, 52321622.8284900, 0, 53846153.8461539, 0,
+        -91503.2679738562, 0, 114379084.967320, 0, 0, 0, -22292615.5883359, 0, 0, -1006535.94771242, 0, 343137254.901961, 0, 0, 0, 95587447.9430870, 0, -283843.137254902, 1098039.21568627, 0, -457516339.869281, 0, 0, 0, 41085221.8433384, 0, -173673.202614379,
+        0, -91503.2679738562, 0, 0, 0, -26923076.9230769, 0, -26732577.0430032, 0, 0, -1006535.94771242, 0, 0, 0, 107692307.692308, 0, 109027576.986157, 0, 0, 1098039.21568627, 0, 0, 0, 53846153.8461539, 0, 52321353.9029998, 0,
+        201923076.923077, 0, -344544.997486174, 0, -40384615.3846154, 0, 0, 0, -94040413.1467739, 605769230.769231, 0, -3789994.97234791, 0, 161538461.538462, 0, -283843.137254902, 0, 378259319.126730, -807692307.692308, 0, 4134539.96983409, 0, 80769230.7692308, 0, -173673.202614379, 0, 186937007.443875,
+        -7538497723.07692, 0, -15076923.0769231, 0, 807692307.692308, 0, 1098039.21568627, 0, 807692307.692308, -7538497723.07692, 0, 15076923.0769231, 0, -807692307.692308, 0, 1098039.21568627, 0, -807692307.692308, 15076995446.1538, 0, 0, 0, 0, 0, 1464052.28758170, 0, 0,
+        0, -1830101544.09251, 0, 457516339.869281, 0, 1098039.21568627, 0, 1098039.21568627, 0, 0, -1830101544.09251, 0, -457516339.869281, 0, 1098039.21568627, 0, 1098039.21568627, 0, 0, 3660203088.18502, 0, 0, 0, 1464052.28758170, 0, 1464052.28758170, 0,
+        -15076923.0769231, 0, -1830173913.32328, 0, 1938461.53846154, 0, 457516339.869281, 0, 4134539.96983409, 15076923.0769231, 0, -1830173913.32328, 0, 1938461.53846154, 0, -457516339.869281, 0, 4134539.96983409, 0, 0, 3660347826.64656, 0, 2584615.38461538, 0, 0, 0, 5512719.95977878,
+        0, -457516339.869281, 0, 41085221.8433384, 0, 173673.202614379, 0, 0, 0, 0, 457516339.869281, 0, 41085221.8433384, 0, -173673.202614379, 0, 0, 0, 0, 0, 0, 375347188.490297, 0, 0, 0, 0, 0,
+        -807692307.692308, 0, -1292307.69230769, 0, 186936738.518384, 0, 0, 0, 80769230.7692308, 807692307.692308, 0, -1292307.69230769, 0, 186936738.518384, 0, 0, 0, 80769230.7692308, 0, 0, 2584615.38461538, 0, 1510743199.88631, 0, 0, 0, 646153846.153846,
+        0, -732026.143790850, 0, 173673.202614379, 0, 52321622.8284900, 0, 53846153.8461539, 0, 0, -732026.143790850, 0, -173673.202614379, 0, 52321622.8284900, 0, 53846153.8461539, 0, 0, 1464052.28758170, 0, 0, 0, 433821049.164538, 0, 430769230.769231, 0,
+        -732026.143790850, 0, -457516339.869281, 0, 0, 0, 41085221.8433384, 0, 173673.202614379, -732026.143790850, 0, 457516339.869281, 0, 0, 0, 41085221.8433384, 0, -173673.202614379, 1464052.28758170, 0, 0, 0, 0, 0, 375347188.490297, 0, 0,
+        0, -732026.143790850, 0, 0, 0, 53846153.8461539, 0, 52321353.9029998, 0, 0, -732026.143790850, 0, 0, 0, 53846153.8461539, 0, 52321353.9029998, 0, 0, 1464052.28758170, 0, 0, 0, 430769230.769231, 0, 433820122.963231, 0,
+        -807692307.692308, 0, -2756359.97988939, 0, 80769230.7692308, 0, 173673.202614379, 0, 186937007.443875, 807692307.692308, 0, -2756359.97988939, 0, 80769230.7692308, 0, -173673.202614379, 0, 186937007.443875, 0, 0, 5512719.95977878, 0, 646153846.153846, 0, 0, 0, 1510744126.08762;
+
+
+    //Ensure that the internal force is recalculated in case the results are expected
+    //by the Jacobian Calculation
+    
+    //Setup the test conditions
+    ChVector<double> OriginalPos = m_nodeC->GetPos();
+    m_nodeC->SetPos(ChVector<>(m_nodeC->GetPos().x(), m_nodeC->GetPos().y(), 0.001));
+
+    ChVectorDynamic<double> InternalForceSmallDispNoVelNoGravity;
+    InternalForceSmallDispNoVelNoGravity.resize(27);
+    m_element->SetGravityOn(false);
+    m_element->ComputeInternalForces(InternalForceSmallDispNoVelNoGravity);
+
+    ChMatrixDynamic<double> JacobianK_SmallDispNoVelNoDamping;
+    JacobianK_SmallDispNoVelNoDamping.resize(27, 27);
+    m_element->ComputeKRMmatricesGlobal(JacobianK_SmallDispNoVelNoDamping, 1, 0, 0);
+
+    ChMatrixDynamic<double> JacobianR_SmallDispNoVelNoDamping;
+    JacobianR_SmallDispNoVelNoDamping.resize(27, 27);
+    m_element->ComputeKRMmatricesGlobal(JacobianR_SmallDispNoVelNoDamping, 0, 1, 0);
+
+    //Reset the element conditions back to its original values
+    m_nodeC->SetPos(OriginalPos);
+
+
+    bool passed_tests = true;
+
+    double small_terms_JacK = 1e-4*Expected_JacobianK_SmallDispNoVelNoDamping.cwiseAbs().maxCoeff();
+    double zeros_max_error_JacK = 0;
+    double max_percent_error_JacK = 0;
+    ChMatrixDynamic<double> percent_error_matrix_JacK;
+    percent_error_matrix_JacK.resize(27, 27);
+    double MaxAbsError_JacR = JacobianR_SmallDispNoVelNoDamping.cwiseAbs().maxCoeff();
+
+    for (auto i = 0; i < Expected_JacobianK_SmallDispNoVelNoDamping.rows(); i++) {
+        for (auto j = 0; j < Expected_JacobianK_SmallDispNoVelNoDamping.cols(); j++) {
+            if (std::abs(Expected_JacobianK_SmallDispNoVelNoDamping(i, j)) < small_terms_JacK) {
+                double error = std::abs(JacobianK_SmallDispNoVelNoDamping(i, j) - Expected_JacobianK_SmallDispNoVelNoDamping(i, j));
+                if (error > zeros_max_error_JacK)
+                    zeros_max_error_JacK = error;
+                percent_error_matrix_JacK(i, j) = 0.0;
+            }
+            else {
+                double percent_error = std::abs((JacobianK_SmallDispNoVelNoDamping(i, j) - Expected_JacobianK_SmallDispNoVelNoDamping(i, j)) / Expected_JacobianK_SmallDispNoVelNoDamping(i, j));
+                if (percent_error > max_percent_error_JacK)
+                    max_percent_error_JacK = percent_error;
+                percent_error_matrix_JacK(i, j) = percent_error;
+            }
+        }
+    }
+
+
+    if (msglvl >= 2) {
+        std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
+        std::cout << "Jacobian K Term - Small Displacement, No Velocity, No Damping = " << std::endl;
+        std::cout << JacobianK_SmallDispNoVelNoDamping << std::endl;
+        std::cout << "Expected Jacobian K Term - Small Displacement, No Velocity, No Damping = " << std::endl;
+        std::cout << Expected_JacobianK_SmallDispNoVelNoDamping << std::endl;
+        std::cout << "Percent Error Jacobian K Term - Small Displacement, No Velocity, No Damping = " << std::endl;
+        std::cout << percent_error_matrix_JacK << std::endl;
+    }
+    if (msglvl >= 1) {
+        std::cout << "Jacobian K Term - Small Displacement, No Velocity, No Damping (Max Abs Error) = "
+            << (JacobianK_SmallDispNoVelNoDamping - Expected_JacobianK_SmallDispNoVelNoDamping).cwiseAbs().maxCoeff() << std::endl;
+
+        std::cout << "Jacobian K Term - Small Displacement, No Velocity, No Damping (Max Abs Error - Only Smaller Terms) = "
+            << zeros_max_error_JacK;
+        if (zeros_max_error_JacK / JacobianK_SmallDispNoVelNoDamping.cwiseAbs().maxCoeff() > 0.0001) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
+
+        std::cout << "Jacobian K Term - Small Displacement, No Velocity, No Damping (Max Abs % Error - Only Larger Terms) = "
+            << max_percent_error_JacK * 100 << "%";
+        if (max_percent_error_JacK > 0.01) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
+    }
+    if (zeros_max_error_JacK / JacobianK_SmallDispNoVelNoDamping.cwiseAbs().maxCoeff() > 0.0001) {
+        passed_tests = false;
+    }
+    if (max_percent_error_JacK > 0.01) {
+        passed_tests = false;
+    }
+
+    if (msglvl >= 2) {
+        std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
+        std::cout << "Jacobian R Term - Small Displacement, No Velocity, No Damping = " << std::endl;
+        std::cout << JacobianR_SmallDispNoVelNoDamping << std::endl;
+    }
+    if (msglvl >= 1) {
+        std::cout << "Jacobian R Term - Small Displacement, No Velocity, No Damping (Max Abs Error) = "
+            << MaxAbsError_JacR;
+
+        if (MaxAbsError_JacR > 0.01) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
+    }
+    if (MaxAbsError_JacR > 0.01) {
+        passed_tests = false;
+    }
+
+    return(passed_tests);
+
+}
+
+template <typename ElementVersion, typename MaterialVersion>
+bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelWithDampingCheck(int msglvl) {
     // =============================================================================
     //  Check the Jacobian at No Displacement/Velocity - With Damping
     //  (some small error expected depending on the formulation/steps used)
@@ -554,10 +871,15 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::RunElementChecks(bool verbos
         -8076923.07692308, 0, 0, 0, 807692.307692308, 0, 0, 0, 1869364.83995308, 8076923.07692308, 0, 0, 0, 807692.307692308, 0, 0, 0, 1869364.83995308, 0, 0, 0, 0, 6461538.46153846, 0, 0, 0, 15107424.1662477;
 
 
+    //Setup the test conditions
     m_element->SetAlphaDamp(0.01);
 
+    //Ensure that the internal force is recalculated in case the results are expected
+    //by the Jacobian Calculation
+    ChVectorDynamic<double> InternalForceNoDispNoVelNoGravity;
+    InternalForceNoDispNoVelNoGravity.resize(27);
     m_element->SetGravityOn(false);
-    m_element->ComputeInternalForces(InternalForceSmallDispSmallVelNoGravity);
+    m_element->ComputeInternalForces(InternalForceNoDispNoVelNoGravity);
 
     ChMatrixDynamic<double> JacobianK_NoDispNoVelWithDamping;
     JacobianK_NoDispNoVelWithDamping.resize(27, 27);
@@ -567,123 +889,137 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::RunElementChecks(bool verbos
     JacobianR_NoDispNoVelWithDamping.resize(27, 27);
     m_element->ComputeKRMmatricesGlobal(JacobianR_NoDispNoVelWithDamping, 0, 1, 0);
 
+    //Reset the element conditions back to its original values
     m_element->SetAlphaDamp(0.0);
 
-    if (verbose) {
+
+    bool passed_tests = true;
+
+    double small_terms_JacK = 1e-4*Expected_JacobianK_NoDispNoVelWithDamping.cwiseAbs().maxCoeff();
+    double zeros_max_error_JacK = 0;
+    double max_percent_error_JacK = 0;
+    ChMatrixDynamic<double> percent_error_matrix_JacK;
+    percent_error_matrix_JacK.resize(27, 27);
+    
+    double small_terms_JacR = 1e-4*Expected_JacobianR_NoDispNoVelWithDamping.cwiseAbs().maxCoeff();
+    double zeros_max_error_JacR = 0;
+    double max_percent_error_JacR = 0;
+    ChMatrixDynamic<double> percent_error_matrix_JacR;
+    percent_error_matrix_JacR.resize(27, 27);
+
+
+    for (auto i = 0; i < Expected_JacobianK_NoDispNoVelWithDamping.rows(); i++) {
+        for (auto j = 0; j < Expected_JacobianK_NoDispNoVelWithDamping.cols(); j++) {
+            if (std::abs(Expected_JacobianK_NoDispNoVelWithDamping(i, j)) < small_terms_JacK) {
+                double error = std::abs(JacobianK_NoDispNoVelWithDamping(i, j) - Expected_JacobianK_NoDispNoVelWithDamping(i, j));
+                if (error > zeros_max_error_JacK)
+                    zeros_max_error_JacK = error;
+                percent_error_matrix_JacK(i, j) = 0.0;
+            }
+            else {
+                double percent_error = std::abs((JacobianK_NoDispNoVelWithDamping(i, j) - Expected_JacobianK_NoDispNoVelWithDamping(i, j)) / Expected_JacobianK_NoDispNoVelWithDamping(i, j));
+                if (percent_error > max_percent_error_JacK)
+                    max_percent_error_JacK = percent_error;
+                percent_error_matrix_JacK(i, j) = percent_error;
+            }
+
+            if (std::abs(Expected_JacobianR_NoDispNoVelWithDamping(i, j)) < small_terms_JacR) {
+                double error = std::abs(JacobianR_NoDispNoVelWithDamping(i, j) - Expected_JacobianR_NoDispNoVelWithDamping(i, j));
+                if (error > zeros_max_error_JacR)
+                    zeros_max_error_JacR = error;
+                percent_error_matrix_JacR(i, j) = 0.0;
+            }
+            else {
+                double percent_error = std::abs((JacobianR_NoDispNoVelWithDamping(i, j) - Expected_JacobianR_NoDispNoVelWithDamping(i, j)) / Expected_JacobianR_NoDispNoVelWithDamping(i, j));
+                if (percent_error > max_percent_error_JacR)
+                    max_percent_error_JacR = percent_error;
+                percent_error_matrix_JacR(i, j) = percent_error;
+            }
+        }
+    }
+
+
+    if (msglvl >= 2) {
         std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
         std::cout << "Jacobian K Term - No Displacement, No Velocity, With Damping = " << std::endl;
         std::cout << JacobianK_NoDispNoVelWithDamping << std::endl;
         std::cout << "Expected Jacobian K Term - No Displacement, No Velocity, With Damping = " << std::endl;
         std::cout << Expected_JacobianK_NoDispNoVelWithDamping << std::endl;
+        std::cout << "Percent Error Jacobian K Term - No Displacement, No Velocity, With Damping = " << std::endl;
+        std::cout << percent_error_matrix_JacK << std::endl;
     }
-    std::cout << "Jacobian K Term - No Displacement, No Velocity, With Damping (Max Abs Error) = "
-        << (JacobianK_NoDispNoVelWithDamping - Expected_JacobianK_NoDispNoVelWithDamping).cwiseAbs().maxCoeff() << std::endl;
-    if (verbose) {
+    if (msglvl >= 1) {
+        std::cout << "Jacobian K Term - No Displacement, No Velocity, With Damping (Max Abs Error) = "
+            << (JacobianK_NoDispNoVelWithDamping - Expected_JacobianK_NoDispNoVelWithDamping).cwiseAbs().maxCoeff() << std::endl;
+
+        std::cout << "Jacobian K Term - No Displacement, No Velocity, With Damping (Max Abs Error - Only Smaller Terms) = "
+            << zeros_max_error_JacK;
+        if (zeros_max_error_JacK / JacobianK_NoDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
+
+        std::cout << "Jacobian K Term - No Displacement, No Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
+            << max_percent_error_JacK * 100 << "%";
+        if (max_percent_error_JacK > 0.01) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
+    }
+    if (zeros_max_error_JacK / JacobianK_NoDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
+        passed_tests = false;
+    }
+    if (max_percent_error_JacK > 0.01) {
+        passed_tests = false;
+    }
+
+    if (msglvl >= 2) {
         std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
         std::cout << "Jacobian R Term - No Displacement, No Velocity, With Damping = " << std::endl;
         std::cout << JacobianR_NoDispNoVelWithDamping << std::endl;
         std::cout << "Expected Jacobian R Term - No Displacement, No Velocity, With Damping = " << std::endl;
         std::cout << Expected_JacobianR_NoDispNoVelWithDamping << std::endl;
+        std::cout << "Percent Error Jacobian R Term - No Displacement, No Velocity, With Damping = " << std::endl;
+        std::cout << percent_error_matrix_JacR << std::endl;
     }
-    std::cout << "Jacobian R Term - No Displacement, No Velocity, With Damping (Max Abs Error) = "
-        << (JacobianR_NoDispNoVelWithDamping - Expected_JacobianR_NoDispNoVelWithDamping).cwiseAbs().maxCoeff() << std::endl;
+    if (msglvl >= 1) {
+        std::cout << "Jacobian R Term - No Displacement, No Velocity, With Damping (Max Abs Error) = "
+            << (JacobianR_NoDispNoVelWithDamping - Expected_JacobianR_NoDispNoVelWithDamping).cwiseAbs().maxCoeff() << std::endl;
 
-    // =============================================================================
-    //  Check the Jacobian at Small Displacement No Velocity - No Damping
-    //  (some small error expected depending on the formulation/steps used)
-    // =============================================================================
-    ChMatrixNM<double, 27, 27> Expected_JacobianK_SmallDispNoVelNoDamping;
-    Expected_JacobianK_SmallDispNoVelNoDamping <<
-        6596179476.92308, 0, 15076923.0769231, 0, -605769230.769231, 0, -1006535.94771242, 0, -605769230.769231, 942318246.153846, 0, 0, 0, 201923076.923077, 0, -91503.2679738562, 0, 201923076.923077, -7538497723.07692, 0, -15076923.0769231, 0, -807692307.692308, 0, -732026.143790850, 0, -807692307.692308,
-        0, 1601332820.31171, 0, -343137254.901961, 0, -1006535.94771242, 0, -1006535.94771242, 0, 0, 228768723.780794, 0, 114379084.967320, 0, -91503.2679738562, 0, -91503.2679738562, 0, 0, -1830101544.09251, 0, -457516339.869281, 0, -732026.143790850, 0, -732026.143790850, 0,
-        15076923.0769231, 0, 1601384081.85018, 0, -1776923.07692308, 0, -343137254.901961, 0, -3789994.97234791, 0, 0, 228789831.473102, 0, -161538.461538462, 0, 114379084.967320, 0, -344544.997486174, -15076923.0769231, 0, -1830173913.32328, 0, -1292307.69230769, 0, -457516339.869281, 0, -2756359.97988939,
-        0, -343137254.901961, 0, 95587447.9430870, 0, 283843.137254902, 0, 0, 0, 0, -114379084.967320, 0, -22292615.5883359, 0, 0, 0, 0, 0, 0, 457516339.869281, 0, 41085221.8433384, 0, 173673.202614379, 0, 0, 0,
-        -605769230.769231, 0, -1776923.07692308, 0, 378258346.216926, 0, 0, 0, 161538461.538462, -201923076.923077, 0, -161538.461538462, 0, -94040269.3506955, 0, 0, 0, -40384615.3846154, 807692307.692308, 0, 1938461.53846154, 0, 186936738.518384, 0, 0, 0, 80769230.7692308,
-        0, -1006535.94771242, 0, 283843.137254902, 0, 109028549.895961, 0, 107692307.692308, 0, 0, -91503.2679738562, 0, 0, 0, -26732720.8390816, 0, -26923076.9230769, 0, 0, 1098039.21568627, 0, 173673.202614379, 0, 52321622.8284900, 0, 53846153.8461539, 0,
-        -1006535.94771242, 0, -343137254.901961, 0, 0, 0, 95587447.9430870, 0, 283843.137254902, -91503.2679738562, 0, -114379084.967320, 0, 0, 0, -22292615.5883359, 0, 0, 1098039.21568627, 0, 457516339.869281, 0, 0, 0, 41085221.8433384, 0, 173673.202614379,
-        0, -1006535.94771242, 0, 0, 0, 107692307.692308, 0, 109027576.986157, 0, 0, -91503.2679738562, 0, 0, 0, -26923076.9230769, 0, -26732577.0430032, 0, 0, 1098039.21568627, 0, 0, 0, 53846153.8461539, 0, 52321353.9029998, 0,
-        -605769230.769231, 0, -3789994.97234791, 0, 161538461.538462, 0, 283843.137254902, 0, 378259319.126730, -201923076.923077, 0, -344544.997486174, 0, -40384615.3846154, 0, 0, 0, -94040413.1467739, 807692307.692308, 0, 4134539.96983409, 0, 80769230.7692308, 0, 173673.202614379, 0, 186937007.443875,
-        942318246.153846, 0, 0, 0, -201923076.923077, 0, -91503.2679738562, 0, -201923076.923077, 6596179476.92308, 0, -15076923.0769231, 0, 605769230.769231, 0, -1006535.94771242, 0, 605769230.769231, -7538497723.07692, 0, 15076923.0769231, 0, 807692307.692308, 0, -732026.143790850, 0, 807692307.692308,
-        0, 228768723.780794, 0, -114379084.967320, 0, -91503.2679738562, 0, -91503.2679738562, 0, 0, 1601332820.31171, 0, 343137254.901961, 0, -1006535.94771242, 0, -1006535.94771242, 0, 0, -1830101544.09251, 0, 457516339.869281, 0, -732026.143790850, 0, -732026.143790850, 0,
-        0, 0, 228789831.473102, 0, -161538.461538462, 0, -114379084.967320, 0, -344544.997486174, -15076923.0769231, 0, 1601384081.85018, 0, -1776923.07692308, 0, 343137254.901961, 0, -3789994.97234791, 15076923.0769231, 0, -1830173913.32328, 0, -1292307.69230769, 0, 457516339.869281, 0, -2756359.97988939,
-        0, 114379084.967320, 0, -22292615.5883359, 0, 0, 0, 0, 0, 0, 343137254.901961, 0, 95587447.9430870, 0, -283843.137254902, 0, 0, 0, 0, -457516339.869281, 0, 41085221.8433384, 0, -173673.202614379, 0, 0, 0,
-        201923076.923077, 0, -161538.461538462, 0, -94040269.3506955, 0, 0, 0, -40384615.3846154, 605769230.769231, 0, -1776923.07692308, 0, 378258346.216926, 0, 0, 0, 161538461.538462, -807692307.692308, 0, 1938461.53846154, 0, 186936738.518384, 0, 0, 0, 80769230.7692308,
-        0, -91503.2679738562, 0, 0, 0, -26732720.8390816, 0, -26923076.9230769, 0, 0, -1006535.94771242, 0, -283843.137254902, 0, 109028549.895961, 0, 107692307.692308, 0, 0, 1098039.21568627, 0, -173673.202614379, 0, 52321622.8284900, 0, 53846153.8461539, 0,
-        -91503.2679738562, 0, 114379084.967320, 0, 0, 0, -22292615.5883359, 0, 0, -1006535.94771242, 0, 343137254.901961, 0, 0, 0, 95587447.9430870, 0, -283843.137254902, 1098039.21568627, 0, -457516339.869281, 0, 0, 0, 41085221.8433384, 0, -173673.202614379,
-        0, -91503.2679738562, 0, 0, 0, -26923076.9230769, 0, -26732577.0430032, 0, 0, -1006535.94771242, 0, 0, 0, 107692307.692308, 0, 109027576.986157, 0, 0, 1098039.21568627, 0, 0, 0, 53846153.8461539, 0, 52321353.9029998, 0,
-        201923076.923077, 0, -344544.997486174, 0, -40384615.3846154, 0, 0, 0, -94040413.1467739, 605769230.769231, 0, -3789994.97234791, 0, 161538461.538462, 0, -283843.137254902, 0, 378259319.126730, -807692307.692308, 0, 4134539.96983409, 0, 80769230.7692308, 0, -173673.202614379, 0, 186937007.443875,
-        -7538497723.07692, 0, -15076923.0769231, 0, 807692307.692308, 0, 1098039.21568627, 0, 807692307.692308, -7538497723.07692, 0, 15076923.0769231, 0, -807692307.692308, 0, 1098039.21568627, 0, -807692307.692308, 15076995446.1538, 0, 0, 0, 0, 0, 1464052.28758170, 0, 0,
-        0, -1830101544.09251, 0, 457516339.869281, 0, 1098039.21568627, 0, 1098039.21568627, 0, 0, -1830101544.09251, 0, -457516339.869281, 0, 1098039.21568627, 0, 1098039.21568627, 0, 0, 3660203088.18502, 0, 0, 0, 1464052.28758170, 0, 1464052.28758170, 0,
-        -15076923.0769231, 0, -1830173913.32328, 0, 1938461.53846154, 0, 457516339.869281, 0, 4134539.96983409, 15076923.0769231, 0, -1830173913.32328, 0, 1938461.53846154, 0, -457516339.869281, 0, 4134539.96983409, 0, 0, 3660347826.64656, 0, 2584615.38461538, 0, 0, 0, 5512719.95977878,
-        0, -457516339.869281, 0, 41085221.8433384, 0, 173673.202614379, 0, 0, 0, 0, 457516339.869281, 0, 41085221.8433384, 0, -173673.202614379, 0, 0, 0, 0, 0, 0, 375347188.490297, 0, 0, 0, 0, 0,
-        -807692307.692308, 0, -1292307.69230769, 0, 186936738.518384, 0, 0, 0, 80769230.7692308, 807692307.692308, 0, -1292307.69230769, 0, 186936738.518384, 0, 0, 0, 80769230.7692308, 0, 0, 2584615.38461538, 0, 1510743199.88631, 0, 0, 0, 646153846.153846,
-        0, -732026.143790850, 0, 173673.202614379, 0, 52321622.8284900, 0, 53846153.8461539, 0, 0, -732026.143790850, 0, -173673.202614379, 0, 52321622.8284900, 0, 53846153.8461539, 0, 0, 1464052.28758170, 0, 0, 0, 433821049.164538, 0, 430769230.769231, 0,
-        -732026.143790850, 0, -457516339.869281, 0, 0, 0, 41085221.8433384, 0, 173673.202614379, -732026.143790850, 0, 457516339.869281, 0, 0, 0, 41085221.8433384, 0, -173673.202614379, 1464052.28758170, 0, 0, 0, 0, 0, 375347188.490297, 0, 0,
-        0, -732026.143790850, 0, 0, 0, 53846153.8461539, 0, 52321353.9029998, 0, 0, -732026.143790850, 0, 0, 0, 53846153.8461539, 0, 52321353.9029998, 0, 0, 1464052.28758170, 0, 0, 0, 430769230.769231, 0, 433820122.963231, 0,
-        -807692307.692308, 0, -2756359.97988939, 0, 80769230.7692308, 0, 173673.202614379, 0, 186937007.443875, 807692307.692308, 0, -2756359.97988939, 0, 80769230.7692308, 0, -173673.202614379, 0, 186937007.443875, 0, 0, 5512719.95977878, 0, 646153846.153846, 0, 0, 0, 1510744126.08762;
+        std::cout << "Jacobian R Term - No Displacement, No Velocity, With Damping (Max Abs Error - Only Smaller Terms) = "
+            << zeros_max_error_JacR;
+        if (zeros_max_error_JacR / JacobianR_NoDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
 
-    
-    //Ensure that the internal force is recalculated in case the results are expected
-    //by the Jacobian Calculation
-    m_nodeC->SetPos(ChVector<>(m_nodeC->GetPos().x(), m_nodeC->GetPos().y(), 0.001));
-
-    m_element->SetGravityOn(false);
-    m_element->ComputeInternalForces(InternalForceSmallDispNoVelNoGravity);
-
-    ChMatrixDynamic<double> JacobianK_SmallDispNoVelNoDamping;
-    JacobianK_SmallDispNoVelNoDamping.resize(27, 27);
-    m_element->ComputeKRMmatricesGlobal(JacobianK_SmallDispNoVelNoDamping, 1, 0, 0);
-
-    ChMatrixDynamic<double> JacobianR_SmallDispNoVelNoDamping;
-    JacobianR_SmallDispNoVelNoDamping.resize(27, 27);
-    m_element->ComputeKRMmatricesGlobal(JacobianR_SmallDispNoVelNoDamping, 0, 1, 0);
-
-    m_nodeC->SetPos(ChVector<>(m_nodeC->GetPos().x(), m_nodeC->GetPos().y(), 0.0));
-
-
-    for (auto i = 0; i < Expected_JacobianK_SmallDispNoVelNoDamping.rows(); i++) {
-        for (auto j = 0; j < Expected_JacobianK_SmallDispNoVelNoDamping.cols(); j++) {
-            if (std::abs(Expected_JacobianK_SmallDispNoVelNoDamping(i, j)) < 100) {
-                double error = std::abs(JacobianK_SmallDispNoVelNoDamping(i, j) - Expected_JacobianK_SmallDispNoVelNoDamping(i, j));
-                if (error > zeros_max_error)
-                    zeros_max_error = error;
-                percent_error_matrix(i, j) = 0.0;
-            }
-            else {
-                double percent_error = std::abs((JacobianK_SmallDispNoVelNoDamping(i, j) - Expected_JacobianK_SmallDispNoVelNoDamping(i, j)) / Expected_JacobianK_SmallDispNoVelNoDamping(i, j));
-                if (percent_error > max_percent_error)
-                    max_percent_error = percent_error;
-                percent_error_matrix(i, j) = percent_error;
-            }
+        std::cout << "Jacobian R Term - No Displacement, No Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
+            << max_percent_error_JacR * 100 << "%";
+        if (max_percent_error_JacR > 0.01) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
         }
     }
-
-    verbose = true;
-    if (verbose) {
-        std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
-        std::cout << "Jacobian K Term - Small Displacement, No Velocity, No Damping = " << std::endl;
-        std::cout << JacobianK_SmallDispNoVelNoDamping << std::endl;
-        std::cout << "Expected Jacobian K Term - Small Displacement, No Velocity, No Damping = " << std::endl;
-        std::cout << Expected_JacobianK_SmallDispNoVelNoDamping << std::endl;
-        std::cout << "Percent Error Jacobian K Term - Small Displacement, No Velocity, No Damping = " << std::endl;
-        std::cout << percent_error_matrix << std::endl;
+    if (zeros_max_error_JacR / JacobianR_NoDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
+        passed_tests = false;
     }
-    std::cout << "Jacobian K Term - Small Displacement, No Velocity, No Damping (Max Abs Error) = "
-        << (JacobianK_SmallDispNoVelNoDamping - Expected_JacobianK_SmallDispNoVelNoDamping).cwiseAbs().maxCoeff() << std::endl;
-    std::cout << "Jacobian K Term - Small Displacement, No Velocity, No Damping (Max Abs Error - Only Terms < 100) = "
-        << zeros_max_error << std::endl;
-    std::cout << "Jacobian K Term - Small Displacement, No Velocity, No Damping (Max Abs % Error - Only Terms >= 100) = "
-        << max_percent_error * 100 << "%" << std::endl;
-
-    if (verbose) {
-        std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
-        std::cout << "Jacobian R Term - Small Displacement, No Velocity, No Damping = " << std::endl;
-        std::cout << JacobianR_SmallDispNoVelNoDamping << std::endl;
+    if (max_percent_error_JacR > 0.01) {
+        passed_tests = false;
     }
-    std::cout << "Jacobian R Term - Small Displacement, No Velocity, No Damping (Max Abs Error) = "
-        << JacobianR_SmallDispNoVelNoDamping.cwiseAbs().maxCoeff() << std::endl;
 
+    return(passed_tests);
+}
 
+template <typename ElementVersion, typename MaterialVersion>
+bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelWithDampingCheck(int msglvl) {
     // =============================================================================
     //  Check the Jacobian at Small Displacement No Velocity - With Damping
     //  (some small error expected depending on the formulation/steps used)
@@ -750,9 +1086,16 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::RunElementChecks(bool verbos
         -8076923.07692308, 0, -20243.3383609854, 0, 807692.307692308, 0, 1736.73202614379, 0, 1869367.52920798, 8076923.07692308, 0, -20243.3383609854, 0, 807692.307692308, 0, -1736.73202614379, 0, 1869367.52920798, 0, 0, 40486.6767219708, 0, 6461538.46153846, 0, 0, 0, 15107433.4282608;
 
 
+    //Ensure that the internal force is recalculated in case the results are expected
+    //by the Jacobian Calculation
+
+    //Setup the test conditions
+    ChVector<double> OriginalPos = m_nodeC->GetPos();
     m_nodeC->SetPos(ChVector<>(m_nodeC->GetPos().x(), m_nodeC->GetPos().y(), 0.001));
     m_element->SetAlphaDamp(0.01);
 
+    ChVectorDynamic<double> InternalForceSmallDispNoVelNoGravity;
+    InternalForceSmallDispNoVelNoGravity.resize(27);
     m_element->SetGravityOn(false);
     m_element->ComputeInternalForces(InternalForceSmallDispNoVelNoGravity);
 
@@ -764,33 +1107,142 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::RunElementChecks(bool verbos
     JacobianR_SmallDispNoVelWithDamping.resize(27, 27);
     m_element->ComputeKRMmatricesGlobal(JacobianR_SmallDispNoVelWithDamping, 0, 1, 0);
 
+    //Reset the element conditions back to its original values
+    m_nodeC->SetPos(OriginalPos);
     m_element->SetAlphaDamp(0.0);
-    m_nodeC->SetPos(ChVector<>(m_nodeC->GetPos().x(), m_nodeC->GetPos().y(), 0.0));
 
 
-    if (verbose) {
+    bool passed_tests = true;
+
+    double small_terms_JacK = 1e-4*Expected_JacobianK_SmallDispNoVelWithDamping.cwiseAbs().maxCoeff();
+    double zeros_max_error_JacK = 0;
+    double max_percent_error_JacK = 0;
+    ChMatrixDynamic<double> percent_error_matrix_JacK;
+    percent_error_matrix_JacK.resize(27, 27);
+
+    double small_terms_JacR = 1e-4*Expected_JacobianR_SmallDispNoVelWithDamping.cwiseAbs().maxCoeff();
+    double zeros_max_error_JacR = 0;
+    double max_percent_error_JacR = 0;
+    ChMatrixDynamic<double> percent_error_matrix_JacR;
+    percent_error_matrix_JacR.resize(27, 27);
+
+
+    for (auto i = 0; i < Expected_JacobianK_SmallDispNoVelWithDamping.rows(); i++) {
+        for (auto j = 0; j < Expected_JacobianK_SmallDispNoVelWithDamping.cols(); j++) {
+            if (std::abs(Expected_JacobianK_SmallDispNoVelWithDamping(i, j)) < small_terms_JacK) {
+                double error = std::abs(JacobianK_SmallDispNoVelWithDamping(i, j) - Expected_JacobianK_SmallDispNoVelWithDamping(i, j));
+                if (error > zeros_max_error_JacK)
+                    zeros_max_error_JacK = error;
+                percent_error_matrix_JacK(i, j) = 0.0;
+            }
+            else {
+                double percent_error = std::abs((JacobianK_SmallDispNoVelWithDamping(i, j) - Expected_JacobianK_SmallDispNoVelWithDamping(i, j)) / Expected_JacobianK_SmallDispNoVelWithDamping(i, j));
+                if (percent_error > max_percent_error_JacK)
+                    max_percent_error_JacK = percent_error;
+                percent_error_matrix_JacK(i, j) = percent_error;
+            }
+
+            if (std::abs(Expected_JacobianR_SmallDispNoVelWithDamping(i, j)) < small_terms_JacR) {
+                double error = std::abs(JacobianR_SmallDispNoVelWithDamping(i, j) - Expected_JacobianR_SmallDispNoVelWithDamping(i, j));
+                if (error > zeros_max_error_JacR)
+                    zeros_max_error_JacR = error;
+                percent_error_matrix_JacR(i, j) = 0.0;
+            }
+            else {
+                double percent_error = std::abs((JacobianR_SmallDispNoVelWithDamping(i, j) - Expected_JacobianR_SmallDispNoVelWithDamping(i, j)) / Expected_JacobianR_SmallDispNoVelWithDamping(i, j));
+                if (percent_error > max_percent_error_JacR)
+                    max_percent_error_JacR = percent_error;
+                percent_error_matrix_JacR(i, j) = percent_error;
+            }
+        }
+    }
+
+
+    if (msglvl >= 2) {
         std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
         std::cout << "Jacobian K Term - Small Displacement, No Velocity, With Damping = " << std::endl;
         std::cout << JacobianK_SmallDispNoVelWithDamping << std::endl;
         std::cout << "Expected Jacobian K Term - Small Displacement, No Velocity, With Damping = " << std::endl;
         std::cout << Expected_JacobianK_SmallDispNoVelWithDamping << std::endl;
+        std::cout << "Percent Error Jacobian K Term - Small Displacement, No Velocity, With Damping = " << std::endl;
+        std::cout << percent_error_matrix_JacK << std::endl;
     }
-    std::cout << "Jacobian K Term - Small Displacement, No Velocity, With Damping (Max Abs Error) = "
-        << (JacobianK_SmallDispNoVelWithDamping - Expected_JacobianK_SmallDispNoVelWithDamping).cwiseAbs().maxCoeff() << std::endl;
-    if (verbose) {
+    if (msglvl >= 1) {
+        std::cout << "Jacobian K Term - Small Displacement, No Velocity, With Damping (Max Abs Error) = "
+            << (JacobianK_SmallDispNoVelWithDamping - Expected_JacobianK_SmallDispNoVelWithDamping).cwiseAbs().maxCoeff() << std::endl;
+
+        std::cout << "Jacobian K Term - Small Displacement, No Velocity, With Damping (Max Abs Error - Only Smaller Terms) = "
+            << zeros_max_error_JacK;
+        if (zeros_max_error_JacK / JacobianK_SmallDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
+
+        std::cout << "Jacobian K Term - Small Displacement, No Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
+            << max_percent_error_JacK * 100 << "%";
+        if (max_percent_error_JacK > 0.01) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
+    }
+    if (zeros_max_error_JacK / JacobianK_SmallDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
+        passed_tests = false;
+    }
+    if (max_percent_error_JacK > 0.01) {
+        passed_tests = false;
+    }
+
+    if (msglvl >= 2) {
         std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
-        std::cout << "Jacobian R Term - Small Displacement, No Velocity, No Damping = " << std::endl;
+        std::cout << "Jacobian R Term - Small Displacement, No Velocity, With Damping = " << std::endl;
         std::cout << JacobianR_SmallDispNoVelWithDamping << std::endl;
         std::cout << "Expected Jacobian R Term - Small Displacement, No Velocity, With Damping = " << std::endl;
         std::cout << Expected_JacobianR_SmallDispNoVelWithDamping << std::endl;
+        std::cout << "Percent Error Jacobian R Term - Small Displacement, No Velocity, With Damping = " << std::endl;
+        std::cout << percent_error_matrix_JacR << std::endl;
     }
-    std::cout << "Jacobian R Term - Small Displacement, No Velocity, With Damping (Max Abs Error) = "
-        << (JacobianR_SmallDispNoVelWithDamping - Expected_JacobianR_SmallDispNoVelWithDamping).cwiseAbs().maxCoeff() << std::endl;
+    if (msglvl >= 1) {
+        std::cout << "Jacobian R Term - Small Displacement, No Velocity, With Damping (Max Abs Error) = "
+            << (JacobianR_SmallDispNoVelWithDamping - Expected_JacobianR_SmallDispNoVelWithDamping).cwiseAbs().maxCoeff() << std::endl;
 
+        std::cout << "Jacobian R Term - Small Displacement, No Velocity, With Damping (Max Abs Error - Only Smaller Terms) = "
+            << zeros_max_error_JacR;
+        if (zeros_max_error_JacR / JacobianR_SmallDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
+
+        std::cout << "Jacobian R Term - Small Displacement, No Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
+            << max_percent_error_JacR * 100 << "%";
+        if (max_percent_error_JacR > 0.01) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
+    }
+    if (zeros_max_error_JacR / JacobianR_SmallDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
+        passed_tests = false;
+    }
+    if (max_percent_error_JacR > 0.01) {
+        passed_tests = false;
+    }
+
+    return(passed_tests);
+}
+
+template <typename ElementVersion, typename MaterialVersion>
+bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianNoDispSmallVelWithDampingCheck(int msglvl) {
     // =============================================================================
-    //  Check the Jacobian at No Displacement Small Velocity - With Damping
-    //  (some small error expected depending on the formulation/steps used)
-    // =============================================================================
+        //  Check the Jacobian at No Displacement Small Velocity - With Damping
+        //  (some small error expected depending on the formulation/steps used)
+        // =============================================================================
 
     ChMatrixNM<double, 27, 27> Expected_JacobianK_NoDispSmallVelWithDamping;
     Expected_JacobianK_NoDispSmallVelWithDamping <<
@@ -853,11 +1305,18 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::RunElementChecks(bool verbos
         -8076923.07692308, 0, 0, 0, 807692.307692308, 0, 0, 0, 1869364.83995308, 8076923.07692308, 0, 0, 0, 807692.307692308, 0, 0, 0, 1869364.83995308, 0, 0, 0, 0, 6461538.46153846, 0, 0, 0, 15107424.1662477;
 
 
+    //Ensure that the internal force is recalculated in case the results are expected
+    //by the Jacobian Calculation
+
+    //Setup the test conditions
+    ChVector<double> OriginalVel = m_nodeC->GetPos_dt();
     m_nodeC->SetPos_dt(ChVector<>(0.0, 0.0, 0.001));
     m_element->SetAlphaDamp(0.01);
 
+    ChVectorDynamic<double> InternalForceNoDispSmallVelNoGravity;
+    InternalForceNoDispSmallVelNoGravity.resize(27);
     m_element->SetGravityOn(false);
-    m_element->ComputeInternalForces(InternalForceSmallDispSmallVelNoGravity);
+    m_element->ComputeInternalForces(InternalForceNoDispSmallVelNoGravity);
 
     ChMatrixDynamic<double> JacobianK_NoDispSmallVelWithDamping;
     JacobianK_NoDispSmallVelWithDamping.resize(27, 27);
@@ -867,75 +1326,320 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::RunElementChecks(bool verbos
     JacobianR_NoDispSmallVelWithDamping.resize(27, 27);
     m_element->ComputeKRMmatricesGlobal(JacobianR_NoDispSmallVelWithDamping, 0, 1, 0);
 
+    //Reset the element conditions back to its original values
+    m_nodeC->SetPos_dt(OriginalVel);
     m_element->SetAlphaDamp(0.0);
-    m_nodeC->SetPos_dt(ChVector<>(0.0, 0.0, 0.0));
 
-    if (verbose) {
+
+    bool passed_tests = true;
+
+    double small_terms_JacK = 1e-4*Expected_JacobianK_NoDispSmallVelWithDamping.cwiseAbs().maxCoeff();
+    double zeros_max_error_JacK = 0;
+    double max_percent_error_JacK = 0;
+    ChMatrixDynamic<double> percent_error_matrix_JacK;
+    percent_error_matrix_JacK.resize(27, 27);
+
+    double small_terms_JacR = 1e-4*Expected_JacobianR_NoDispSmallVelWithDamping.cwiseAbs().maxCoeff();
+    double zeros_max_error_JacR = 0;
+    double max_percent_error_JacR = 0;
+    ChMatrixDynamic<double> percent_error_matrix_JacR;
+    percent_error_matrix_JacR.resize(27, 27);
+
+
+    for (auto i = 0; i < Expected_JacobianK_NoDispSmallVelWithDamping.rows(); i++) {
+        for (auto j = 0; j < Expected_JacobianK_NoDispSmallVelWithDamping.cols(); j++) {
+            if (std::abs(Expected_JacobianK_NoDispSmallVelWithDamping(i, j)) < small_terms_JacK) {
+                double error = std::abs(JacobianK_NoDispSmallVelWithDamping(i, j) - Expected_JacobianK_NoDispSmallVelWithDamping(i, j));
+                if (error > zeros_max_error_JacK)
+                    zeros_max_error_JacK = error;
+                percent_error_matrix_JacK(i, j) = 0.0;
+            }
+            else {
+                double percent_error = std::abs((JacobianK_NoDispSmallVelWithDamping(i, j) - Expected_JacobianK_NoDispSmallVelWithDamping(i, j)) / Expected_JacobianK_NoDispSmallVelWithDamping(i, j));
+                if (percent_error > max_percent_error_JacK)
+                    max_percent_error_JacK = percent_error;
+                percent_error_matrix_JacK(i, j) = percent_error;
+            }
+
+            if (std::abs(Expected_JacobianR_NoDispSmallVelWithDamping(i, j)) < small_terms_JacR) {
+                double error = std::abs(JacobianR_NoDispSmallVelWithDamping(i, j) - Expected_JacobianR_NoDispSmallVelWithDamping(i, j));
+                if (error > zeros_max_error_JacR)
+                    zeros_max_error_JacR = error;
+                percent_error_matrix_JacR(i, j) = 0.0;
+            }
+            else {
+                double percent_error = std::abs((JacobianR_NoDispSmallVelWithDamping(i, j) - Expected_JacobianR_NoDispSmallVelWithDamping(i, j)) / Expected_JacobianR_NoDispSmallVelWithDamping(i, j));
+                if (percent_error > max_percent_error_JacR)
+                    max_percent_error_JacR = percent_error;
+                percent_error_matrix_JacR(i, j) = percent_error;
+            }
+        }
+    }
+
+
+    if (msglvl >= 2) {
         std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
         std::cout << "Jacobian K Term - No Displacement, Small Velocity, With Damping = " << std::endl;
         std::cout << JacobianK_NoDispSmallVelWithDamping << std::endl;
         std::cout << "Expected Jacobian K Term - No Displacement, Small Velocity, With Damping = " << std::endl;
         std::cout << Expected_JacobianK_NoDispSmallVelWithDamping << std::endl;
+        std::cout << "Percent Error Jacobian K Term - No Displacement, Small Velocity, With Damping = " << std::endl;
+        std::cout << percent_error_matrix_JacK << std::endl;
     }
-    std::cout << "Jacobian K Term - No Displacement, Small Velocity, With Damping (Max Abs Error) = "
-        << (JacobianK_NoDispSmallVelWithDamping - Expected_JacobianK_NoDispSmallVelWithDamping).cwiseAbs().maxCoeff() << std::endl;
-    if (verbose) {
+    if (msglvl >= 1) {
+        std::cout << "Jacobian K Term - No Displacement, Small Velocity, With Damping (Max Abs Error) = "
+            << (JacobianK_NoDispSmallVelWithDamping - Expected_JacobianK_NoDispSmallVelWithDamping).cwiseAbs().maxCoeff() << std::endl;
+
+        std::cout << "Jacobian K Term - No Displacement, Small Velocity, With Damping (Max Abs Error - Only Smaller Terms) = "
+            << zeros_max_error_JacK;
+        if (zeros_max_error_JacK / JacobianK_NoDispSmallVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
+
+        std::cout << "Jacobian K Term - No Displacement, Small Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
+            << max_percent_error_JacK * 100 << "%";
+        if (max_percent_error_JacK > 0.01) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
+    }
+    if (zeros_max_error_JacK / JacobianK_NoDispSmallVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
+        passed_tests = false;
+    }
+    if (max_percent_error_JacK > 0.01) {
+        passed_tests = false;
+    }
+
+    if (msglvl >= 2) {
         std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
         std::cout << "Jacobian R Term - No Displacement, Small Velocity, With Damping = " << std::endl;
         std::cout << JacobianR_NoDispSmallVelWithDamping << std::endl;
         std::cout << "Expected Jacobian R Term - No Displacement, Small Velocity, With Damping = " << std::endl;
         std::cout << Expected_JacobianR_NoDispSmallVelWithDamping << std::endl;
+        std::cout << "Percent Error Jacobian R Term - No Displacement, Small Velocity, With Damping = " << std::endl;
+        std::cout << percent_error_matrix_JacR << std::endl;
     }
-    std::cout << "Jacobian R Term - No Displacement, Small Velocity, With Damping (Max Abs Error) = "
-        << (JacobianR_NoDispSmallVelWithDamping - Expected_JacobianR_NoDispSmallVelWithDamping).cwiseAbs().maxCoeff() << std::endl;
+    if (msglvl >= 1) {
+        std::cout << "Jacobian R Term - No Displacement, Small Velocity, With Damping (Max Abs Error) = "
+            << (JacobianR_NoDispSmallVelWithDamping - Expected_JacobianR_NoDispSmallVelWithDamping).cwiseAbs().maxCoeff() << std::endl;
 
+        std::cout << "Jacobian R Term - No Displacement, Small Velocity, With Damping (Max Abs Error - Only Smaller Terms) = "
+            << zeros_max_error_JacR;
+        if (zeros_max_error_JacR / JacobianR_NoDispSmallVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
 
-    return 1;
+        std::cout << "Jacobian R Term - No Displacement, Small Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
+            << max_percent_error_JacR * 100 << "%";
+        if (max_percent_error_JacR > 0.01) {
+            print_red(" - Test FAILED\n");
+        }
+        else {
+            std::cout << " - Test PASSED" << std::endl;
+        }
+    }
+    if (zeros_max_error_JacR / JacobianR_NoDispSmallVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
+        passed_tests = false;
+    }
+    if (max_percent_error_JacR > 0.01) {
+        passed_tests = false;
+    }
+
+    return(passed_tests);
 }
+
 
 int main(int argc, char* argv[]) {
 
     //std::cout << "-------------------------------------" << std::endl;
     //ANCFBeamTest<ChElementBeamANCF, ChMaterialBeamANCF> ChElementBeamANCF_test;
-    //if (ChElementBeamANCF_test.RunElementChecks(true))
-    //    std::cout << "ChElementBeamANCF Element Checks = PASSED" << std::endl;
+    //if (ChElementBeamANCF_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF Element Checks = PASSED\n");
     //else
-    //    std::cout << "ChElementBeamANCF Element Checks = FAILED" << std::endl;
+    //    print_red("ChElementBeamANCF Element Checks = FAILED\n");
 
-    std::cout << "-------------------------------------" << std::endl;
-    ANCFBeamTest<ChElementBeamANCF_MT01, ChMaterialBeamANCF_MT01> ChElementBeamANCF_MT01_test;
-    if (ChElementBeamANCF_MT01_test.RunElementChecks(false))
-        std::cout << "ChElementBeamANCF_MT01 Element Checks = PASSED" << std::endl;
-    else
-        std::cout << "ChElementBeamANCF_MT01 Element Checks = FAILED" << std::endl;
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT01, ChMaterialBeamANCF_MT01> ChElementBeamANCF_MT01_test;
+    //if (ChElementBeamANCF_MT01_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT01 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT01Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT02, ChMaterialBeamANCF_MT02> ChElementBeamANCF_MT02_test;
+    //if (ChElementBeamANCF_MT02_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT02 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT02 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT03, ChMaterialBeamANCF_MT03> ChElementBeamANCF_MT03_test;
+    //if (ChElementBeamANCF_MT03_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT03 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT03 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT04, ChMaterialBeamANCF_MT04> ChElementBeamANCF_MT04_test;
+    //if (ChElementBeamANCF_MT04_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT04 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT04 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT05, ChMaterialBeamANCF_MT05> ChElementBeamANCF_MT05_test;
+    //if (ChElementBeamANCF_MT05_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT05 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT05 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT06, ChMaterialBeamANCF_MT06> ChElementBeamANCF_MT06_test;
+    //if (ChElementBeamANCF_MT06_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT06 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT06 Element Checks = FAILED\n");
 
     //std::cout << "-------------------------------------" << std::endl;
     //ANCFBeamTest<ChElementBeamANCF_MT07, ChMaterialBeamANCF_MT07> ChElementBeamANCF_MT07_test;
-    //if (ChElementBeamANCF_MT07_test.RunElementChecks(false))
-    //    std::cout << "ChElementBeamANCF_MT07 Element Checks = PASSED" << std::endl;
+    //if (ChElementBeamANCF_MT07_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT07 Element Checks = PASSED\n");
     //else
-    //    std::cout << "ChElementBeamANCF_MT07 Element Checks = FAILED" << std::endl;
+    //    print_red("ChElementBeamANCF_MT07 Element Checks = FAILED\n");
 
     //std::cout << "-------------------------------------" << std::endl;
-    //ANCFBeamTest<ChElementBeamANCF_MT26, ChMaterialBeamANCF_MT26> ChElementBeamANCF_MT26_test;
-    //if (ChElementBeamANCF_MT26_test.RunElementChecks(true))
-    //    std::cout << "ChElementBeamANCF_MT26 Element Checks = PASSED" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT08, ChMaterialBeamANCF_MT08> ChElementBeamANCF_MT08_test;
+    //if (ChElementBeamANCF_MT08_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT08 Element Checks = PASSED\n");
     //else
-    //    std::cout << "ChElementBeamANCF_MT26 Element Checks = FAILED" << std::endl;
+    //    print_red("ChElementBeamANCF_MT08 Element Checks = FAILED\n");
 
     //std::cout << "-------------------------------------" << std::endl;
-    //ANCFBeamTest<ChElementBeamANCF_MT30, ChMaterialBeamANCF_MT30> ChElementBeamANCF_MT30_test;
-    //if (ChElementBeamANCF_MT30_test.RunElementChecks(false))
-    //    std::cout << "ChElementBeamANCF_MT30 Element Checks = PASSED" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT09, ChMaterialBeamANCF_MT09> ChElementBeamANCF_MT09_test;
+    //if (ChElementBeamANCF_MT09_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT09 Element Checks = PASSED\n");
     //else
-    //    std::cout << "ChElementBeamANCF_MT30 Element Checks = FAILED" << std::endl;
+    //    print_red("ChElementBeamANCF_MT09 Element Checks = FAILED\n");
 
     //std::cout << "-------------------------------------" << std::endl;
-    //ANCFBeamTest<ChElementBeamANCF_MT31, ChMaterialBeamANCF_MT31> ChElementBeamANCF_MT31_test;
-    //if (ChElementBeamANCF_MT31_test.RunElementChecks(true))
-    //    std::cout << "ChElementBeamANCF_MT31 Element Checks = PASSED" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT10, ChMaterialBeamANCF_MT10> ChElementBeamANCF_MT10_test;
+    //if (ChElementBeamANCF_MT10_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT10 Element Checks = PASSED\n");
     //else
-    //    std::cout << "ChElementBeamANCF_MT31 Element Checks = FAILED" << std::endl;
+    //    print_red("ChElementBeamANCF_MT10 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT11, ChMaterialBeamANCF_MT11> ChElementBeamANCF_MT11_test;
+    //if (ChElementBeamANCF_MT11_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT11 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT11 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT12, ChMaterialBeamANCF_MT12> ChElementBeamANCF_MT12_test;
+    //if (ChElementBeamANCF_MT12_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT12 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT12 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT13, ChMaterialBeamANCF_MT13> ChElementBeamANCF_MT13_test;
+    //if (ChElementBeamANCF_MT13_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT13 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT13 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT14, ChMaterialBeamANCF_MT14> ChElementBeamANCF_MT14_test;
+    //if (ChElementBeamANCF_MT14_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT14 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT14 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT15, ChMaterialBeamANCF_MT15> ChElementBeamANCF_MT15_test;
+    //if (ChElementBeamANCF_MT15_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT15 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT15 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT16, ChMaterialBeamANCF_MT16> ChElementBeamANCF_MT16_test;
+    //if (ChElementBeamANCF_MT16_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT16 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT16 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT17, ChMaterialBeamANCF_MT17> ChElementBeamANCF_MT17_test;
+    //if (ChElementBeamANCF_MT17_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT17 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT17 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT18, ChMaterialBeamANCF_MT18> ChElementBeamANCF_MT18_test;
+    //if (ChElementBeamANCF_MT18_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT18 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT18 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT19, ChMaterialBeamANCF_MT19> ChElementBeamANCF_MT19_test;
+    //if (ChElementBeamANCF_MT19_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT19 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT19 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT20, ChMaterialBeamANCF_MT20> ChElementBeamANCF_MT20_test;
+    //if (ChElementBeamANCF_MT20_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT20 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT20 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT21, ChMaterialBeamANCF_MT21> ChElementBeamANCF_MT21_test;
+    //if (ChElementBeamANCF_MT21_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT21 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT21 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT22, ChMaterialBeamANCF_MT22> ChElementBeamANCF_MT22_test;
+    //if (ChElementBeamANCF_MT22_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT22 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT22 Element Checks = FAILED\n");
+
+    //std::cout << "-------------------------------------" << std::endl;
+    //ANCFBeamTest<ChElementBeamANCF_MT23, ChMaterialBeamANCF_MT23> ChElementBeamANCF_MT23_test;
+    //if (ChElementBeamANCF_MT23_test.RunElementChecks(0))
+    //    print_green("ChElementBeamANCF_MT23 Element Checks = PASSED\n");
+    //else
+    //    print_red("ChElementBeamANCF_MT23 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_MT24, ChMaterialBeamANCF_MT24> ChElementBeamANCF_MT24_test;
+    if (ChElementBeamANCF_MT24_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_MT24 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_MT24 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_MT25, ChMaterialBeamANCF_MT25> ChElementBeamANCF_MT25_test;
+    if (ChElementBeamANCF_MT25_test.RunElementChecks(2))
+        print_green("ChElementBeamANCF_MT25 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_MT25 Element Checks = FAILED\n");
 
     return 0;
 }

@@ -295,7 +295,7 @@ void ChElementBeamANCF_MT21::PrecomputeInternalForceMatricesWeights() {
                 double xi = GQTable->Lroots[GQ_idx_xi][it_xi];
                 double eta = GQTable->Lroots[GQ_idx_eta_zeta][it_eta];
                 double zeta = GQTable->Lroots[GQ_idx_eta_zeta][it_zeta];
-                unsigned int index = it_zeta + it_eta*GQTable->Lroots[GQ_idx_eta_zeta].size() + it_xi*GQTable->Lroots[GQ_idx_eta_zeta].size()*GQTable->Lroots[GQ_idx_eta_zeta].size();
+                auto index = it_zeta + it_eta*GQTable->Lroots[GQ_idx_eta_zeta].size() + it_xi*GQTable->Lroots[GQ_idx_eta_zeta].size()*GQTable->Lroots[GQ_idx_eta_zeta].size();
                 ChMatrix33<double> J_0xi;               //Element Jacobian between the reference configuration and normalized configuration
                 ChMatrixNMc<double, 9, 3> Sxi_D;         //Matrix of normalized shape function derivatives
 
@@ -341,6 +341,8 @@ void ChElementBeamANCF_MT21::SetAlphaDamp(double a) {
     m_Alpha = a;
     if (std::abs(m_Alpha) > 1e-10)
         m_damping_enabled = true;
+    else
+        m_damping_enabled = false;
 }
 
 void ChElementBeamANCF_MT21::ComputeInternalForces(ChVectorDynamic<>& Fi) {
@@ -587,13 +589,18 @@ void ChElementBeamANCF_MT21::ComputeInternalJacobianSingleGQPnt(ChMatrixNM<doubl
     ChMatrixNM<double, 3, 3> S;                   //2nd Piola-Kirchoff stress tensor (symmetric tensor)
     ChMatrixNM<double, 3, 3> I_3x3;               //3x3 identity matrix
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 6, 27> partial_epsilon_partial_e;//partial derivate of the Green-Lagrange strain tensor in Voigt notation with respect to the nodal coordinates
+    partial_epsilon_partial_e.resize(6, 27);
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 6, 27> Scaled_Combined_partial_epsilon_partial_e;
+    Scaled_Combined_partial_epsilon_partial_e.resize(6, 27);
     Eigen::Map<ChVectorN<double, 27>> Sxi_D_0xiReshaped(Sxi_D_0xi.data(), Sxi_D_0xi.size());
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 27, 3> partial_e_tempA;//temporary matrix for calculating the partial derivatives of the strains with respect to the nodal coordinates
+    partial_e_tempA.resize(27, 3);
     Eigen::Map<ChRowVectorN<double, 81>> partial_e_tempReshapedA(partial_e_tempA.data(), 81);
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 27, 3> partial_e_tempB;//temporary matrix for calculating the partial derivatives of the strains with respect to the nodal coordinates
+    partial_e_tempB.resize(27, 3);
     Eigen::Map<ChRowVectorN<double, 81>> partial_e_tempReshapedB(partial_e_tempB.data(), 81);
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 27, 3> partial_e_tempC;//temporary matrix for calculating the partial derivatives of the strains with respect to the nodal coordinates
+    partial_e_tempC.resize(27, 3);
     Eigen::Map<ChRowVectorN<double, 81>> partial_e_tempReshapedC(partial_e_tempC.data(), 81);
 
     //ChMatrixNMc<double, 9, 3> Sxi_D_0xi = m_SD_precompute_D0.block(9 * index, 0, 9, 3);  //Faster to use this than to reference m_SD_precompute_D0 directly in the calculations 
@@ -666,12 +673,12 @@ void ChElementBeamANCF_MT21::ComputeInternalJacobianSingleGQPnt(ChMatrixNM<doubl
         partial_e_tempB = Sxi_D_0xiReshaped*Scaled_Combined_Fcol1transpose;
         partial_e_tempC = Sxi_D_0xiReshaped*Scaled_Combined_Fcol2transpose;
 
-        Scaled_Combined_partial_epsilon_partial_e.row(0) = partial_e_tempReshapedA.block(0, 0, 1, 27);
-        Scaled_Combined_partial_epsilon_partial_e.row(1) = partial_e_tempReshapedB.block(0, 27, 1, 27);
-        Scaled_Combined_partial_epsilon_partial_e.row(2) = partial_e_tempReshapedC.block(0, 54, 1, 27);
-        Scaled_Combined_partial_epsilon_partial_e.row(3).noalias() = partial_e_tempReshapedB.block(0, 54, 1, 27) + partial_e_tempReshapedC.block(0, 27, 1, 27);
-        Scaled_Combined_partial_epsilon_partial_e.row(4).noalias() = partial_e_tempReshapedA.block(0, 54, 1, 27) + partial_e_tempReshapedC.block(0, 0, 1, 27);
-        Scaled_Combined_partial_epsilon_partial_e.row(5).noalias() = partial_e_tempReshapedA.block(0, 27, 1, 27) + partial_e_tempReshapedB.block(0, 0, 1, 27);
+        Scaled_Combined_partial_epsilon_partial_e.row(0) = D0(0)*partial_e_tempReshapedA.block(0, 0, 1, 27);
+        Scaled_Combined_partial_epsilon_partial_e.row(1) = D0(1)*partial_e_tempReshapedB.block(0, 27, 1, 27);
+        Scaled_Combined_partial_epsilon_partial_e.row(2) = D0(2)*partial_e_tempReshapedC.block(0, 54, 1, 27);
+        Scaled_Combined_partial_epsilon_partial_e.row(3).noalias() = D0(3)*(partial_e_tempReshapedB.block(0, 54, 1, 27) + partial_e_tempReshapedC.block(0, 27, 1, 27));
+        Scaled_Combined_partial_epsilon_partial_e.row(4).noalias() = D0(4)*(partial_e_tempReshapedA.block(0, 54, 1, 27) + partial_e_tempReshapedC.block(0, 0, 1, 27));
+        Scaled_Combined_partial_epsilon_partial_e.row(5).noalias() = D0(5)*(partial_e_tempReshapedA.block(0, 27, 1, 27) + partial_e_tempReshapedB.block(0, 0, 1, 27));
 
         //Calculate and accumulate the dense component of the Jacobian.
         Jac_Dense += partial_epsilon_partial_e.transpose()*Scaled_Combined_partial_epsilon_partial_e;

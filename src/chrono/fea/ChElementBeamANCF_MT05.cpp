@@ -205,6 +205,8 @@ void ChElementBeamANCF_MT05::SetAlphaDamp(double a) {
     m_Alpha = a;
     if (std::abs(m_Alpha) > 1e-10)
         m_damping_enabled = true;
+    else
+        m_damping_enabled = false;
 }
 
 void ChElementBeamANCF_MT05::ComputeInternalForces(ChVectorDynamic<>& Fi) {
