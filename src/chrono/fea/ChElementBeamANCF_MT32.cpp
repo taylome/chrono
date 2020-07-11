@@ -69,6 +69,13 @@ namespace fea {
 
 ChElementBeamANCF_MT32::ChElementBeamANCF_MT32() : m_gravity_on(false), m_thicknessY(0), m_thicknessZ(0), m_lenX(0), m_Alpha(0), m_damping_enabled(false){
     m_nodes.resize(3);
+
+    m_O1.resize(81, 81);
+    m_O2.resize(81, 81);
+    m_K3Compact.resize(9, 9);
+    m_K13Compact.resize(9, 9);
+
+    m_K13Compact.setZero();
 }
 
 // ------------------------------------------------------------------------------
@@ -248,9 +255,9 @@ void ChElementBeamANCF_MT32::ComputeKRMmatricesGlobal(ChMatrixRef H, double Kfac
     }
     for (unsigned int i = 0; i < 9; i++) {
         for (unsigned int j = 0; j < 9; j++) {
-            H(3 * i, 3 * j) += m_K13Compact(i, j) + Mfactor * m_MassMatrix(i, j);
-            H(3 * i + 1, 3 * j + 1) += m_K13Compact(i, j) + Mfactor * m_MassMatrix(i, j);
-            H(3 * i + 2, 3 * j + 2) += m_K13Compact(i, j) + Mfactor * m_MassMatrix(i, j);
+            H(3 * i, 3 * j) += -Kfactor * m_K13Compact(i, j) + Mfactor * m_MassMatrix(i, j);
+            H(3 * i + 1, 3 * j + 1) += -Kfactor * m_K13Compact(i, j) + Mfactor * m_MassMatrix(i, j);
+            H(3 * i + 2, 3 * j + 2) += -Kfactor * m_K13Compact(i, j) + Mfactor * m_MassMatrix(i, j);
         }
     }
 
@@ -404,7 +411,7 @@ void ChElementBeamANCF_MT32::PrecomputeInternalForceMatricesWeights() {
                 double xi = GQTable->Lroots[GQ_idx_xi][it_xi];
                 double eta = GQTable->Lroots[GQ_idx_eta_zeta][it_eta];
                 double zeta = GQTable->Lroots[GQ_idx_eta_zeta][it_zeta];
-                unsigned int index = it_zeta + it_eta*GQTable->Lroots[GQ_idx_eta_zeta].size() + it_xi*GQTable->Lroots[GQ_idx_eta_zeta].size()*GQTable->Lroots[GQ_idx_eta_zeta].size();
+                auto index = it_zeta + it_eta*GQTable->Lroots[GQ_idx_eta_zeta].size() + it_xi*GQTable->Lroots[GQ_idx_eta_zeta].size()*GQTable->Lroots[GQ_idx_eta_zeta].size();
                 ChMatrix33<double> J_0xi;               //Element Jacobian between the reference configuration and normalized configuration
                 ChMatrixNMc<double, 9, 3> Sxi_D;         //Matrix of normalized shape function derivatives
 
@@ -674,6 +681,8 @@ void ChElementBeamANCF_MT32::SetAlphaDamp(double a) {
     m_Alpha = a;
     if (std::abs(m_Alpha) > 1e-10)
         m_damping_enabled = true;
+    else
+        m_damping_enabled = false;
 }
 
 void ChElementBeamANCF_MT32::ComputeInternalForces(ChVectorDynamic<>& Fi) {
