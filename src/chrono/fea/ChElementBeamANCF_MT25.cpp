@@ -421,9 +421,9 @@ void ChElementBeamANCF_MT25::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
         SPK2(0) = m_GQWeight_det_J_0xi(index)*D0(0)*(0.5*FCol0.dot(FCol0) - 0.5 + m_Alpha*FCol0.dot(FdotCol0)); //Smat(0, 0)
         SPK2(1) = m_GQWeight_det_J_0xi(index)*D0(1)*(0.5*FCol1.dot(FCol1) - 0.5 + m_Alpha*FCol1.dot(FdotCol1)); //Smat(1, 1)
         SPK2(2) = m_GQWeight_det_J_0xi(index)*D0(2)*(0.5*FCol2.dot(FCol2) - 0.5 + m_Alpha*FCol2.dot(FdotCol2)); //Smat(2, 2)
-        SPK2(3) = m_GQWeight_det_J_0xi(index)*D0(3)*(FCol1.dot(FCol2) + 0.5*m_Alpha*(FCol1.dot(FdotCol2)+ FCol2.dot(FdotCol1))); //Smat(1, 2) = Smat(2, 1)
-        SPK2(4) = m_GQWeight_det_J_0xi(index)*D0(4)*(FCol0.dot(FCol2) + 0.5*m_Alpha*(FCol0.dot(FdotCol2) + FCol2.dot(FdotCol0))); //Smat(0, 2) = Smat(2, 0)
-        SPK2(5) = m_GQWeight_det_J_0xi(index)*D0(5)*(FCol0.dot(FCol1) + 0.5*m_Alpha*(FCol0.dot(FdotCol1) + FCol1.dot(FdotCol0))); //Smat(0, 1) = Smat(1, 0)
+        SPK2(3) = m_GQWeight_det_J_0xi(index)*D0(3)*(FCol1.dot(FCol2) + m_Alpha*(FCol1.dot(FdotCol2)+ FCol2.dot(FdotCol1))); //Smat(1, 2) = Smat(2, 1)
+        SPK2(4) = m_GQWeight_det_J_0xi(index)*D0(4)*(FCol0.dot(FCol2) + m_Alpha*(FCol0.dot(FdotCol2) + FCol2.dot(FdotCol0))); //Smat(0, 2) = Smat(2, 0)
+        SPK2(5) = m_GQWeight_det_J_0xi(index)*D0(5)*(FCol0.dot(FCol1) + m_Alpha*(FCol0.dot(FdotCol1) + FCol1.dot(FdotCol0))); //Smat(0, 1) = Smat(1, 0)
 
         P_transpose_scaled_Block.block(3 * index, 0, 1, 3).noalias() = SPK2(0)*FCol0.transpose() + SPK2(5)*FCol1.transpose() + SPK2(4)*FCol2.transpose();
         P_transpose_scaled_Block.block(3 * index + 1, 0, 1, 3).noalias() = SPK2(5)*FCol0.transpose() + SPK2(1)*FCol1.transpose() + SPK2(3)*FCol2.transpose();

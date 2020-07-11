@@ -256,12 +256,12 @@ void ChElementBeamANCF_MT27::ComputeKRMmatricesGlobal(ChMatrixRef H, double Kfac
             partial_e_tempB = Sxi_D_0xiReshaped*Scaled_Combined_Fcol1transpose;
             partial_e_tempC = Sxi_D_0xiReshaped*Scaled_Combined_Fcol2transpose;
 
-            Scaled_Combined_partial_epsilon_partial_e.row(0) = partial_e_tempReshapedA.block<1, 27>(0, 0);
-            Scaled_Combined_partial_epsilon_partial_e.row(1) = partial_e_tempReshapedB.block<1, 27>(0, 27);
-            Scaled_Combined_partial_epsilon_partial_e.row(2) = partial_e_tempReshapedC.block<1, 27>(0, 54);
-            Scaled_Combined_partial_epsilon_partial_e.row(3).noalias() = partial_e_tempReshapedB.block<1, 27>(0, 54) + partial_e_tempReshapedC.block<1, 27>(0, 27);
-            Scaled_Combined_partial_epsilon_partial_e.row(4).noalias() = partial_e_tempReshapedA.block<1, 27>(0, 54) + partial_e_tempReshapedC.block<1, 27>(0, 0);
-            Scaled_Combined_partial_epsilon_partial_e.row(5).noalias() = partial_e_tempReshapedA.block<1, 27>(0, 27) + partial_e_tempReshapedB.block<1, 27>(0, 0);
+            Scaled_Combined_partial_epsilon_partial_e.row(0) = D0(0)*partial_e_tempReshapedA.block<1, 27>(0, 0);
+            Scaled_Combined_partial_epsilon_partial_e.row(1) = D0(1)*partial_e_tempReshapedB.block<1, 27>(0, 27);
+            Scaled_Combined_partial_epsilon_partial_e.row(2) = D0(2)*partial_e_tempReshapedC.block<1, 27>(0, 54);
+            Scaled_Combined_partial_epsilon_partial_e.row(3).noalias() = D0(3)*(partial_e_tempReshapedB.block<1, 27>(0, 54) + partial_e_tempReshapedC.block<1, 27>(0, 27));
+            Scaled_Combined_partial_epsilon_partial_e.row(4).noalias() = D0(4)*(partial_e_tempReshapedA.block<1, 27>(0, 54) + partial_e_tempReshapedC.block<1, 27>(0, 0));
+            Scaled_Combined_partial_epsilon_partial_e.row(5).noalias() = D0(5)*(partial_e_tempReshapedA.block<1, 27>(0, 27) + partial_e_tempReshapedB.block<1, 27>(0, 0));
 
             //Calculate and accumulate the dense component of the Jacobian.
             H -= partial_epsilon_partial_e.transpose()*Scaled_Combined_partial_epsilon_partial_e;
@@ -473,7 +473,7 @@ void ChElementBeamANCF_MT27::PrecomputeInternalForceMatricesWeights() {
                 double xi = GQTable->Lroots[GQ_idx_xi][it_xi];
                 double eta = GQTable->Lroots[GQ_idx_eta_zeta][it_eta];
                 double zeta = GQTable->Lroots[GQ_idx_eta_zeta][it_zeta];
-                unsigned int index = it_zeta + it_eta*GQTable->Lroots[GQ_idx_eta_zeta].size() + it_xi*GQTable->Lroots[GQ_idx_eta_zeta].size()*GQTable->Lroots[GQ_idx_eta_zeta].size();
+                auto index = it_zeta + it_eta*GQTable->Lroots[GQ_idx_eta_zeta].size() + it_xi*GQTable->Lroots[GQ_idx_eta_zeta].size()*GQTable->Lroots[GQ_idx_eta_zeta].size();
                 ChMatrix33<double> J_0xi;               //Element Jacobian between the reference configuration and normalized configuration
                 ChMatrixNMc<double, 9, 3> Sxi_D;         //Matrix of normalized shape function derivatives
 
@@ -524,6 +524,8 @@ void ChElementBeamANCF_MT27::SetAlphaDamp(double a) {
     m_Alpha = a;
     if (std::abs(m_Alpha) > 1e-10)
         m_damping_enabled = true;
+    else
+        m_damping_enabled = false;
 }
 
 void ChElementBeamANCF_MT27::ComputeInternalForces(ChVectorDynamic<>& Fi) {
@@ -578,12 +580,12 @@ void ChElementBeamANCF_MT27::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
         FdotCol1 = m_Fdot_Block.block(0, (3 * index) + 1, 3, 1);
         FdotCol2 = m_Fdot_Block.block(0, (3 * index) + 2, 3, 1);
 
-        m_SPK2(6 * index) = m_GQWeight_det_J_0xi_D0(index)*D0(0)*(0.5*FCol0.dot(FCol0) - 0.5 + m_Alpha*FCol0.dot(FdotCol0)); //Smat(0, 0)
-        m_SPK2((6 * index) + 1) = m_GQWeight_det_J_0xi_D0(index)*D0(1)*(0.5*FCol1.dot(FCol1) - 0.5 + m_Alpha*FCol1.dot(FdotCol1)); //Smat(1, 1)
-        m_SPK2((6 * index) + 2) = m_GQWeight_det_J_0xi_D0(index)*D0(2)*(0.5*FCol2.dot(FCol2) - 0.5 + m_Alpha*FCol2.dot(FdotCol2)); //Smat(2, 2)
-        m_SPK2((6 * index) + 3) = m_GQWeight_det_J_0xi_D0(index)*D0(3)*(FCol1.dot(FCol2) + 0.5*m_Alpha*(FCol1.dot(FdotCol2)+ FCol2.dot(FdotCol1))); //Smat(1, 2) = Smat(2, 1)
-        m_SPK2((6 * index) + 4) = m_GQWeight_det_J_0xi_D0(index)*D0(4)*(FCol0.dot(FCol2) + 0.5*m_Alpha*(FCol0.dot(FdotCol2) + FCol2.dot(FdotCol0))); //Smat(0, 2) = Smat(2, 0)
-        m_SPK2((6 * index) + 5) = m_GQWeight_det_J_0xi_D0(index)*D0(5)*(FCol0.dot(FCol1) + 0.5*m_Alpha*(FCol0.dot(FdotCol1) + FCol1.dot(FdotCol0))); //Smat(0, 1) = Smat(1, 0)
+        m_SPK2(6 * index) = m_GQWeight_det_J_0xi(index)*D0(0)*(0.5*FCol0.dot(FCol0) - 0.5 + m_Alpha*FCol0.dot(FdotCol0)); //Smat(0, 0)
+        m_SPK2((6 * index) + 1) = m_GQWeight_det_J_0xi(index)*D0(1)*(0.5*FCol1.dot(FCol1) - 0.5 + m_Alpha*FCol1.dot(FdotCol1)); //Smat(1, 1)
+        m_SPK2((6 * index) + 2) = m_GQWeight_det_J_0xi(index)*D0(2)*(0.5*FCol2.dot(FCol2) - 0.5 + m_Alpha*FCol2.dot(FdotCol2)); //Smat(2, 2)
+        m_SPK2((6 * index) + 3) = m_GQWeight_det_J_0xi(index)*D0(3)*(FCol1.dot(FCol2) + m_Alpha*(FCol1.dot(FdotCol2)+ FCol2.dot(FdotCol1))); //Smat(1, 2) = Smat(2, 1)
+        m_SPK2((6 * index) + 4) = m_GQWeight_det_J_0xi(index)*D0(4)*(FCol0.dot(FCol2) + m_Alpha*(FCol0.dot(FdotCol2) + FCol2.dot(FdotCol0))); //Smat(0, 2) = Smat(2, 0)
+        m_SPK2((6 * index) + 5) = m_GQWeight_det_J_0xi(index)*D0(5)*(FCol0.dot(FCol1) + m_Alpha*(FCol0.dot(FdotCol1) + FCol1.dot(FdotCol0))); //Smat(0, 1) = Smat(1, 0)
 
         P_transpose_scaled_Block.block(3 * index, 0, 1, 3).noalias() = m_SPK2(6 * index)*FCol0.transpose() + m_SPK2((6 * index) + 5)*FCol1.transpose() + m_SPK2((6 * index) + 4)*FCol2.transpose();
         P_transpose_scaled_Block.block(3 * index + 1, 0, 1, 3).noalias() = m_SPK2((6 * index) + 5)*FCol0.transpose() + m_SPK2((6 * index) + 1)*FCol1.transpose() + m_SPK2((6 * index) + 3)*FCol2.transpose();
@@ -605,9 +607,9 @@ void ChElementBeamANCF_MT27::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
         FdotCol1 = m_Fdot_Block.block(0, (3 * index) + 1, 3, 1);
         FdotCol2 = m_Fdot_Block.block(0, (3 * index) + 2, 3, 1);
 
-        Ediag(0) = m_GQWeight_det_J_0xi_D0(index)*(0.5*FCol0.dot(FCol0) - 0.5 + m_Alpha*FCol0.dot(FdotCol0));
-        Ediag(1) = m_GQWeight_det_J_0xi_D0(index)*(0.5*FCol1.dot(FCol1) - 0.5 + m_Alpha*FCol1.dot(FdotCol1));
-        Ediag(2) = m_GQWeight_det_J_0xi_D0(index)*(0.5*FCol2.dot(FCol2) - 0.5 + m_Alpha*FCol2.dot(FdotCol2));
+        Ediag(0) = m_GQWeight_det_J_0xi(index)*(0.5*FCol0.dot(FCol0) - 0.5 + m_Alpha*FCol0.dot(FdotCol0));
+        Ediag(1) = m_GQWeight_det_J_0xi(index)*(0.5*FCol1.dot(FCol1) - 0.5 + m_Alpha*FCol1.dot(FdotCol1));
+        Ediag(2) = m_GQWeight_det_J_0xi(index)*(0.5*FCol2.dot(FCol2) - 0.5 + m_Alpha*FCol2.dot(FdotCol2));
 
         //m_Ediag.block((3 * (index-16)), 0, 3, 1).noalias() = Ediag;
         //Faster to cache these values one by one rather than using the block command

@@ -404,14 +404,14 @@ class ChApi ChElementBeamANCF_MT31 : public ChElementBeam, public ChLoadableU, p
     //ChVectorN<double, 4> m_GQWeight_det_J_0xi_Dv;           ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale factor for Poisson Effect on the beam axis only
 
     //For Liu Method
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor, 81, 81> m_O1;
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor, 81, 81> m_O2;
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor, 9, 9> m_K3Compact;
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor, 9, 9> m_K13Compact;
-    //ChMatrixNMc<double, 81, 81> m_O1;
-    //ChMatrixNMc<double, 81, 81> m_O2;
-    //ChMatrixNMc<double, 9, 9> m_K3Compact;
-    //ChMatrixNMc<double, 9, 9> m_K13Compact;
+    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor, 81, 81> m_O1;
+    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor, 81, 81> m_O2;
+    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor, 9, 9> m_K3Compact;
+    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor, 9, 9> m_K13Compact;
+    ChMatrixNMc<double, 81, 81> m_O1;
+    ChMatrixNMc<double, 81, 81> m_O2;
+    ChMatrixNMc<double, 9, 9> m_K3Compact;
+    ChMatrixNMc<double, 9, 9> m_K13Compact;
 
 
   public:
