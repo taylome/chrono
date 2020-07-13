@@ -4,6 +4,7 @@ set(TESTS
 	btest_FEA_ANCFbeam3_InternalFrcKRM
 	etest_FEA_ANCFbeam3_PrincetonBeam
 	utest_FEA_ANCFbeam3_InternalFrcKRM
+	utest_FEA_ANCFbeam3_MathTesting
     )
 
 # ------------------------------------------------------------------------------
