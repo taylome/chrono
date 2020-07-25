@@ -57,6 +57,9 @@
 #include "chrono/fea/ChElementBeamANCF_MT25.h"
 #include "chrono/fea/ChElementBeamANCF_MT26.h"
 #include "chrono/fea/ChElementBeamANCF_MT27.h"
+#include "chrono/fea/ChElementBeamANCF_MT27A.h"
+#include "chrono/fea/ChElementBeamANCF_MT27B.h"
+#include "chrono/fea/ChElementBeamANCF_MT27C.h"
 #include "chrono/fea/ChElementBeamANCF_MT28.h"
 #include "chrono/fea/ChElementBeamANCF_MT30.h"
 #include "chrono/fea/ChElementBeamANCF_MT31.h"
@@ -151,7 +154,7 @@ ANCFBeamTest<num_elements, ElementVersion, MaterialVersion>::ANCFBeamTest() {
         element->SetNodes(nodeA, nodeB, nodeC);
         element->SetDimensions(2 * dx, thickness, width);
         element->SetMaterial(material);
-        element->SetAlphaDamp(0.0);
+        element->SetAlphaDamp(0.01);
         element->SetGravityOn(
             false);  // Enable the efficient ANCF method for calculating the application of gravity to the element
         element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
@@ -235,7 +238,7 @@ void ANCFBeamTest<num_elements, ElementVersion, MaterialVersion>::PrintTimingRes
     for (auto i = 0; i < steps; i++) {
         PerturbNodes();
         TimeInternalFrc += GetInternalFrc();
-        //TimeKRM += GetJacobian();
+        TimeKRM += GetJacobian();
     }
 
     Timer_Total.stop();
@@ -339,8 +342,17 @@ int main(int argc, char* argv[]) {
  //   ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT26, ChMaterialBeamANCF_MT26> BeamTest_MT26;
  //   std::cout << "ChElementBeamANCF_MT26, "; BeamTest_MT26.PrintTimingResults(num_steps);
 
- //   ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT27, ChMaterialBeamANCF_MT27> BeamTest_MT27;
- //   std::cout << "ChElementBeamANCF_MT27, "; BeamTest_MT27.PrintTimingResults(num_steps);
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT27, ChMaterialBeamANCF_MT27> BeamTest_MT27;
+    std::cout << "ChElementBeamANCF_MT27, "; BeamTest_MT27.PrintTimingResults(num_steps);
+
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT27A, ChMaterialBeamANCF_MT27A> BeamTest_MT27A;
+    std::cout << "ChElementBeamANCF_MT27A, "; BeamTest_MT27A.PrintTimingResults(num_steps);
+
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT27B, ChMaterialBeamANCF_MT27B> BeamTest_MT27B;
+    std::cout << "ChElementBeamANCF_MT27B, "; BeamTest_MT27B.PrintTimingResults(num_steps);
+
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT27C, ChMaterialBeamANCF_MT27C> BeamTest_MT27C;
+    std::cout << "ChElementBeamANCF_MT27C, "; BeamTest_MT27C.PrintTimingResults(num_steps);
 
  //   ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT28, ChMaterialBeamANCF_MT28> BeamTest_MT28;
  //   std::cout << "ChElementBeamANCF_MT28, "; BeamTest_MT28.PrintTimingResults(num_steps);
@@ -348,8 +360,8 @@ int main(int argc, char* argv[]) {
  //   ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT30, ChMaterialBeamANCF_MT30> BeamTest_MT30;
  //   std::cout << "ChElementBeamANCF_MT30, "; BeamTest_MT30.PrintTimingResults(num_steps);
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT31, ChMaterialBeamANCF_MT31> BeamTest_MT31;
-    std::cout << "ChElementBeamANCF_MT31, "; BeamTest_MT31.PrintTimingResults(num_steps);
+    //ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT31, ChMaterialBeamANCF_MT31> BeamTest_MT31;
+    //std::cout << "ChElementBeamANCF_MT31, "; BeamTest_MT31.PrintTimingResults(num_steps);
 
     //ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT32, ChMaterialBeamANCF_MT32> BeamTest_MT32;
     //std::cout << "ChElementBeamANCF_MT32, "; BeamTest_MT32.PrintTimingResults(num_steps);

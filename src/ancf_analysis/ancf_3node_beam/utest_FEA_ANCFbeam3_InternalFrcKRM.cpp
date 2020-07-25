@@ -51,6 +51,7 @@
 #include "chrono/fea/ChElementBeamANCF_MT26.h"
 #include "chrono/fea/ChElementBeamANCF_MT27.h"
 #include "chrono/fea/ChElementBeamANCF_MT28.h"
+#include "chrono/fea/ChElementBeamANCF_MT29.h"
 #include "chrono/fea/ChElementBeamANCF_MT30.h"
 #include "chrono/fea/ChElementBeamANCF_MT31.h"
 #include "chrono/fea/ChElementBeamANCF_MT32.h"
@@ -1661,6 +1662,13 @@ int main(int argc, char* argv[]) {
         print_green("ChElementBeamANCF_MT28 Element Checks = PASSED\n");
     else
         print_red("ChElementBeamANCF_MT28 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_MT29, ChMaterialBeamANCF_MT29> ChElementBeamANCF_MT29_test;
+    if (ChElementBeamANCF_MT29_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_MT29 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_MT29 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_MT30, ChMaterialBeamANCF_MT30> ChElementBeamANCF_MT30_test;

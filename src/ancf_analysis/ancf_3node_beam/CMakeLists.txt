@@ -2,6 +2,7 @@ set(TESTS
 	btest_FEA_ANCFbeam3_SmallDisplacement_GoogleBMark
 	btest_FEA_ANCFbeam3_SmallDisplacement
 	btest_FEA_ANCFbeam3_InternalFrcKRM
+	btest_FEA_ANCFbeam3_LargeDisplacement_3DPendulum
 	etest_FEA_ANCFbeam3_PrincetonBeam
 	utest_FEA_ANCFbeam3_InternalFrcKRM
 	utest_FEA_ANCFbeam3_MathTesting
