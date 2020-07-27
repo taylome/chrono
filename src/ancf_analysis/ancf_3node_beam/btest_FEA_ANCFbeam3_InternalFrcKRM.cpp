@@ -24,7 +24,7 @@
 //#include "mkl.h"
 
 #include "chrono/ChConfig.h"
-#include "chrono/utils/ChBenchmark.h"
+//#include "chrono/utils/ChBenchmark.h"
 
 #include "chrono/physics/ChSystemSMC.h"
 #include "chrono/solver/ChIterativeSolverLS.h"
@@ -61,11 +61,20 @@
 #include "chrono/fea/ChElementBeamANCF_MT27B.h"
 #include "chrono/fea/ChElementBeamANCF_MT27C.h"
 #include "chrono/fea/ChElementBeamANCF_MT28.h"
-#include "chrono/fea/ChElementBeamANCF_MT30.h"
-#include "chrono/fea/ChElementBeamANCF_MT31.h"
-#include "chrono/fea/ChElementBeamANCF_MT32.h"
+#include "chrono/fea/ChElementBeamANCF_MT29.h"
+#include "chrono/fea/ChElementBeamANCF_MT60.h"
+#include "chrono/fea/ChElementBeamANCF_MT61.h"
+#include "chrono/fea/ChElementBeamANCF_MT62.h"
 
 #include "chrono/fea/ChMesh.h"
+
+#ifdef CHRONO_MKL
+#include "chrono_mkl/ChSolverMKL.h"
+#endif
+
+#ifdef CHRONO_MUMPS
+#include "chrono_mumps/ChSolverMumps.h"
+#endif
 
 using namespace chrono;
 using namespace chrono::fea;
@@ -228,16 +237,19 @@ double ANCFBeamTest<num_elements, ElementVersion, MaterialVersion>::GetJacobian(
 template <int num_elements, typename ElementVersion, typename MaterialVersion>
 void ANCFBeamTest<num_elements, ElementVersion, MaterialVersion>::PrintTimingResults(int steps) {
     
+    double TimeInternalFrc = GetInternalFrc();
+    double TimeKRM = GetJacobian();
+
     ChTimer<> Timer_Total;
     Timer_Total.reset();
     Timer_Total.start();
 
-    double TimeInternalFrc = 0;
-    double TimeKRM = 0;
+    TimeInternalFrc = 0;
+    TimeKRM = 0;
 
     for (auto i = 0; i < steps; i++) {
         PerturbNodes();
-        TimeInternalFrc += GetInternalFrc();
+        //TimeInternalFrc += GetInternalFrc();
         TimeKRM += GetJacobian();
     }
 
@@ -345,26 +357,26 @@ int main(int argc, char* argv[]) {
     ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT27, ChMaterialBeamANCF_MT27> BeamTest_MT27;
     std::cout << "ChElementBeamANCF_MT27, "; BeamTest_MT27.PrintTimingResults(num_steps);
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT27A, ChMaterialBeamANCF_MT27A> BeamTest_MT27A;
-    std::cout << "ChElementBeamANCF_MT27A, "; BeamTest_MT27A.PrintTimingResults(num_steps);
+    //ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT27A, ChMaterialBeamANCF_MT27A> BeamTest_MT27A;
+    //std::cout << "ChElementBeamANCF_MT27A, "; BeamTest_MT27A.PrintTimingResults(num_steps);
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT27B, ChMaterialBeamANCF_MT27B> BeamTest_MT27B;
-    std::cout << "ChElementBeamANCF_MT27B, "; BeamTest_MT27B.PrintTimingResults(num_steps);
+    //ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT27B, ChMaterialBeamANCF_MT27B> BeamTest_MT27B;
+    //std::cout << "ChElementBeamANCF_MT27B, "; BeamTest_MT27B.PrintTimingResults(num_steps);
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT27C, ChMaterialBeamANCF_MT27C> BeamTest_MT27C;
-    std::cout << "ChElementBeamANCF_MT27C, "; BeamTest_MT27C.PrintTimingResults(num_steps);
+    //ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT27C, ChMaterialBeamANCF_MT27C> BeamTest_MT27C;
+    //std::cout << "ChElementBeamANCF_MT27C, "; BeamTest_MT27C.PrintTimingResults(num_steps);
 
  //   ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT28, ChMaterialBeamANCF_MT28> BeamTest_MT28;
  //   std::cout << "ChElementBeamANCF_MT28, "; BeamTest_MT28.PrintTimingResults(num_steps);
 
- //   ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT30, ChMaterialBeamANCF_MT30> BeamTest_MT30;
- //   std::cout << "ChElementBeamANCF_MT30, "; BeamTest_MT30.PrintTimingResults(num_steps);
+ //   ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT60, ChMaterialBeamANCF_MT60> BeamTest_MT60;
+ //   std::cout << "ChElementBeamANCF_MT60, "; BeamTest_MT60.PrintTimingResults(num_steps);
 
-    //ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT31, ChMaterialBeamANCF_MT31> BeamTest_MT31;
-    //std::cout << "ChElementBeamANCF_MT31, "; BeamTest_MT31.PrintTimingResults(num_steps);
+    //ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT61, ChMaterialBeamANCF_MT61> BeamTest_MT61;
+    //std::cout << "ChElementBeamANCF_MT61, "; BeamTest_MT61.PrintTimingResults(num_steps);
 
-    //ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT32, ChMaterialBeamANCF_MT32> BeamTest_MT32;
-    //std::cout << "ChElementBeamANCF_MT32, "; BeamTest_MT32.PrintTimingResults(num_steps);
+    //ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT62, ChMaterialBeamANCF_MT62> BeamTest_MT62;
+    //std::cout << "ChElementBeamANCF_MT62, "; BeamTest_MT62.PrintTimingResults(num_steps);
 
     return(0);
 }

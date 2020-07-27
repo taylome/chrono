@@ -52,9 +52,9 @@
 #include "chrono/fea/ChElementBeamANCF_MT27.h"
 #include "chrono/fea/ChElementBeamANCF_MT28.h"
 #include "chrono/fea/ChElementBeamANCF_MT29.h"
-#include "chrono/fea/ChElementBeamANCF_MT30.h"
-#include "chrono/fea/ChElementBeamANCF_MT31.h"
-#include "chrono/fea/ChElementBeamANCF_MT32.h"
+#include "chrono/fea/ChElementBeamANCF_MT60.h"
+#include "chrono/fea/ChElementBeamANCF_MT61.h"
+#include "chrono/fea/ChElementBeamANCF_MT62.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -1671,25 +1671,25 @@ int main(int argc, char* argv[]) {
         print_red("ChElementBeamANCF_MT29 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
-    ANCFBeamTest<ChElementBeamANCF_MT30, ChMaterialBeamANCF_MT30> ChElementBeamANCF_MT30_test;
-    if (ChElementBeamANCF_MT30_test.RunElementChecks(0))
-        print_green("ChElementBeamANCF_MT30 Element Checks = PASSED\n");
+    ANCFBeamTest<ChElementBeamANCF_MT60, ChMaterialBeamANCF_MT60> ChElementBeamANCF_MT60_test;
+    if (ChElementBeamANCF_MT60_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_MT60 Element Checks = PASSED\n");
     else
-        print_red("ChElementBeamANCF_MT30 Element Checks = FAILED\n");
+        print_red("ChElementBeamANCF_MT60 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
-    ANCFBeamTest<ChElementBeamANCF_MT31, ChMaterialBeamANCF_MT31> ChElementBeamANCF_MT31_test;
-    if (ChElementBeamANCF_MT31_test.RunElementChecks(0))
-        print_green("ChElementBeamANCF_MT31 Element Checks = PASSED\n");
+    ANCFBeamTest<ChElementBeamANCF_MT61, ChMaterialBeamANCF_MT61> ChElementBeamANCF_MT61_test;
+    if (ChElementBeamANCF_MT61_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_MT61 Element Checks = PASSED\n");
     else
-        print_red("ChElementBeamANCF_MT31 Element Checks = FAILED\n");
+        print_red("ChElementBeamANCF_MT61 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
-    ANCFBeamTest<ChElementBeamANCF_MT32, ChMaterialBeamANCF_MT32> ChElementBeamANCF_MT32_test;
-    if (ChElementBeamANCF_MT32_test.RunElementChecks(0))
-        print_green("ChElementBeamANCF_MT32 Element Checks = PASSED\n");
+    ANCFBeamTest<ChElementBeamANCF_MT62, ChMaterialBeamANCF_MT62> ChElementBeamANCF_MT62_test;
+    if (ChElementBeamANCF_MT62_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_MT62 Element Checks = PASSED\n");
     else
-        print_red("ChElementBeamANCF_MT32 Element Checks = FAILED\n");
+        print_red("ChElementBeamANCF_MT62 Element Checks = FAILED\n");
 
 
     return 0;

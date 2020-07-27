@@ -64,9 +64,9 @@
 #include "chrono/fea/ChElementBeamANCF_MT26.h"
 #include "chrono/fea/ChElementBeamANCF_MT27.h"
 #include "chrono/fea/ChElementBeamANCF_MT28.h"
-#include "chrono/fea/ChElementBeamANCF_MT30.h"
-#include "chrono/fea/ChElementBeamANCF_MT31.h"
-#include "chrono/fea/ChElementBeamANCF_MT32.h"
+#include "chrono/fea/ChElementBeamANCF_MT60.h"
+#include "chrono/fea/ChElementBeamANCF_MT61.h"
+#include "chrono/fea/ChElementBeamANCF_MT62.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"

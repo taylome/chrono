@@ -27,7 +27,7 @@
 #include <string>
 
 #include "chrono/ChConfig.h"
-#include "chrono/utils/ChBenchmark.h"
+//#include "chrono/utils/ChBenchmark.h"
 
 #include "chrono/physics/ChSystemSMC.h"
 #include "chrono/solver/ChIterativeSolverLS.h"
@@ -65,9 +65,9 @@
 #include "chrono/fea/ChElementBeamANCF_MT27.h"
 #include "chrono/fea/ChElementBeamANCF_MT28.h"
 #include "chrono/fea/ChElementBeamANCF_MT29.h"
-#include "chrono/fea/ChElementBeamANCF_MT30.h"
-#include "chrono/fea/ChElementBeamANCF_MT31.h"
-#include "chrono/fea/ChElementBeamANCF_MT32.h"
+#include "chrono/fea/ChElementBeamANCF_MT60.h"
+#include "chrono/fea/ChElementBeamANCF_MT61.h"
+#include "chrono/fea/ChElementBeamANCF_MT62.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -115,7 +115,7 @@ public:
     void NonlinearStatics() { m_system->DoStaticNonlinear(50); }
     ChVector<> GetBeamEndPointPos() { return m_nodeEndPoint->GetPos(); }
 
-    void RunTimingTest(ChMatrixNM<double, 4, 17>& timing_stats, const std::string& test_name);
+    void RunTimingTest(ChMatrixNM<double, 4, 19>& timing_stats, const std::string& test_name);
 
 protected:
     ChSystemSMC* m_system;
@@ -347,7 +347,7 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::SimulateVis() {
 }
 
 template <typename ElementVersion, typename MaterialVersion>
-void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<double, 4, 17>& timing_stats,
+void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<double, 4, 19>& timing_stats,
     const std::string& test_name) {
     // Timing Results entries (in seconds)
     //  - "Step_Total"
@@ -369,7 +369,7 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
     //  - "FEA_Jacobian_Calls"
 
     // Reset timing results since the results will be accumulated into this vector
-    ChMatrixNM<double, REPEATS, 17> timing_results;
+    ChMatrixNM<double, REPEATS, 19> timing_results;
     timing_results.setZero();
 
     // Run the requested number of steps to warm start the system, but do not collect any timing information
@@ -438,6 +438,8 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
             midpoint_displacement(i + (r * NUM_SIM_STEPS), 2) = GetBeamEndPointPos().y();
             midpoint_displacement(i + (r * NUM_SIM_STEPS), 3) = GetBeamEndPointPos().z();
         }
+        timing_results(r, 17) = (timing_results(r, 13) * 1e6) / (timing_results(r, 15) * double(m_NumElements));
+        timing_results(r, 18) = (timing_results(r, 14) * 1e6) / (timing_results(r, 16) * double(m_NumElements));
     }
 
     // Scale times from s to ms
@@ -478,7 +480,7 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
         ;
         break;
     }
-    std::cout << " - Max_OMP_Threads: " << omp_get_max_threads();
+    //std::cout << " - Max_OMP_Threads: " << omp_get_max_threads();
     std::cout << " - Tip_Displacement_Mean = " << tip_displacement_offset << std::endl;
 
     std::cout << "Step_Total "
@@ -497,7 +499,10 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
         << "FEA_InternalFrc "
         << "FEA_Jacobian "
         << "FEA_InternalFrc_Calls "
-        << "FEA_Jacobian_Calls" << std::endl;
+        << "FEA_Jacobian_Calls" 
+        << "FEA_InternalFrc_AvgFunctionCall_us"
+        << "FEA_Jacobian_AvgFunctionCall_us"
+        << std::endl;
     for (int r = 0; r < REPEATS; r++) {
         std::cout << "Run_" << r << ":\t" << timing_results.row(r) << std::endl;
     }
@@ -532,20 +537,20 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
 }
 
 int main(int argc, char* argv[]) {
-    //ChVectorN<int, 6> num_els;
-    //num_els << 8, 16, 32, 64, 128, 256;
+    ChVectorN<int, 8> num_els;
+    num_els << 8, 16, 32, 64, 128, 256, 512, 1024;
 
     //std::vector<SolverType> Solver = {SolverType::MINRES, SolverType::MKL, SolverType::MUMPS, SolverType::SparseLU,
     //                                  SolverType::SparseQR};
     //std::vector<SolverType> Solver = {SolverType::MKL, SolverType::MUMPS, SolverType::SparseLU, SolverType::SparseQR};
 
-    ChVectorN<int, 1> num_els;
-    num_els << 8;
+    //ChVectorN<int, 1> num_els;
+    //num_els << 16;
     std::vector<SolverType> Solver = { SolverType::MUMPS };
 
     double f = 5.0;
 
-    ChMatrixNM<double, 4, 17> timing_stats;
+    ChMatrixNM<double, 4, 19> timing_stats;
     
     //ANCFBeamTest<ChElementBeamANCF_MT27, ChMaterialBeamANCF_MT27> test(8, SolverType::MUMPS, 2);
     //test.SimulateVis();
@@ -762,22 +767,22 @@ int main(int argc, char* argv[]) {
 
     //for (const auto& ls : Solver) {
     //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT30, ChMaterialBeamANCF_MT30> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT30");
+    //        ANCFBeamTest<ChElementBeamANCF_MT60, ChMaterialBeamANCF_MT60> test(num_els(i), ls);
+    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT60");
     //    }
     //}
 
     for (const auto& ls : Solver) {
         for (auto i = 0; i < num_els.size(); i++) {
-            ANCFBeamTest<ChElementBeamANCF_MT31, ChMaterialBeamANCF_MT31> test(num_els(i), ls, f);
-            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT31");
+            ANCFBeamTest<ChElementBeamANCF_MT61, ChMaterialBeamANCF_MT61> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT61");
         }
     }
 
     //for (const auto& ls : Solver) {
     //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT32, ChMaterialBeamANCF_MT32> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT32");
+    //        ANCFBeamTest<ChElementBeamANCF_MT62, ChMaterialBeamANCF_MT62> test(num_els(i), ls);
+    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT62");
     //    }
     //}
 

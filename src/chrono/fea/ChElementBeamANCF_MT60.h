@@ -18,8 +18,8 @@
 // and Nonlinear Dynamics, 2013, April 2013, Vol. 8, 021004.
 // =============================================================================
 
-#ifndef CHELEMENTBEAMANCFMT30_H
-#define CHELEMENTBEAMANCFMT30_H
+#ifndef CHELEMENTBEAMANCFMT60_H
+#define CHELEMENTBEAMANCFMT60_H
 
 #include <vector>
 
@@ -35,10 +35,10 @@ namespace fea {
 
 /// Material definition.
 /// This class implements material properties for an ANCF Beam.
-class ChApi ChMaterialBeamANCF_MT30 {
+class ChApi ChMaterialBeamANCF_MT60 {
   public:
     /// Construct an isotropic material.
-    ChMaterialBeamANCF_MT30(double rho,        ///< material density
+    ChMaterialBeamANCF_MT60(double rho,        ///< material density
                        double E,          ///< Young's modulus
                        double nu,         ///< Poisson ratio
                        const double& k1,  ///< Shear correction factor along beam local y axis
@@ -46,7 +46,7 @@ class ChApi ChMaterialBeamANCF_MT30 {
     );
 
     /// Construct a (possibly) orthotropic material.
-    ChMaterialBeamANCF_MT30(double rho,            ///< material density
+    ChMaterialBeamANCF_MT60(double rho,            ///< material density
                        const ChVector<>& E,   ///< elasticity moduli (E_x, E_y, E_z)
                        const ChVector<>& nu,  ///< Poisson ratios (nu_xy, nu_xz, nu_yz)
                        const ChVector<>& G,   ///< shear moduli (G_xy, G_xz, G_yz)
@@ -88,7 +88,7 @@ class ChApi ChMaterialBeamANCF_MT30 {
 /// </pre>
 /// where C is the third and central node.
 
-class ChApi ChElementBeamANCF_MT30 : public ChElementBeam, public ChLoadableU, public ChLoadableUVW {
+class ChApi ChElementBeamANCF_MT60 : public ChElementBeam, public ChLoadableU, public ChLoadableUVW {
   public:
     using ShapeVector = ChMatrixNM<double, 1, 9>;
 
@@ -97,8 +97,8 @@ class ChApi ChElementBeamANCF_MT30 : public ChElementBeam, public ChLoadableU, p
     template <typename T, int M, int N>
     using ChMatrixNMc = Eigen::Matrix<T, M, N, Eigen::ColMajor>;
 
-    ChElementBeamANCF_MT30();
-    ~ChElementBeamANCF_MT30() {}
+    ChElementBeamANCF_MT60();
+    ~ChElementBeamANCF_MT60() {}
 
     /// Get the number of nodes used by this element.
     virtual int GetNnodes() override { return 3; }
@@ -122,7 +122,7 @@ class ChApi ChElementBeamANCF_MT30 : public ChElementBeam, public ChLoadableU, p
     }
 
     /// Specify the element material.
-    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF_MT30> beam_mat) { m_material = beam_mat; }
+    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF_MT60> beam_mat) { m_material = beam_mat; }
 
     /// Access the n-th node of this element.
     virtual std::shared_ptr<ChNodeFEAbase> GetNodeN(int n) override { return m_nodes[n]; }
@@ -137,7 +137,7 @@ class ChApi ChElementBeamANCF_MT30 : public ChElementBeam, public ChLoadableU, p
     std::shared_ptr<ChNodeFEAxyzDD> GetNodeC() const { return m_nodes[2]; }
 
     /// Return the material.
-    std::shared_ptr<ChMaterialBeamANCF_MT30> GetMaterial() const { return m_material; }
+    std::shared_ptr<ChMaterialBeamANCF_MT60> GetMaterial() const { return m_material; }
 
     /// Turn gravity on/off.
     void SetGravityOn(bool val) { m_gravity_on = val; }
@@ -395,7 +395,7 @@ class ChApi ChElementBeamANCF_MT30 : public ChElementBeam, public ChLoadableU, p
     bool m_gravity_on;                                      ///< enable/disable gravity calculation
     ChVectorN<double, 27> m_GravForce;                      ///< Gravity Force
     ChMatrixNM<double, 9, 9> m_MassMatrix;                  ///< mass matrix - in compact form for reduced memory and reduced KRM matrix computations
-    std::shared_ptr<ChMaterialBeamANCF_MT30> m_material;    ///< beam material
+    std::shared_ptr<ChMaterialBeamANCF_MT60> m_material;    ///< beam material
     StrainFormulation m_strain_form;                        ///< Strain formulation
     ChMatrixNMc<double, 9, 3> m_e0_bar;                      ///< Element Position Coordinate Matrix for the Reference Configuration
     ChMatrixNMc<double, 144, 3> m_SD_precompute_D0;          ///< Precomputed corrected normalized shape function derivative matrices for no Poisson Effect

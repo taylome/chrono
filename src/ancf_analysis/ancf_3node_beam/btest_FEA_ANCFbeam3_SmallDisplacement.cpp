@@ -65,9 +65,9 @@
 #include "chrono/fea/ChElementBeamANCF_MT27.h"
 #include "chrono/fea/ChElementBeamANCF_MT28.h"
 #include "chrono/fea/ChElementBeamANCF_MT29.h"
-#include "chrono/fea/ChElementBeamANCF_MT30.h"
-#include "chrono/fea/ChElementBeamANCF_MT31.h"
-#include "chrono/fea/ChElementBeamANCF_MT32.h"
+#include "chrono/fea/ChElementBeamANCF_MT60.h"
+#include "chrono/fea/ChElementBeamANCF_MT61.h"
+#include "chrono/fea/ChElementBeamANCF_MT62.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -786,22 +786,22 @@ int main(int argc, char* argv[]) {
 
     //for (const auto& ls : Solver) {
     //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT30, ChMaterialBeamANCF_MT30> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT30");
+    //        ANCFBeamTest<ChElementBeamANCF_MT60, ChMaterialBeamANCF_MT60> test(num_els(i), ls);
+    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT60");
     //    }
     //}
 
     //for (const auto& ls : Solver) {
     //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT31, ChMaterialBeamANCF_MT31> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT31");
+    //        ANCFBeamTest<ChElementBeamANCF_MT61, ChMaterialBeamANCF_MT61> test(num_els(i), ls);
+    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT61");
     //    }
     //}
 
     //for (const auto& ls : Solver) {
     //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT32, ChMaterialBeamANCF_MT32> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT32");
+    //        ANCFBeamTest<ChElementBeamANCF_MT62, ChMaterialBeamANCF_MT62> test(num_els(i), ls);
+    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT62");
     //    }
     //}
 
