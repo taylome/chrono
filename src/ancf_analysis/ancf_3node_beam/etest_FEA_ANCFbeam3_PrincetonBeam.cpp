@@ -102,8 +102,8 @@ TestBeam::TestBeam(int num_elements, double beam_angle_rad, double vert_tip_load
     auto solver_type = SolverType::MUMPS;
 
 #ifndef CHRONO_MUMPS
-    if (m_SolverType == SolverType::MUMPS) {
-        m_SolverType = SolverType::SparseLU;
+    if (SolverType == SolverType::MUMPS) {
+        SolverType = SolverType::SparseLU;
         std::cout << "WARNING! Chrono::MUMPS not enabled. Forcing use of Eigen SparseLU solver" << std::endl;
     }
 #endif

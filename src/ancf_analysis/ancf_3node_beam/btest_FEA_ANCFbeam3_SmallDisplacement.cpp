@@ -514,7 +514,9 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
             ;
             break;
     }
+#ifdef _OPENMP
     std::cout << " - Max_OMP_Threads: " << omp_get_max_threads();
+#endif
     std::cout << " - Tip_Displacement_Mean = " << tip_displacement_offset << std::endl;
 
     std::cout << "Step_Total "
