@@ -27,13 +27,13 @@
 #include <string>
 
 #include "chrono/ChConfig.h"
-//#include "chrono/utils/ChBenchmark.h"
 
 #include "chrono/physics/ChSystemSMC.h"
 #include "chrono/solver/ChIterativeSolverLS.h"
+#include "chrono/solver/ChDirectSolverLS.h"
 
-#include "chrono_postprocess/ChGnuPlot.h"
-#include "chrono_thirdparty/filesystem/path.h"
+//#include "chrono_postprocess/ChGnuPlot.h"
+//#include "chrono_thirdparty/filesystem/path.h"
 
 #include "chrono/fea/ChElementBeamANCF.h"
 #include "chrono/fea/ChElementBeamANCF_MT01.h"
@@ -65,6 +65,11 @@
 #include "chrono/fea/ChElementBeamANCF_MT27.h"
 #include "chrono/fea/ChElementBeamANCF_MT28.h"
 #include "chrono/fea/ChElementBeamANCF_MT29.h"
+#include "chrono/fea/ChElementBeamANCF_MT30.h"
+#include "chrono/fea/ChElementBeamANCF_MT31.h"
+#include "chrono/fea/ChElementBeamANCF_MT32.h"
+#include "chrono/fea/ChElementBeamANCF_MT33.h"
+#include "chrono/fea/ChElementBeamANCF_MT34.h"
 #include "chrono/fea/ChElementBeamANCF_MT60.h"
 #include "chrono/fea/ChElementBeamANCF_MT61.h"
 #include "chrono/fea/ChElementBeamANCF_MT62.h"
@@ -89,7 +94,7 @@
 
 using namespace chrono;
 using namespace chrono::fea;
-using namespace postprocess;
+//using namespace postprocess;
 
 enum class SolverType { MINRES, MKL, MUMPS, SparseLU, SparseQR };
 
@@ -217,7 +222,6 @@ ANCFBeamTest<ElementVersion, MaterialVersion>::ANCFBeamTest(int num_elements, So
     double rho = 8000 / (f*f);     // kg/m^3
     double E = 10e7 / (std::pow(f, 4)); // Pa
     double nu = 0;           // Poisson effect neglected for this model
-    double G = E / (2 * (1 + nu));
     double k1 =
         10 * (1 + nu) / (12 + 11 * nu);  // Timoshenko shear correction coefficient for a rectangular cross-section
     double k2 = k1;                      // Timoshenko shear correction coefficient for a rectangular cross-section
@@ -537,16 +541,16 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
 }
 
 int main(int argc, char* argv[]) {
-    ChVectorN<int, 8> num_els;
-    num_els << 8, 16, 32, 64, 128, 256, 512, 1024;
+    //ChVectorN<int, 8> num_els;
+    //num_els << 8, 16, 32, 64, 128, 256, 512, 1024;
 
     //std::vector<SolverType> Solver = {SolverType::MINRES, SolverType::MKL, SolverType::MUMPS, SolverType::SparseLU,
     //                                  SolverType::SparseQR};
     //std::vector<SolverType> Solver = {SolverType::MKL, SolverType::MUMPS, SolverType::SparseLU, SolverType::SparseQR};
 
-    //ChVectorN<int, 1> num_els;
-    //num_els << 16;
-    std::vector<SolverType> Solver = { SolverType::MUMPS };
+    ChVectorN<int, 1> num_els;
+    num_els << 1024;
+    std::vector<SolverType> Solver = { SolverType::SparseLU };
 
     double f = 5.0;
 
@@ -555,194 +559,194 @@ int main(int argc, char* argv[]) {
     //ANCFBeamTest<ChElementBeamANCF_MT27, ChMaterialBeamANCF_MT27> test(8, SolverType::MUMPS, 2);
     //test.SimulateVis();
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF, ChMaterialBeamANCF> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF, ChMaterialBeamANCF> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT01, ChMaterialBeamANCF_MT01> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT01");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT01, ChMaterialBeamANCF_MT01> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT01");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT02, ChMaterialBeamANCF_MT02> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT02");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT02, ChMaterialBeamANCF_MT02> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT02");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT03, ChMaterialBeamANCF_MT03> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT03");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT03, ChMaterialBeamANCF_MT03> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT03");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT04, ChMaterialBeamANCF_MT04> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT04");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT04, ChMaterialBeamANCF_MT04> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT04");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT05, ChMaterialBeamANCF_MT05> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT05");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT05, ChMaterialBeamANCF_MT05> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT05");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT06, ChMaterialBeamANCF_MT06> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT06");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT06, ChMaterialBeamANCF_MT06> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT06");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT07, ChMaterialBeamANCF_MT07> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT07");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT07, ChMaterialBeamANCF_MT07> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT07");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT08, ChMaterialBeamANCF_MT08> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT08");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT08, ChMaterialBeamANCF_MT08> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT08");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT09, ChMaterialBeamANCF_MT09> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT09");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT09, ChMaterialBeamANCF_MT09> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT09");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT10, ChMaterialBeamANCF_MT10> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT10");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT10, ChMaterialBeamANCF_MT10> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT10");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT11, ChMaterialBeamANCF_MT11> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT11");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT11, ChMaterialBeamANCF_MT11> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT11");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT12, ChMaterialBeamANCF_MT12> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT12");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT12, ChMaterialBeamANCF_MT12> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT12");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT13, ChMaterialBeamANCF_MT13> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT13");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT13, ChMaterialBeamANCF_MT13> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT13");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT14, ChMaterialBeamANCF_MT14> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT14");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT14, ChMaterialBeamANCF_MT14> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT14");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT15, ChMaterialBeamANCF_MT15> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT15");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT15, ChMaterialBeamANCF_MT15> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT15");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT16, ChMaterialBeamANCF_MT16> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT16");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT16, ChMaterialBeamANCF_MT16> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT16");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT17, ChMaterialBeamANCF_MT17> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT17");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT17, ChMaterialBeamANCF_MT17> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT17");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT18, ChMaterialBeamANCF_MT18> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT18");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT18, ChMaterialBeamANCF_MT18> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT18");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT19, ChMaterialBeamANCF_MT19> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT19");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT19, ChMaterialBeamANCF_MT19> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT19");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT20, ChMaterialBeamANCF_MT20> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT20");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT20, ChMaterialBeamANCF_MT20> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT20");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT21, ChMaterialBeamANCF_MT21> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT21");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT21, ChMaterialBeamANCF_MT21> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT21");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT22, ChMaterialBeamANCF_MT22> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT22");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT22, ChMaterialBeamANCF_MT22> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT22");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT23, ChMaterialBeamANCF_MT23> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT23");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT23, ChMaterialBeamANCF_MT23> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT23");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT24, ChMaterialBeamANCF_MT24> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT24");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT24, ChMaterialBeamANCF_MT24> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT24");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT25, ChMaterialBeamANCF_MT25> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT25");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT25, ChMaterialBeamANCF_MT25> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT25");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT26, ChMaterialBeamANCF_MT26> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT26");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT26, ChMaterialBeamANCF_MT26> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT26");
+        }
+    }
 
     for (const auto& ls : Solver) {
         for (auto i = 0; i < num_els.size(); i++) {
@@ -751,26 +755,61 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT28, ChMaterialBeamANCF_MT28> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT28");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT28, ChMaterialBeamANCF_MT28> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT28");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT29, ChMaterialBeamANCF_MT29> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT29");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT29, ChMaterialBeamANCF_MT29> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT29");
+        }
+    }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT60, ChMaterialBeamANCF_MT60> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT60");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT30, ChMaterialBeamANCF_MT30> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT30");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT31, ChMaterialBeamANCF_MT31> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT31");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT32, ChMaterialBeamANCF_MT32> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT32");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT33, ChMaterialBeamANCF_MT33> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT33");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT34, ChMaterialBeamANCF_MT34> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT34");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT60, ChMaterialBeamANCF_MT60> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT60");
+        }
+    }
 
     for (const auto& ls : Solver) {
         for (auto i = 0; i < num_els.size(); i++) {
@@ -779,12 +818,12 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    //for (const auto& ls : Solver) {
-    //    for (auto i = 0; i < num_els.size(); i++) {
-    //        ANCFBeamTest<ChElementBeamANCF_MT62, ChMaterialBeamANCF_MT62> test(num_els(i), ls);
-    //        test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT62");
-    //    }
-    //}
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT62, ChMaterialBeamANCF_MT62> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT62");
+        }
+    }
 
     return(0);
 }

@@ -5,6 +5,7 @@ set(TESTS
 	btest_FEA_ANCFbeam3_LargeDisplacement_3DPendulum
 	etest_FEA_ANCFbeam3_PrincetonBeam
 	utest_FEA_ANCFbeam3_InternalFrcKRM
+	utest_FEA_ANCFbeam3_IntrinsicsMathTesting
 	utest_FEA_ANCFbeam3_MathTesting
     )
 

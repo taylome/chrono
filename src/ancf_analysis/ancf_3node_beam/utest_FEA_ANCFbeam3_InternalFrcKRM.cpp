@@ -17,10 +17,9 @@
 // =============================================================================
 
 #include "chrono/ChConfig.h"
-#include "chrono/utils/ChBenchmark.h"
 
 #include "chrono/physics/ChSystemSMC.h"
-#include "chrono/solver/ChIterativeSolverLS.h"
+#include "chrono/solver/ChDirectSolverLS.h"
 
 #include "chrono/fea/ChElementBeamANCF.h"
 #include "chrono/fea/ChElementBeamANCF_MT01.h"
@@ -52,6 +51,11 @@
 #include "chrono/fea/ChElementBeamANCF_MT27.h"
 #include "chrono/fea/ChElementBeamANCF_MT28.h"
 #include "chrono/fea/ChElementBeamANCF_MT29.h"
+#include "chrono/fea/ChElementBeamANCF_MT30.h"
+#include "chrono/fea/ChElementBeamANCF_MT31.h"
+#include "chrono/fea/ChElementBeamANCF_MT32.h"
+#include "chrono/fea/ChElementBeamANCF_MT33.h"
+#include "chrono/fea/ChElementBeamANCF_MT34.h"
 #include "chrono/fea/ChElementBeamANCF_MT60.h"
 #include "chrono/fea/ChElementBeamANCF_MT61.h"
 #include "chrono/fea/ChElementBeamANCF_MT62.h"
@@ -60,6 +64,10 @@
 #include "chrono/fea/ChVisualizationFEAmesh.h"
 #include "chrono/physics/ChLoadContainer.h"
 #include "chrono/fea/ChLoadsBeam.h"
+
+#if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+#include <windows.h>
+#endif
 
 using namespace chrono;
 using namespace chrono::fea;
@@ -139,7 +147,6 @@ ANCFBeamTest<ElementVersion, MaterialVersion>::ANCFBeamTest() {
     double rho = 7850; //kg/m^3
     double E = 210e9; //Pa
     double nu = 0.3;
-    double G = E / (2 + (1 + nu));
     double k1 = 10 * (1 + nu) / (12 + 11 * nu);  // Timoshenko shear correction coefficient for a rectangular cross-section
     double k2 = k1;                              // Timoshenko shear correction coefficient for a rectangular cross-section
 
@@ -1460,6 +1467,21 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianNoDispSmallVelWithDa
 
 int main(int argc, char* argv[]) {
 
+#if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD dwMode = 0;
+    GetConsoleMode(hOut, &dwMode);
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+
+    // References:
+    //SetConsoleMode() and ENABLE_VIRTUAL_TERMINAL_PROCESSING?
+    //https://stackoverflow.com/questions/38772468/setconsolemode-and-enable-virtual-terminal-processing
+
+    // Windows console with ANSI colors handling
+    // https://superuser.com/questions/413073/windows-console-with-ansi-colors-handling
+#endif
+
     std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF, ChMaterialBeamANCF> ChElementBeamANCF_test;
     if (ChElementBeamANCF_test.RunElementChecks(0))
@@ -1669,6 +1691,41 @@ int main(int argc, char* argv[]) {
         print_green("ChElementBeamANCF_MT29 Element Checks = PASSED\n");
     else
         print_red("ChElementBeamANCF_MT29 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_MT30, ChMaterialBeamANCF_MT30> ChElementBeamANCF_MT30_test;
+    if (ChElementBeamANCF_MT30_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_MT30 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_MT30 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_MT31, ChMaterialBeamANCF_MT31> ChElementBeamANCF_MT31_test;
+    if (ChElementBeamANCF_MT31_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_MT31 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_MT31 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_MT32, ChMaterialBeamANCF_MT32> ChElementBeamANCF_MT32_test;
+    if (ChElementBeamANCF_MT32_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_MT32 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_MT32 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_MT33, ChMaterialBeamANCF_MT33> ChElementBeamANCF_MT33_test;
+    if (ChElementBeamANCF_MT33_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_MT33 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_MT33 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_MT34, ChMaterialBeamANCF_MT34> ChElementBeamANCF_MT34_test;
+    if (ChElementBeamANCF_MT34_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_MT34 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_MT34 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_MT60, ChMaterialBeamANCF_MT60> ChElementBeamANCF_MT60_test;
