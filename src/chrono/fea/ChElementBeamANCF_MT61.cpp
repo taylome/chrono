@@ -14,7 +14,7 @@
 // ANCF beam element with 3 nodes.
 // =============================================================================
 //
-// MT61 = MT30 + With Just the First Implementation of Liu Calculation Method (comparison code removed)
+// MT61 = MT60 + With Just the First Implementation of Liu Calculation Method (comparison code removed)
 //  Mass Matrix = Constant, pre-calculated 27x27 matrix
 //  Generalized Force due to gravity = Constant 27x1 Vector 
 //     (assumption that gravity is constant too)

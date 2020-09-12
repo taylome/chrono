@@ -14,7 +14,7 @@
 // ANCF beam element with 3 nodes.
 // =============================================================================
 //
-// MT62 = MT31 + For calculating the internal force, first subtract the position of the middle node from the position of the first and last nodes
+// MT62 = MT61 + For calculating the internal force, first subtract the position of the middle node from the position of the first and last nodes
 //  Mass Matrix = Constant, pre-calculated 27x27 matrix
 //  Generalized Force due to gravity = Constant 27x1 Vector 
 //     (assumption that gravity is constant too)
