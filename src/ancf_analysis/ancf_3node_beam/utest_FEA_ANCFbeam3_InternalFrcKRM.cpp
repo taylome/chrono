@@ -63,6 +63,7 @@
 #include "chrono/fea/ChElementBeamANCF_MT60.h"
 #include "chrono/fea/ChElementBeamANCF_MT61.h"
 #include "chrono/fea/ChElementBeamANCF_MT62.h"
+#include "chrono/fea/ChElementBeamANCF_MT63.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -1780,6 +1781,12 @@ int main(int argc, char* argv[]) {
     else
         print_red("ChElementBeamANCF_MT62 Element Checks = FAILED\n");
 
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_MT63, ChMaterialBeamANCF_MT63> ChElementBeamANCF_MT63_test;
+    if (ChElementBeamANCF_MT63_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_MT63 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_MT63 Element Checks = FAILED\n");
 
     return 0;
 }
