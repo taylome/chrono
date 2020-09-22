@@ -60,10 +60,12 @@
 #include "chrono/fea/ChElementBeamANCF_MT36.h"
 #include "chrono/fea/ChElementBeamANCF_MT37.h"
 #include "chrono/fea/ChElementBeamANCF_MT38.h"
+#include "chrono/fea/ChElementBeamANCF_MT39.h"
 #include "chrono/fea/ChElementBeamANCF_MT60.h"
 #include "chrono/fea/ChElementBeamANCF_MT61.h"
 #include "chrono/fea/ChElementBeamANCF_MT62.h"
 #include "chrono/fea/ChElementBeamANCF_MT63.h"
+#include "chrono/fea/ChElementBeamANCF_MT64.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -1761,6 +1763,13 @@ int main(int argc, char* argv[]) {
         print_red("ChElementBeamANCF_MT38 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_MT39, ChMaterialBeamANCF_MT39> ChElementBeamANCF_MT39_test;
+    if (ChElementBeamANCF_MT39_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_MT39 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_MT39 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_MT60, ChMaterialBeamANCF_MT60> ChElementBeamANCF_MT60_test;
     if (ChElementBeamANCF_MT60_test.RunElementChecks(0))
         print_green("ChElementBeamANCF_MT60 Element Checks = PASSED\n");
@@ -1787,6 +1796,13 @@ int main(int argc, char* argv[]) {
         print_green("ChElementBeamANCF_MT63 Element Checks = PASSED\n");
     else
         print_red("ChElementBeamANCF_MT63 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_MT64, ChMaterialBeamANCF_MT64> ChElementBeamANCF_MT64_test;
+    if (ChElementBeamANCF_MT64_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_MT64 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_MT64 Element Checks = FAILED\n");
 
     return 0;
 }

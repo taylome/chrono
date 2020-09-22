@@ -68,10 +68,12 @@
 #include "chrono/fea/ChElementBeamANCF_MT36.h"
 #include "chrono/fea/ChElementBeamANCF_MT37.h"
 #include "chrono/fea/ChElementBeamANCF_MT38.h"
+#include "chrono/fea/ChElementBeamANCF_MT39.h"
 #include "chrono/fea/ChElementBeamANCF_MT60.h"
 #include "chrono/fea/ChElementBeamANCF_MT61.h"
 #include "chrono/fea/ChElementBeamANCF_MT62.h"
 #include "chrono/fea/ChElementBeamANCF_MT63.h"
+#include "chrono/fea/ChElementBeamANCF_MT64.h"
 
 #include "chrono/fea/ChMesh.h"
 
@@ -397,6 +399,9 @@ int main(int argc, char* argv[]) {
     ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT38, ChMaterialBeamANCF_MT38> BeamTest_MT38;
     std::cout << "ChElementBeamANCF_MT38, "; BeamTest_MT38.PrintTimingResults(num_steps);
 
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT39, ChMaterialBeamANCF_MT39> BeamTest_MT39;
+    std::cout << "ChElementBeamANCF_MT39, "; BeamTest_MT39.PrintTimingResults(num_steps);
+
     ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT60, ChMaterialBeamANCF_MT60> BeamTest_MT60;
     std::cout << "ChElementBeamANCF_MT60, "; BeamTest_MT60.PrintTimingResults(num_steps);
 
@@ -408,6 +413,9 @@ int main(int argc, char* argv[]) {
 
     ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT63, ChMaterialBeamANCF_MT63> BeamTest_MT63;
     std::cout << "ChElementBeamANCF_MT63, "; BeamTest_MT63.PrintTimingResults(num_steps);
+
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_MT64, ChMaterialBeamANCF_MT64> BeamTest_MT64;
+    std::cout << "ChElementBeamANCF_MT64, "; BeamTest_MT64.PrintTimingResults(num_steps);
 
     return(0);
 }

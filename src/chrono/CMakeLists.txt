@@ -495,10 +495,12 @@ set(ChronoEngine_fea_elements_SOURCES
 	fea/ChElementBeamANCF_MT36.cpp
 	fea/ChElementBeamANCF_MT37.cpp
 	fea/ChElementBeamANCF_MT38.cpp
+	fea/ChElementBeamANCF_MT39.cpp
     fea/ChElementBeamANCF_MT60.cpp
     fea/ChElementBeamANCF_MT61.cpp
     fea/ChElementBeamANCF_MT62.cpp
     fea/ChElementBeamANCF_MT63.cpp
+	fea/ChElementBeamANCF_MT64.cpp
     fea/ChElementBeamEuler.cpp
     fea/ChElementCableANCF.cpp
     fea/ChElementGeneric.cpp
@@ -565,10 +567,12 @@ set(ChronoEngine_fea_elements_HEADERS
 	fea/ChElementBeamANCF_MT36.h
 	fea/ChElementBeamANCF_MT37.h
 	fea/ChElementBeamANCF_MT38.h
+	fea/ChElementBeamANCF_MT39.h
     fea/ChElementBeamANCF_MT60.h
     fea/ChElementBeamANCF_MT61.h
     fea/ChElementBeamANCF_MT62.h
     fea/ChElementBeamANCF_MT63.h
+	fea/ChElementBeamANCF_MT64.h
     fea/ChElementBeamEuler.h
     fea/ChElementBeamIGA.h
     fea/ChElementCableANCF.h
