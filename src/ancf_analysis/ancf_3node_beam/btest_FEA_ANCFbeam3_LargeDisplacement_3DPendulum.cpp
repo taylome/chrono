@@ -75,6 +75,8 @@
 #include "chrono/fea/ChElementBeamANCF_MT37.h"
 #include "chrono/fea/ChElementBeamANCF_MT38.h"
 #include "chrono/fea/ChElementBeamANCF_MT39.h"
+#include "chrono/fea/ChElementBeamANCF_MT40.h"
+#include "chrono/fea/ChElementBeamANCF_MT41.h"
 #include "chrono/fea/ChElementBeamANCF_MT60.h"
 #include "chrono/fea/ChElementBeamANCF_MT61.h"
 #include "chrono/fea/ChElementBeamANCF_MT62.h"
@@ -845,6 +847,20 @@ int main(int argc, char* argv[]) {
         for (auto i = 0; i < num_els.size(); i++) {
             ANCFBeamTest<ChElementBeamANCF_MT39, ChMaterialBeamANCF_MT39> test(num_els(i), ls, f);
             test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT39");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT40, ChMaterialBeamANCF_MT40> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT40");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_MT41, ChMaterialBeamANCF_MT41> test(num_els(i), ls, f);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_MT41");
         }
     }
 

@@ -435,6 +435,7 @@ set(ChronoEngine_fea_nodes_SOURCES
     fea/ChNodeFEAxyzP.cpp
     fea/ChNodeFEAxyzD.cpp
     fea/ChNodeFEAxyzDD.cpp
+	fea/ChNodeFEAxyzDDD.cpp
     fea/ChNodeFEAcurv.cpp
 )
 
@@ -445,6 +446,7 @@ set(ChronoEngine_fea_nodes_HEADERS
     fea/ChNodeFEAxyzP.h
     fea/ChNodeFEAxyzD.h
     fea/ChNodeFEAxyzDD.h
+	fea/ChNodeFEAxyzDDD.h
     fea/ChNodeFEAcurv.h
 )
 
@@ -496,6 +498,8 @@ set(ChronoEngine_fea_elements_SOURCES
 	fea/ChElementBeamANCF_MT37.cpp
 	fea/ChElementBeamANCF_MT38.cpp
 	fea/ChElementBeamANCF_MT39.cpp
+	fea/ChElementBeamANCF_MT40.cpp
+	fea/ChElementBeamANCF_MT41.cpp
     fea/ChElementBeamANCF_MT60.cpp
     fea/ChElementBeamANCF_MT61.cpp
     fea/ChElementBeamANCF_MT62.cpp
@@ -568,6 +572,8 @@ set(ChronoEngine_fea_elements_HEADERS
 	fea/ChElementBeamANCF_MT37.h
 	fea/ChElementBeamANCF_MT38.h
 	fea/ChElementBeamANCF_MT39.h
+	fea/ChElementBeamANCF_MT40.h
+	fea/ChElementBeamANCF_MT41.h
     fea/ChElementBeamANCF_MT60.h
     fea/ChElementBeamANCF_MT61.h
     fea/ChElementBeamANCF_MT62.h
