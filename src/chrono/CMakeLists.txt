@@ -463,6 +463,16 @@ source_group(fea\\nodes FILES
 
 set(ChronoEngine_fea_elements_SOURCES
     fea/ChElementBeamANCF.cpp
+	fea/ChElementBeamANCF_TR01.cpp
+	fea/ChElementBeamANCF_TR02.cpp
+	fea/ChElementBeamANCF_TR03.cpp
+	fea/ChElementBeamANCF_TR04.cpp
+	fea/ChElementBeamANCF_TR05.cpp
+	fea/ChElementBeamANCF_TR06.cpp
+	fea/ChElementBeamANCF_TR07.cpp
+	fea/ChElementBeamANCF_TR08.cpp
+	fea/ChElementBeamANCF_TR09.cpp
+	fea/ChElementBeamANCF_TR10.cpp
     fea/ChElementBeamEuler.cpp
     fea/ChElementBeamIGA.cpp
     fea/ChElementCableANCF.cpp
@@ -489,6 +499,16 @@ set(ChronoEngine_fea_elements_HEADERS
     fea/ChElementBar.h
     fea/ChElementBeam.h
     fea/ChElementBeamANCF.h
+	fea/ChElementBeamANCF_TR01.h
+	fea/ChElementBeamANCF_TR02.h
+	fea/ChElementBeamANCF_TR03.h
+	fea/ChElementBeamANCF_TR04.h
+	fea/ChElementBeamANCF_TR05.h
+	fea/ChElementBeamANCF_TR06.h
+	fea/ChElementBeamANCF_TR07.h
+	fea/ChElementBeamANCF_TR08.h
+	fea/ChElementBeamANCF_TR09.h
+	fea/ChElementBeamANCF_TR10.h
     fea/ChElementBeamEuler.h
     fea/ChElementBeamIGA.h
     fea/ChElementCableANCF.h
