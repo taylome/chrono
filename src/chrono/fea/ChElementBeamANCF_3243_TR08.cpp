@@ -11,11 +11,8 @@
 // =============================================================================
 // Authors: Michael Taylor, Antonio Recuero, Radu Serban
 // =============================================================================
-// ANCF beam element with 3 nodes. Description of this element and its internal
-// forces may be found in Nachbagauer, Gruber, Gerstmayr, "Structural and Continuum
-// Mechanics Approaches for a 3D Shear Deformable ANCF Beam Finite Element:
-// Application to Static and Linearized Dynamic Examples", Journal of Computational
-// and Nonlinear Dynamics, 2013, April 2013, Vol. 8, 021004.
+// Fully Parameterized ANCF beam element with 2 nodes. Description of this element
+// and its internal forces may be found in
 // =============================================================================
 // Internal Force Calculation Method is based on:  Gerstmayr, J., Shabana, A.A.:
 // Efficient integration of the elastic forces and thin three-dimensional beam
@@ -26,13 +23,13 @@
 //     of the terms needed for the generalized internal force calculation with
 //     an analytical Jacobian that is integrated across all GQ points at once
 //
-//  Mass Matrix = Constant, pre-calculated 9x9 matrix
+//  Mass Matrix = Constant, pre-calculated 8x8 matrix
 //
-//  Generalized Force due to gravity = Constant 27x1 Vector
+//  Generalized Force due to gravity = Constant 24x1 Vector
 //     (assumption that gravity is constant too)
 //
 //  Generalized Internal Force Vector = Calculated using the Gerstmayr method:
-//     Dense Math: e_bar = 3x9 and S_bar = 9x1
+//     Dense Math: e_bar = 3x8 and S_bar = 8x1
 //     Math is based on the method presented by Gerstmayr and Shabana
 //     1 less than "Full Integration" Number of GQ Integration Points (4x2x2)
 //     GQ integration is performed across all the GQ points at once
@@ -47,7 +44,7 @@
 
 #include "chrono/core/ChQuadrature.h"
 #include "chrono/physics/ChSystem.h"
-#include "chrono/fea/ChElementBeamANCF_TR08.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR08.h"
 #include <cmath>
 #include <Eigen/Dense>
 
@@ -58,9 +55,9 @@ namespace fea {
 // Constructor
 // ------------------------------------------------------------------------------
 
-ChElementBeamANCF_TR08::ChElementBeamANCF_TR08()
+ChElementBeamANCF_3243_TR08::ChElementBeamANCF_3243_TR08()
     : m_gravity_on(false), m_thicknessY(0), m_thicknessZ(0), m_lenX(0), m_Alpha(0), m_damping_enabled(false) {
-    m_nodes.resize(3);
+    m_nodes.resize(2);
 
     // m_F_Transpose_CombinedBlock_col_ordered.setZero();
     // m_F_Transpose_CombinedBlockDamping_col_ordered.setZero();
@@ -79,27 +76,23 @@ ChElementBeamANCF_TR08::ChElementBeamANCF_TR08()
 // Set element nodes
 // ------------------------------------------------------------------------------
 
-void ChElementBeamANCF_TR08::SetNodes(std::shared_ptr<ChNodeFEAxyzDD> nodeA,
-                                      std::shared_ptr<ChNodeFEAxyzDD> nodeB,
-                                      std::shared_ptr<ChNodeFEAxyzDD> nodeC) {
+void ChElementBeamANCF_3243_TR08::SetNodes(std::shared_ptr<ChNodeFEAxyzDDD> nodeA,
+                                           std::shared_ptr<ChNodeFEAxyzDDD> nodeB) {
     assert(nodeA);
     assert(nodeB);
-    assert(nodeC);
 
     m_nodes[0] = nodeA;
     m_nodes[1] = nodeB;
-    m_nodes[2] = nodeC;
 
     std::vector<ChVariables*> mvars;
     mvars.push_back(&m_nodes[0]->Variables());
     mvars.push_back(&m_nodes[0]->Variables_D());
     mvars.push_back(&m_nodes[0]->Variables_DD());
+    mvars.push_back(&m_nodes[0]->Variables_DDD());
     mvars.push_back(&m_nodes[1]->Variables());
     mvars.push_back(&m_nodes[1]->Variables_D());
     mvars.push_back(&m_nodes[1]->Variables_DD());
-    mvars.push_back(&m_nodes[2]->Variables());
-    mvars.push_back(&m_nodes[2]->Variables_D());
-    mvars.push_back(&m_nodes[2]->Variables_DD());
+    mvars.push_back(&m_nodes[1]->Variables_DDD());
 
     Kmatr.SetVariables(mvars);
 
@@ -113,34 +106,36 @@ void ChElementBeamANCF_TR08::SetNodes(std::shared_ptr<ChNodeFEAxyzDD> nodeA,
 // -----------------------------------------------------------------------------
 
 // Initial element setup.
-void ChElementBeamANCF_TR08::SetupInitial(ChSystem* system) {
+void ChElementBeamANCF_3243_TR08::SetupInitial(ChSystem* system) {
     // Compute mass matrix and gravitational forces and store them since they are constants
     ComputeMassMatrixAndGravityForce(system->Get_G_acc());
     PrecomputeInternalForceMatricesWeights();
 }
 
 // State update.
-void ChElementBeamANCF_TR08::Update() {
+void ChElementBeamANCF_3243_TR08::Update() {
     ChElementGeneric::Update();
 }
 
 // Fill the D vector with the current field values at the element nodes.
-void ChElementBeamANCF_TR08::GetStateBlock(ChVectorDynamic<>& mD) {
+void ChElementBeamANCF_3243_TR08::GetStateBlock(ChVectorDynamic<>& mD) {
     mD.segment(0, 3) = m_nodes[0]->GetPos().eigen();
     mD.segment(3, 3) = m_nodes[0]->GetD().eigen();
     mD.segment(6, 3) = m_nodes[0]->GetDD().eigen();
-    mD.segment(9, 3) = m_nodes[1]->GetPos().eigen();
-    mD.segment(12, 3) = m_nodes[1]->GetD().eigen();
-    mD.segment(15, 3) = m_nodes[1]->GetDD().eigen();
-    mD.segment(18, 3) = m_nodes[2]->GetPos().eigen();
-    mD.segment(21, 3) = m_nodes[2]->GetD().eigen();
-    mD.segment(24, 3) = m_nodes[2]->GetDD().eigen();
+    mD.segment(9, 3) = m_nodes[0]->GetDDD().eigen();
+    mD.segment(12, 3) = m_nodes[1]->GetPos().eigen();
+    mD.segment(15, 3) = m_nodes[1]->GetD().eigen();
+    mD.segment(18, 3) = m_nodes[1]->GetDD().eigen();
+    mD.segment(21, 3) = m_nodes[1]->GetDDD().eigen();
 }
 
 // Calculate the global matrix H as a linear combination of K, R, and M:
 //   H = Mfactor * [M] + Kfactor * [K] + Rfactor * [R]
-void ChElementBeamANCF_TR08::ComputeKRMmatricesGlobal(ChMatrixRef H, double Kfactor, double Rfactor, double Mfactor) {
-    assert((H.rows() == 27) && (H.cols() == 27));
+void ChElementBeamANCF_3243_TR08::ComputeKRMmatricesGlobal(ChMatrixRef H,
+                                                           double Kfactor,
+                                                           double Rfactor,
+                                                           double Mfactor) {
+    assert((H.rows() == 24) && (H.cols() == 24));
 
     ////Use H to accumulate the Dense part of the Jacobian, so set it to all zeros
     ////H.setZero();
@@ -154,12 +149,12 @@ void ChElementBeamANCF_TR08::ComputeKRMmatricesGlobal(ChMatrixRef H, double Kfac
     }
 
 #else
-    ChMatrixNM<double, 27, 27> JacobianMatrix;
+    ChMatrixNM<double, 24, 24> JacobianMatrix;
     ComputeInternalJacobians(JacobianMatrix, Kfactor, Rfactor);
     // Load Jac + Mfactor*[M] into H
     H = JacobianMatrix;
-    for (unsigned int i = 0; i < 9; i++) {
-        for (unsigned int j = 0; j < 9; j++) {
+    for (unsigned int i = 0; i < 8; i++) {
+        for (unsigned int j = 0; j < 8; j++) {
             H(3 * i, 3 * j) += Mfactor * m_MassMatrix(i, j);
             H(3 * i + 1, 3 * j + 1) += Mfactor * m_MassMatrix(i, j);
             H(3 * i + 2, 3 * j + 2) += Mfactor * m_MassMatrix(i, j);
@@ -169,7 +164,7 @@ void ChElementBeamANCF_TR08::ComputeKRMmatricesGlobal(ChMatrixRef H, double Kfac
 }
 
 // Return the mass matrix.
-void ChElementBeamANCF_TR08::ComputeMmatrixGlobal(ChMatrixRef M) {
+void ChElementBeamANCF_3243_TR08::ComputeMmatrixGlobal(ChMatrixRef M) {
     M.setZero();
 
     // Inflate the Mass Matrix since it is stored in compact form.
@@ -177,8 +172,8 @@ void ChElementBeamANCF_TR08::ComputeMmatrixGlobal(ChMatrixRef M) {
     // M(1:3:end,1:3:end) = m_MassMatrix;
     // M(2:3:end,2:3:end) = m_MassMatrix;
     // M(3:3:end,3:3:end) = m_MassMatrix;
-    for (unsigned int i = 0; i < 9; i++) {
-        for (unsigned int j = 0; j < 9; j++) {
+    for (unsigned int i = 0; i < 8; i++) {
+        for (unsigned int j = 0; j < 8; j++) {
             M(3 * i, 3 * j) = m_MassMatrix(i, j);
             M(3 * i + 1, 3 * j + 1) = m_MassMatrix(i, j);
             M(3 * i + 2, 3 * j + 2) = m_MassMatrix(i, j);
@@ -189,7 +184,7 @@ void ChElementBeamANCF_TR08::ComputeMmatrixGlobal(ChMatrixRef M) {
 // -----------------------------------------------------------------------------
 // Mass Matrix & Generalized Force Due to Gravity Calculation
 // -----------------------------------------------------------------------------
-void ChElementBeamANCF_TR08::ComputeMassMatrixAndGravityForce(const ChVector<>& g_acc) {
+void ChElementBeamANCF_3243_TR08::ComputeMassMatrixAndGravityForce(const ChVector<>& g_acc) {
     // For this element, 5 GQ Points are needed in the xi direction
     //  and 2 GQ Points are needed in the eta & zeta directions
     //  for exact integration of the element's mass matrix, even if
@@ -217,9 +212,9 @@ void ChElementBeamANCF_TR08::ComputeMassMatrixAndGravityForce(const ChVector<>& 
                 double eta = GQTable->Lroots[GQ_idx_eta_zeta][it_eta];
                 double zeta = GQTable->Lroots[GQ_idx_eta_zeta][it_zeta];
                 double det_J_0xi = Calc_det_J_0xi(xi, eta, zeta);  // determinate of the element Jacobian (volume ratio)
-                ChMatrixNM<double, 3, 27> Sxi;                     // 3x27 Normalized Shape Function Matrix
+                ChMatrixNM<double, 3, 24> Sxi;                     // 3x24 Normalized Shape Function Matrix
                 Calc_Sxi(Sxi, xi, eta, zeta);
-                ChVectorN<double, 9> Sxi_compact;  // 9x1 Vector of the Unique Normalized Shape Functions
+                ChVectorN<double, 8> Sxi_compact;  // 8x1 Vector of the Unique Normalized Shape Functions
                 Calc_Sxi_compact(Sxi_compact, xi, eta, zeta);
 
                 m_GravForce += (GQ_weight * rho * det_J_0xi) * Sxi.transpose() * g_acc.eigen();
@@ -230,7 +225,7 @@ void ChElementBeamANCF_TR08::ComputeMassMatrixAndGravityForce(const ChVector<>& 
 }
 
 // Precalculate constant matrices and scalars for the internal force calculations
-void ChElementBeamANCF_TR08::PrecomputeInternalForceMatricesWeights() {
+void ChElementBeamANCF_3243_TR08::PrecomputeInternalForceMatricesWeights() {
     ChQuadratureTables* GQTable = GetStaticGQTables();
     unsigned int GQ_idx_xi = 3;        // 4 Point Gauss-Quadrature;
     unsigned int GQ_idx_eta_zeta = 1;  // 2 Point Gauss-Quadrature;
@@ -250,16 +245,16 @@ void ChElementBeamANCF_TR08::PrecomputeInternalForceMatricesWeights() {
                              it_xi * GQTable->Lroots[GQ_idx_eta_zeta].size() * GQTable->Lroots[GQ_idx_eta_zeta].size();
                 ChMatrix33<double>
                     J_0xi;  // Element Jacobian between the reference configuration and normalized configuration
-                ChMatrixNMc<double, 9, 3> Sxi_D;  // Matrix of normalized shape function derivatives
+                ChMatrixNMc<double, 8, 3> Sxi_D;  // Matrix of normalized shape function derivatives
 
                 Calc_Sxi_D(Sxi_D, xi, eta, zeta);
                 J_0xi.noalias() = m_e0_bar.transpose() * Sxi_D;
 
-                ChMatrixNMc<double, 9, 3> SD = Sxi_D * J_0xi.inverse();
-                m_SD_precompute_D0.block(0, 3 * index, 9, 3) = SD;
-                m_SD_precompute_D0_col0_block.block(0, index, 9, 1) = SD.col(0);
-                m_SD_precompute_D0_col1_block.block(0, index, 9, 1) = SD.col(1);
-                m_SD_precompute_D0_col2_block.block(0, index, 9, 1) = SD.col(2);
+                ChMatrixNMc<double, 8, 3> SD = Sxi_D * J_0xi.inverse();
+                m_SD_precompute_D0.block(0, 3 * index, 8, 3) = SD;
+                m_SD_precompute_D0_col0_block.block(0, index, 8, 1) = SD.col(0);
+                m_SD_precompute_D0_col1_block.block(0, index, 8, 1) = SD.col(1);
+                m_SD_precompute_D0_col2_block.block(0, index, 8, 1) = SD.col(2);
                 m_GQWeight_det_J_0xi_D0(index) = -J_0xi.determinant() * GQ_weight;
             }
         }
@@ -272,38 +267,37 @@ void ChElementBeamANCF_TR08::PrecomputeInternalForceMatricesWeights() {
         double GQ_weight = GQTable->Weight[GQ_idx_xi][it_xi] * 2 * 2;
         double xi = GQTable->Lroots[GQ_idx_xi][it_xi];
         ChMatrix33<double> J_0xi;  // Element Jacobian between the reference configuration and normalized configuration
-        ChMatrixNMc<double, 9, 3> Sxi_D;  // Matrix of normalized shape function derivatives
+        ChMatrixNMc<double, 8, 3> Sxi_D;  // Matrix of normalized shape function derivatives
 
         Calc_Sxi_D(Sxi_D, xi, 0, 0);
         J_0xi.noalias() = m_e0_bar.transpose() * Sxi_D;
 
-        ChMatrixNMc<double, 9, 3> SD = Sxi_D * J_0xi.inverse();
-        m_SD_precompute_Dv.block(0, 3 * it_xi, 9, 3) = SD;
-        m_SD_precompute_Dv_col0_block.block(0, it_xi, 9, 1) = SD.col(0);
-        m_SD_precompute_Dv_col1_block.block(0, it_xi, 9, 1) = SD.col(1);
-        m_SD_precompute_Dv_col2_block.block(0, it_xi, 9, 1) = SD.col(2);
+        ChMatrixNMc<double, 8, 3> SD = Sxi_D * J_0xi.inverse();
+        m_SD_precompute_Dv.block(0, 3 * it_xi, 8, 3) = SD;
+        m_SD_precompute_Dv_col0_block.block(0, it_xi, 8, 1) = SD.col(0);
+        m_SD_precompute_Dv_col1_block.block(0, it_xi, 8, 1) = SD.col(1);
+        m_SD_precompute_Dv_col2_block.block(0, it_xi, 8, 1) = SD.col(2);
         m_GQWeight_det_J_0xi_Dv(it_xi) = -J_0xi.determinant() * GQ_weight;
     }
 
-    m_SD_precompute.block(0, 0, 9, 48) = m_SD_precompute_D0;
-    m_SD_precompute.block(0, 48, 9, 12) = m_SD_precompute_Dv;
+    m_SD_precompute.block(0, 0, 8, 48) = m_SD_precompute_D0;
+    m_SD_precompute.block(0, 48, 8, 12) = m_SD_precompute_Dv;
 
-    m_SD_precompute_col_ordered.block(0, 0, 9, 16) = m_SD_precompute_D0_col0_block;
-    m_SD_precompute_col_ordered.block(0, 16, 9, 16) = m_SD_precompute_D0_col1_block;
-    m_SD_precompute_col_ordered.block(0, 32, 9, 16) = m_SD_precompute_D0_col2_block;
-    m_SD_precompute_col_ordered.block(0, 48, 9, 4) = m_SD_precompute_Dv_col0_block;
-    m_SD_precompute_col_ordered.block(0, 52, 9, 4) = m_SD_precompute_Dv_col1_block;
-    m_SD_precompute_col_ordered.block(0, 56, 9, 4) = m_SD_precompute_Dv_col2_block;
+    m_SD_precompute_col_ordered.block(0, 0, 8, 16) = m_SD_precompute_D0_col0_block;
+    m_SD_precompute_col_ordered.block(0, 16, 8, 16) = m_SD_precompute_D0_col1_block;
+    m_SD_precompute_col_ordered.block(0, 32, 8, 16) = m_SD_precompute_D0_col2_block;
+    m_SD_precompute_col_ordered.block(0, 48, 8, 4) = m_SD_precompute_Dv_col0_block;
+    m_SD_precompute_col_ordered.block(0, 52, 8, 4) = m_SD_precompute_Dv_col1_block;
+    m_SD_precompute_col_ordered.block(0, 56, 8, 4) = m_SD_precompute_Dv_col2_block;
 
     m_GQWeight_det_J_0xi.block(0, 0, 16, 1) = m_GQWeight_det_J_0xi_D0;
     m_GQWeight_det_J_0xi.block(16, 0, 4, 1) = m_GQWeight_det_J_0xi_Dv;
 }
 
 /// This class computes and adds corresponding masses to ElementGeneric member m_TotalMass
-void ChElementBeamANCF_TR08::ComputeNodalMass() {
-    m_nodes[0]->m_TotalMass += m_MassMatrix(0, 0) + m_MassMatrix(0, 3) + m_MassMatrix(0, 6);
-    m_nodes[1]->m_TotalMass += m_MassMatrix(3, 3) + m_MassMatrix(3, 0) + m_MassMatrix(3, 6);
-    m_nodes[2]->m_TotalMass += m_MassMatrix(6, 6) + m_MassMatrix(6, 0) + m_MassMatrix(6, 3);
+void ChElementBeamANCF_3243_TR08::ComputeNodalMass() {
+    m_nodes[0]->m_TotalMass += m_MassMatrix(0, 0) + m_MassMatrix(0, 12);
+    m_nodes[1]->m_TotalMass += m_MassMatrix(12, 12) + m_MassMatrix(12, 0);
 }
 
 // -----------------------------------------------------------------------------
@@ -311,7 +305,7 @@ void ChElementBeamANCF_TR08::ComputeNodalMass() {
 // -----------------------------------------------------------------------------
 
 // Set structural damping.
-void ChElementBeamANCF_TR08::SetAlphaDamp(double a) {
+void ChElementBeamANCF_3243_TR08::SetAlphaDamp(double a) {
     m_Alpha = a;
     m_2Alpha = 2 * a;
     if (std::abs(m_Alpha) > 1e-10)
@@ -320,17 +314,17 @@ void ChElementBeamANCF_TR08::SetAlphaDamp(double a) {
         m_damping_enabled = false;
 }
 
-void ChElementBeamANCF_TR08::ComputeInternalForces(ChVectorDynamic<>& Fi) {
+void ChElementBeamANCF_3243_TR08::ComputeInternalForces(ChVectorDynamic<>& Fi) {
     // Runs faster if the internal force with or without damping calculations are not combined into the same function
     // using the common calculations with an if statement for the damping in the middle to calculate the different
     // P_transpose_scaled_Block components
     if (m_damping_enabled) {
-        ChMatrixNM<double, 9, 6> ebar_ebardot;
+        ChMatrixNM<double, 8, 6> ebar_ebardot;
         CalcCombinedCoordMatrix(ebar_ebardot);
 
         ComputeInternalForcesAtState(Fi, ebar_ebardot);
     } else {
-        ChMatrixNM<double, 9, 3> e_bar;
+        ChMatrixNM<double, 8, 3> e_bar;
         CalcCoordMatrix(e_bar);
 
         ComputeInternalForcesAtStateNoDamping(Fi, e_bar);
@@ -341,14 +335,14 @@ void ChElementBeamANCF_TR08::ComputeInternalForces(ChVectorDynamic<>& Fi) {
     }
 }
 
-void ChElementBeamANCF_TR08::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
-                                                          const ChMatrixNM<double, 9, 6>& ebar_ebardot) {
+void ChElementBeamANCF_3243_TR08::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
+                                                               const ChMatrixNM<double, 8, 6>& ebar_ebardot) {
     // Straight & Normalized Internal Force Integrand is of order : 8 in xi, order : 4 in eta, and order : 4 in zeta.
     // This requires GQ 5 points along the xi direction and 3 points along the eta and zeta directions for "Full
     // Integration" However, very similar results can be obtained with 1 fewer GQ point in  each direction, resulting in
     // roughly 1/3 of the calculations
 
-#if true //Need to test "false" on Euler (Jan 3, 2021)
+#if true  // Need to test "false" on Euler (Jan 3, 2021)
     // Calculate F is one big block and then split up afterwards to improve efficiency (hopefully)
     ChMatrixNMc<double, 60, 6> F_Transpose_CombinedBlockDamping_col_ordered =
         m_SD_precompute_col_ordered.transpose() * ebar_ebardot;
@@ -627,300 +621,302 @@ void ChElementBeamANCF_TR08::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
 
     // =============================================================================
 
-    ChMatrixNM<double, 9, 3> QiCompact = m_SD_precompute_col_ordered * P_transpose_scaled_Block_col_ordered;
-    Eigen::Map<ChVectorN<double, 27>> QiReshaped(QiCompact.data(), QiCompact.size());
+    ChMatrixNM<double, 8, 3> QiCompact = m_SD_precompute_col_ordered * P_transpose_scaled_Block_col_ordered;
+    Eigen::Map<ChVectorN<double, 24>> QiReshaped(QiCompact.data(), QiCompact.size());
     Fi = QiReshaped;
 
 #else
-// Calculate F is one big block and then split up afterwards to improve efficiency (hopefully)
-ChMatrixNMc<double, 60, 6> F_Transpose_CombinedBlockDamping_col_ordered;
-F_Transpose_CombinedBlockDamping_col_ordered.noalias() = m_SD_precompute_col_ordered.transpose() * ebar_ebardot;
+    // Calculate F is one big block and then split up afterwards to improve efficiency (hopefully)
+    ChMatrixNMc<double, 60, 6> F_Transpose_CombinedBlockDamping_col_ordered;
+    F_Transpose_CombinedBlockDamping_col_ordered.noalias() = m_SD_precompute_col_ordered.transpose() * ebar_ebardot;
 
-const ChVectorN<double, 6>& D0 = GetMaterial()->Get_D0();
+    const ChVectorN<double, 6>& D0 = GetMaterial()->Get_D0();
 
-ChVectorN<double, 16> SPK2_0_D0_Block;
-SPK2_0_D0_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0));
-SPK2_0_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1));
-SPK2_0_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2));
-SPK2_0_D0_Block.array() -= 1;
-ChVectorN<double, 16> SPK2_0_D0_BlockDamping; 
-SPK2_0_D0_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 3));
-SPK2_0_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 4));
-SPK2_0_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 5));
-SPK2_0_D0_Block.noalias() += m_2Alpha * SPK2_0_D0_BlockDamping;
-SPK2_0_D0_Block.array() *= m_GQWeight_det_J_0xi_D0.array();
-SPK2_0_D0_Block *= (0.5 * D0(0));
+    ChVectorN<double, 16> SPK2_0_D0_Block;
+    SPK2_0_D0_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0));
+    SPK2_0_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1));
+    SPK2_0_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2));
+    SPK2_0_D0_Block.array() -= 1;
+    ChVectorN<double, 16> SPK2_0_D0_BlockDamping;
+    SPK2_0_D0_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 3));
+    SPK2_0_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 4));
+    SPK2_0_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 5));
+    SPK2_0_D0_Block.noalias() += m_2Alpha * SPK2_0_D0_BlockDamping;
+    SPK2_0_D0_Block.array() *= m_GQWeight_det_J_0xi_D0.array();
+    SPK2_0_D0_Block *= (0.5 * D0(0));
 
-ChVectorN<double, 16> SPK2_1_D0_Block;
-SPK2_1_D0_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0));
-SPK2_1_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1));
-SPK2_1_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2));
-SPK2_1_D0_Block.array() -= 1;
-ChVectorN<double, 16> SPK2_1_D0_BlockDamping;
-SPK2_1_D0_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 3));
-SPK2_1_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 4));
-SPK2_1_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 5));
-SPK2_1_D0_Block.noalias() += m_2Alpha * SPK2_1_D0_BlockDamping;
-SPK2_1_D0_Block.array() *= m_GQWeight_det_J_0xi_D0.array();
-SPK2_1_D0_Block *= (0.5 * D0(1));
+    ChVectorN<double, 16> SPK2_1_D0_Block;
+    SPK2_1_D0_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0));
+    SPK2_1_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1));
+    SPK2_1_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2));
+    SPK2_1_D0_Block.array() -= 1;
+    ChVectorN<double, 16> SPK2_1_D0_BlockDamping;
+    SPK2_1_D0_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 3));
+    SPK2_1_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 4));
+    SPK2_1_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 5));
+    SPK2_1_D0_Block.noalias() += m_2Alpha * SPK2_1_D0_BlockDamping;
+    SPK2_1_D0_Block.array() *= m_GQWeight_det_J_0xi_D0.array();
+    SPK2_1_D0_Block *= (0.5 * D0(1));
 
-ChVectorN<double, 16> SPK2_2_D0_Block;
-SPK2_2_D0_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0));
-SPK2_2_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1));
-SPK2_2_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2));
-SPK2_2_D0_Block.array() -= 1;
-ChVectorN<double, 16> SPK2_2_D0_BlockDamping;
-SPK2_2_D0_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 3));
-SPK2_2_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 4));
-SPK2_2_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 5));
-SPK2_2_D0_Block.noalias() += m_2Alpha * SPK2_2_D0_BlockDamping;
-SPK2_2_D0_Block.array() *= m_GQWeight_det_J_0xi_D0.array();
-SPK2_2_D0_Block *= (0.5 * D0(2));
+    ChVectorN<double, 16> SPK2_2_D0_Block;
+    SPK2_2_D0_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0));
+    SPK2_2_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1));
+    SPK2_2_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2));
+    SPK2_2_D0_Block.array() -= 1;
+    ChVectorN<double, 16> SPK2_2_D0_BlockDamping;
+    SPK2_2_D0_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 3));
+    SPK2_2_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 4));
+    SPK2_2_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 5));
+    SPK2_2_D0_Block.noalias() += m_2Alpha * SPK2_2_D0_BlockDamping;
+    SPK2_2_D0_Block.array() *= m_GQWeight_det_J_0xi_D0.array();
+    SPK2_2_D0_Block *= (0.5 * D0(2));
 
-ChVectorN<double, 16> SPK2_3_D0_Block;
-SPK2_3_D0_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0));
-SPK2_3_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1));
-SPK2_3_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2));
-ChVectorN<double, 16> SPK2_3_D0_BlockDamping;
-SPK2_3_D0_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 3));
-SPK2_3_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 4));
-SPK2_3_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 5));
-SPK2_3_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 3));
-SPK2_3_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 4));
-SPK2_3_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 5));
-SPK2_3_D0_Block.noalias() += m_Alpha * SPK2_3_D0_BlockDamping;
-SPK2_3_D0_Block.array() *= m_GQWeight_det_J_0xi_D0.array();
-SPK2_3_D0_Block *= D0(3);
+    ChVectorN<double, 16> SPK2_3_D0_Block;
+    SPK2_3_D0_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0));
+    SPK2_3_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1));
+    SPK2_3_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2));
+    ChVectorN<double, 16> SPK2_3_D0_BlockDamping;
+    SPK2_3_D0_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 3));
+    SPK2_3_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 4));
+    SPK2_3_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 5));
+    SPK2_3_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 3));
+    SPK2_3_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 4));
+    SPK2_3_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 5));
+    SPK2_3_D0_Block.noalias() += m_Alpha * SPK2_3_D0_BlockDamping;
+    SPK2_3_D0_Block.array() *= m_GQWeight_det_J_0xi_D0.array();
+    SPK2_3_D0_Block *= D0(3);
 
-ChVectorN<double, 16> SPK2_4_D0_Block;
-SPK2_4_D0_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0));
-SPK2_4_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1));
-SPK2_4_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2));
-ChVectorN<double, 16> SPK2_4_D0_BlockDamping;
-SPK2_4_D0_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 3));
-SPK2_4_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 4));
-SPK2_4_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 5));
-SPK2_4_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 3));
-SPK2_4_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 4));
-SPK2_4_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 5));
-SPK2_4_D0_Block.noalias() += m_Alpha * SPK2_4_D0_BlockDamping;
-SPK2_4_D0_Block.array() *= m_GQWeight_det_J_0xi_D0.array();
-SPK2_4_D0_Block *= D0(4);
+    ChVectorN<double, 16> SPK2_4_D0_Block;
+    SPK2_4_D0_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0));
+    SPK2_4_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1));
+    SPK2_4_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2));
+    ChVectorN<double, 16> SPK2_4_D0_BlockDamping;
+    SPK2_4_D0_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 3));
+    SPK2_4_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 4));
+    SPK2_4_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 5));
+    SPK2_4_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 3));
+    SPK2_4_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 4));
+    SPK2_4_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 5));
+    SPK2_4_D0_Block.noalias() += m_Alpha * SPK2_4_D0_BlockDamping;
+    SPK2_4_D0_Block.array() *= m_GQWeight_det_J_0xi_D0.array();
+    SPK2_4_D0_Block *= D0(4);
 
-ChVectorN<double, 16> SPK2_5_D0_Block;
-SPK2_5_D0_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0));
-SPK2_5_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1));
-SPK2_5_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2));
-ChVectorN<double, 16> SPK2_5_D0_BlockDamping;
-SPK2_5_D0_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 3));
-SPK2_5_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 4));
-SPK2_5_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 5));
-SPK2_5_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 3));
-SPK2_5_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 4));
-SPK2_5_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 5));
-SPK2_5_D0_Block.noalias() += m_Alpha * SPK2_5_D0_BlockDamping;
-SPK2_5_D0_Block.array() *= m_GQWeight_det_J_0xi_D0.array();
-SPK2_5_D0_Block *= D0(5);
+    ChVectorN<double, 16> SPK2_5_D0_Block;
+    SPK2_5_D0_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0));
+    SPK2_5_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1));
+    SPK2_5_D0_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2));
+    ChVectorN<double, 16> SPK2_5_D0_BlockDamping;
+    SPK2_5_D0_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 3));
+    SPK2_5_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 4));
+    SPK2_5_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 5));
+    SPK2_5_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 3));
+    SPK2_5_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 4));
+    SPK2_5_D0_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 5));
+    SPK2_5_D0_Block.noalias() += m_Alpha * SPK2_5_D0_BlockDamping;
+    SPK2_5_D0_Block.array() *= m_GQWeight_det_J_0xi_D0.array();
+    SPK2_5_D0_Block *= D0(5);
 
-ChMatrixNMc<double, 60, 3>
-P_transpose_scaled_Block_col_ordered;  // 1st tensor Piola-Kirchoff stress tensor (non-symmetric tensor) - Tiled
-                                       // across all Gauss-Quadrature points in column order in a big matrix
+    ChMatrixNMc<double, 60, 3>
+        P_transpose_scaled_Block_col_ordered;  // 1st tensor Piola-Kirchoff stress tensor (non-symmetric tensor) - Tiled
+                                               // across all Gauss-Quadrature points in column order in a big matrix
 
-P_transpose_scaled_Block_col_ordered.block<16, 1>(0, 0).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(SPK2_0_D0_Block) +
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(SPK2_5_D0_Block);
-P_transpose_scaled_Block_col_ordered.block<16, 1>(0, 0).noalias() +=
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0).cwiseProduct(SPK2_4_D0_Block);
-P_transpose_scaled_Block_col_ordered.block<16, 1>(0, 1).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(SPK2_0_D0_Block) +
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(SPK2_5_D0_Block);
-P_transpose_scaled_Block_col_ordered.block<16, 1>(0, 1).noalias() +=
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1).cwiseProduct(SPK2_4_D0_Block);
-P_transpose_scaled_Block_col_ordered.block<16, 1>(0, 2).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(SPK2_0_D0_Block) +
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(SPK2_5_D0_Block);
-P_transpose_scaled_Block_col_ordered.block<16, 1>(0, 2).noalias() +=
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2).cwiseProduct(SPK2_4_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(0, 0).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(SPK2_0_D0_Block) +
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(SPK2_5_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(0, 0).noalias() +=
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0).cwiseProduct(SPK2_4_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(0, 1).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(SPK2_0_D0_Block) +
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(SPK2_5_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(0, 1).noalias() +=
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1).cwiseProduct(SPK2_4_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(0, 2).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(SPK2_0_D0_Block) +
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(SPK2_5_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(0, 2).noalias() +=
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2).cwiseProduct(SPK2_4_D0_Block);
 
-P_transpose_scaled_Block_col_ordered.block<16, 1>(16, 0).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(SPK2_5_D0_Block) +
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(SPK2_1_D0_Block);
-P_transpose_scaled_Block_col_ordered.block<16, 1>(16, 0).noalias() +=
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0).cwiseProduct(SPK2_3_D0_Block);
-P_transpose_scaled_Block_col_ordered.block<16, 1>(16, 1).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(SPK2_5_D0_Block) +
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(SPK2_1_D0_Block);
-P_transpose_scaled_Block_col_ordered.block<16, 1>(16, 1).noalias() +=
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1).cwiseProduct(SPK2_3_D0_Block);
-P_transpose_scaled_Block_col_ordered.block<16, 1>(16, 2).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(SPK2_5_D0_Block) +
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(SPK2_1_D0_Block);
-P_transpose_scaled_Block_col_ordered.block<16, 1>(16, 2).noalias() +=
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2).cwiseProduct(SPK2_3_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(16, 0).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(SPK2_5_D0_Block) +
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(SPK2_1_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(16, 0).noalias() +=
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0).cwiseProduct(SPK2_3_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(16, 1).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(SPK2_5_D0_Block) +
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(SPK2_1_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(16, 1).noalias() +=
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1).cwiseProduct(SPK2_3_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(16, 2).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(SPK2_5_D0_Block) +
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(SPK2_1_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(16, 2).noalias() +=
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2).cwiseProduct(SPK2_3_D0_Block);
 
-P_transpose_scaled_Block_col_ordered.block<16, 1>(32, 0).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(SPK2_4_D0_Block) +
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(SPK2_3_D0_Block);
-P_transpose_scaled_Block_col_ordered.block<16, 1>(32, 0).noalias() +=
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0).cwiseProduct(SPK2_2_D0_Block);
-P_transpose_scaled_Block_col_ordered.block<16, 1>(32, 1).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(SPK2_4_D0_Block) +
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(SPK2_3_D0_Block);
-P_transpose_scaled_Block_col_ordered.block<16, 1>(32, 1).noalias() +=
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1).cwiseProduct(SPK2_2_D0_Block);
-P_transpose_scaled_Block_col_ordered.block<16, 1>(32, 2).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(SPK2_4_D0_Block) +
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(SPK2_3_D0_Block);
-P_transpose_scaled_Block_col_ordered.block<16, 1>(32, 2).noalias() +=
-F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2).cwiseProduct(SPK2_2_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(32, 0).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).cwiseProduct(SPK2_4_D0_Block) +
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 0).cwiseProduct(SPK2_3_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(32, 0).noalias() +=
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 0).cwiseProduct(SPK2_2_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(32, 1).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 1).cwiseProduct(SPK2_4_D0_Block) +
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 1).cwiseProduct(SPK2_3_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(32, 1).noalias() +=
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 1).cwiseProduct(SPK2_2_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(32, 2).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 2).cwiseProduct(SPK2_4_D0_Block) +
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(16, 2).cwiseProduct(SPK2_3_D0_Block);
+    P_transpose_scaled_Block_col_ordered.block<16, 1>(32, 2).noalias() +=
+        F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(32, 2).cwiseProduct(SPK2_2_D0_Block);
 
-// =============================================================================
+    // =============================================================================
 
-ChVectorN<double, 4> Ediag_0_Dv_Block;
-Ediag_0_Dv_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 0));
-Ediag_0_Dv_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 1));
-Ediag_0_Dv_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 2));
-Ediag_0_Dv_Block.array() -= 1;
-Ediag_0_Dv_Block *= 0.5;
-ChVectorN<double, 4> Ediag_0_Dv_BlockDamping;
-Ediag_0_Dv_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 3));
-Ediag_0_Dv_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 4));
-Ediag_0_Dv_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 5));
-Ediag_0_Dv_Block.noalias() += m_Alpha * Ediag_0_Dv_BlockDamping;
-Ediag_0_Dv_Block.array() *= m_GQWeight_det_J_0xi_Dv.array();
+    ChVectorN<double, 4> Ediag_0_Dv_Block;
+    Ediag_0_Dv_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 0));
+    Ediag_0_Dv_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 1));
+    Ediag_0_Dv_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 2));
+    Ediag_0_Dv_Block.array() -= 1;
+    Ediag_0_Dv_Block *= 0.5;
+    ChVectorN<double, 4> Ediag_0_Dv_BlockDamping;
+    Ediag_0_Dv_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 3));
+    Ediag_0_Dv_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 4));
+    Ediag_0_Dv_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 5));
+    Ediag_0_Dv_Block.noalias() += m_Alpha * Ediag_0_Dv_BlockDamping;
+    Ediag_0_Dv_Block.array() *= m_GQWeight_det_J_0xi_Dv.array();
 
-ChVectorN<double, 4> Ediag_1_Dv_Block;
-Ediag_1_Dv_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 0));
-Ediag_1_Dv_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 1));
-Ediag_1_Dv_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 2));
-Ediag_1_Dv_Block.array() -= 1;
-Ediag_1_Dv_Block *= 0.5;
-ChVectorN<double, 4> Ediag_1_Dv_BlockDamping;
-Ediag_1_Dv_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 3));
-Ediag_1_Dv_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 4));
-Ediag_1_Dv_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 5));
-Ediag_1_Dv_Block.noalias() += m_Alpha * Ediag_1_Dv_BlockDamping;
-Ediag_1_Dv_Block.array() *= m_GQWeight_det_J_0xi_Dv.array();
+    ChVectorN<double, 4> Ediag_1_Dv_Block;
+    Ediag_1_Dv_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 0));
+    Ediag_1_Dv_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 1));
+    Ediag_1_Dv_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 2));
+    Ediag_1_Dv_Block.array() -= 1;
+    Ediag_1_Dv_Block *= 0.5;
+    ChVectorN<double, 4> Ediag_1_Dv_BlockDamping;
+    Ediag_1_Dv_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 3));
+    Ediag_1_Dv_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 4));
+    Ediag_1_Dv_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 5));
+    Ediag_1_Dv_Block.noalias() += m_Alpha * Ediag_1_Dv_BlockDamping;
+    Ediag_1_Dv_Block.array() *= m_GQWeight_det_J_0xi_Dv.array();
 
-ChVectorN<double, 4> Ediag_2_Dv_Block;
-Ediag_2_Dv_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 0));
-Ediag_2_Dv_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 1));
-Ediag_2_Dv_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 2));
-Ediag_2_Dv_Block.array() -= 1;
-Ediag_2_Dv_Block *= 0.5;
-ChVectorN<double, 4> Ediag_2_Dv_BlockDamping;
-Ediag_2_Dv_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 0).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 3));
-Ediag_2_Dv_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 1).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 4));
-Ediag_2_Dv_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 2).cwiseProduct(
-    F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 5));
-Ediag_2_Dv_Block.noalias() += m_Alpha * Ediag_2_Dv_BlockDamping;
-Ediag_2_Dv_Block.array() *= m_GQWeight_det_J_0xi_Dv.array();
+    ChVectorN<double, 4> Ediag_2_Dv_Block;
+    Ediag_2_Dv_Block.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 0));
+    Ediag_2_Dv_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 1));
+    Ediag_2_Dv_Block.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 2));
+    Ediag_2_Dv_Block.array() -= 1;
+    Ediag_2_Dv_Block *= 0.5;
+    ChVectorN<double, 4> Ediag_2_Dv_BlockDamping;
+    Ediag_2_Dv_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 0).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 3));
+    Ediag_2_Dv_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 1).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 4));
+    Ediag_2_Dv_BlockDamping.noalias() += F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 2).cwiseProduct(
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 5));
+    Ediag_2_Dv_Block.noalias() += m_Alpha * Ediag_2_Dv_BlockDamping;
+    Ediag_2_Dv_Block.array() *= m_GQWeight_det_J_0xi_Dv.array();
 
-const ChMatrix33<double>& Dv = GetMaterial()->Get_Dv();
+    const ChMatrix33<double>& Dv = GetMaterial()->Get_Dv();
 
-ChVectorN<double, 4> Sdiag_0_Dv_Block;
-Sdiag_0_Dv_Block.noalias() = Dv(0, 0) * Ediag_0_Dv_Block + Dv(1, 0) * Ediag_1_Dv_Block + Dv(2, 0) * Ediag_2_Dv_Block;
-ChVectorN<double, 4> Sdiag_1_Dv_Block;
-Sdiag_1_Dv_Block.noalias() = Dv(0, 1) * Ediag_0_Dv_Block + Dv(1, 1) * Ediag_1_Dv_Block + Dv(2, 1) * Ediag_2_Dv_Block;
-ChVectorN<double, 4> Sdiag_2_Dv_Block;
-Sdiag_2_Dv_Block.noalias() = Dv(0, 2) * Ediag_0_Dv_Block + Dv(1, 2) * Ediag_1_Dv_Block + Dv(2, 2) * Ediag_2_Dv_Block;
+    ChVectorN<double, 4> Sdiag_0_Dv_Block;
+    Sdiag_0_Dv_Block.noalias() =
+        Dv(0, 0) * Ediag_0_Dv_Block + Dv(1, 0) * Ediag_1_Dv_Block + Dv(2, 0) * Ediag_2_Dv_Block;
+    ChVectorN<double, 4> Sdiag_1_Dv_Block;
+    Sdiag_1_Dv_Block.noalias() =
+        Dv(0, 1) * Ediag_0_Dv_Block + Dv(1, 1) * Ediag_1_Dv_Block + Dv(2, 1) * Ediag_2_Dv_Block;
+    ChVectorN<double, 4> Sdiag_2_Dv_Block;
+    Sdiag_2_Dv_Block.noalias() =
+        Dv(0, 2) * Ediag_0_Dv_Block + Dv(1, 2) * Ediag_1_Dv_Block + Dv(2, 2) * Ediag_2_Dv_Block;
 
-P_transpose_scaled_Block_col_ordered.block<4, 1>(48, 0).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 0).cwiseProduct(Sdiag_0_Dv_Block);
-P_transpose_scaled_Block_col_ordered.block<4, 1>(48, 1).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 1).cwiseProduct(Sdiag_0_Dv_Block);
-P_transpose_scaled_Block_col_ordered.block<4, 1>(48, 2).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 2).cwiseProduct(Sdiag_0_Dv_Block);
+    P_transpose_scaled_Block_col_ordered.block<4, 1>(48, 0).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 0).cwiseProduct(Sdiag_0_Dv_Block);
+    P_transpose_scaled_Block_col_ordered.block<4, 1>(48, 1).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 1).cwiseProduct(Sdiag_0_Dv_Block);
+    P_transpose_scaled_Block_col_ordered.block<4, 1>(48, 2).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(48, 2).cwiseProduct(Sdiag_0_Dv_Block);
 
-P_transpose_scaled_Block_col_ordered.block<4, 1>(52, 0).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 0).cwiseProduct(Sdiag_1_Dv_Block);
-P_transpose_scaled_Block_col_ordered.block<4, 1>(52, 1).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 1).cwiseProduct(Sdiag_1_Dv_Block);
-P_transpose_scaled_Block_col_ordered.block<4, 1>(52, 2).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 2).cwiseProduct(Sdiag_1_Dv_Block);
+    P_transpose_scaled_Block_col_ordered.block<4, 1>(52, 0).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 0).cwiseProduct(Sdiag_1_Dv_Block);
+    P_transpose_scaled_Block_col_ordered.block<4, 1>(52, 1).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 1).cwiseProduct(Sdiag_1_Dv_Block);
+    P_transpose_scaled_Block_col_ordered.block<4, 1>(52, 2).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(52, 2).cwiseProduct(Sdiag_1_Dv_Block);
 
-P_transpose_scaled_Block_col_ordered.block<4, 1>(56, 0).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 0).cwiseProduct(Sdiag_2_Dv_Block);
-P_transpose_scaled_Block_col_ordered.block<4, 1>(56, 1).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 1).cwiseProduct(Sdiag_2_Dv_Block);
-P_transpose_scaled_Block_col_ordered.block<4, 1>(56, 2).noalias() =
-F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 2).cwiseProduct(Sdiag_2_Dv_Block);
+    P_transpose_scaled_Block_col_ordered.block<4, 1>(56, 0).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 0).cwiseProduct(Sdiag_2_Dv_Block);
+    P_transpose_scaled_Block_col_ordered.block<4, 1>(56, 1).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 1).cwiseProduct(Sdiag_2_Dv_Block);
+    P_transpose_scaled_Block_col_ordered.block<4, 1>(56, 2).noalias() =
+        F_Transpose_CombinedBlockDamping_col_ordered.block<4, 1>(56, 2).cwiseProduct(Sdiag_2_Dv_Block);
 
-// =============================================================================
+    // =============================================================================
 
-ChMatrixNM<double, 9, 3> QiCompact;
-QiCompact.noalias() = m_SD_precompute_col_ordered * P_transpose_scaled_Block_col_ordered;
-Eigen::Map<ChVectorN<double, 27>> QiReshaped(QiCompact.data(), QiCompact.size());
-Fi = QiReshaped;
+    ChMatrixNM<double, 8, 3> QiCompact;
+    QiCompact.noalias() = m_SD_precompute_col_ordered * P_transpose_scaled_Block_col_ordered;
+    Eigen::Map<ChVectorN<double, 24>> QiReshaped(QiCompact.data(), QiCompact.size());
+    Fi = QiReshaped;
 
 #endif
-
 }
 
-void ChElementBeamANCF_TR08::ComputeInternalForcesAtStateNoDamping(ChVectorDynamic<>& Fi,
-                                                                   const ChMatrixNM<double, 9, 3>& e_bar) {
+void ChElementBeamANCF_3243_TR08::ComputeInternalForcesAtStateNoDamping(ChVectorDynamic<>& Fi,
+                                                                        const ChMatrixNM<double, 8, 3>& e_bar) {
     // Straight & Normalized Internal Force Integrand is of order : 8 in xi, order : 4 in eta, and order : 4 in zeta.
     // This requires GQ 5 points along the xi direction and 3 points along the eta and zeta directions for "Full
     // Integration" However, very similar results can be obtained with 1 fewer GQ point in  each direction, resulting in
@@ -1104,8 +1100,8 @@ void ChElementBeamANCF_TR08::ComputeInternalForcesAtStateNoDamping(ChVectorDynam
 
     // =============================================================================
 
-    ChMatrixNM<double, 9, 3> QiCompact = m_SD_precompute_col_ordered * P_transpose_scaled_Block_col_ordered;
-    Eigen::Map<ChVectorN<double, 27>> QiReshaped(QiCompact.data(), QiCompact.size());
+    ChMatrixNM<double, 8, 3> QiCompact = m_SD_precompute_col_ordered * P_transpose_scaled_Block_col_ordered;
+    Eigen::Map<ChVectorN<double, 24>> QiReshaped(QiCompact.data(), QiCompact.size());
     Fi = QiReshaped;
 }
 
@@ -1114,22 +1110,22 @@ void ChElementBeamANCF_TR08::ComputeInternalForcesAtStateNoDamping(ChVectorDynam
 // -----------------------------------------------------------------------------
 
 // Calculate the calculate the Jacobian of the internal force integrand with damping included
-void ChElementBeamANCF_TR08::ComputeInternalJacobianDamping(ChMatrixRef& H,
-                                                            double Kfactor,
-                                                            double Rfactor,
-                                                            double Mfactor) {
-    ChMatrixNM<double, 9, 6> ebar_ebardot;
+void ChElementBeamANCF_3243_TR08::ComputeInternalJacobianDamping(ChMatrixRef& H,
+                                                                 double Kfactor,
+                                                                 double Rfactor,
+                                                                 double Mfactor) {
+    ChMatrixNM<double, 8, 6> ebar_ebardot;
     CalcCombinedCoordMatrix(ebar_ebardot);
 
     // Calculate F is one big block and then split up afterwards to improve efficiency (hopefully)
     ChMatrixNMc<double, 60, 6> F_Transpose_CombinedBlockDamping_col_ordered;
     F_Transpose_CombinedBlockDamping_col_ordered.noalias() = m_SD_precompute_col_ordered.transpose() * ebar_ebardot;
 
-    // ChMatrixNM<double, 27, 180> partial_epsilon_partial_e_Transpose;
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 27, 180> partial_epsilon_partial_e_Transpose;
-    partial_epsilon_partial_e_Transpose.resize(27, 108);
+    // ChMatrixNM<double, 24, 180> partial_epsilon_partial_e_Transpose;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 24, 180> partial_epsilon_partial_e_Transpose;
+    partial_epsilon_partial_e_Transpose.resize(24, 108);
 
-    for (auto i = 0; i < 9; i++) {
+    for (auto i = 0; i < 8; i++) {
         partial_epsilon_partial_e_Transpose.block<1, 16>(3 * i, 0).noalias() =
             m_SD_precompute_col_ordered.block<1, 16>(i, 0).cwiseProduct(
                 F_Transpose_CombinedBlockDamping_col_ordered.block<16, 1>(0, 0).transpose());
@@ -1246,14 +1242,14 @@ void ChElementBeamANCF_TR08::ComputeInternalJacobianDamping(ChMatrixRef& H,
         scaled_F_Transpose_col_ordered.block<4, 1>(56, i).array() *= m_GQWeight_det_J_0xi_Dv.array();
     }
 
-    // ChMatrixNM<double, 27, 108> Scaled_Combined_partial_epsilon_partial_e_Transpose;
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 27, 180>
+    // ChMatrixNM<double, 24, 108> Scaled_Combined_partial_epsilon_partial_e_Transpose;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 24, 180>
         Scaled_Combined_partial_epsilon_partial_e_Transpose;
-    Scaled_Combined_partial_epsilon_partial_e_Transpose.resize(27, 108);
+    Scaled_Combined_partial_epsilon_partial_e_Transpose.resize(24, 108);
 
     const ChVectorN<double, 6>& D0 = GetMaterial()->Get_D0();
 
-    for (auto i = 0; i < 9; i++) {
+    for (auto i = 0; i < 8; i++) {
         Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, 16>(3 * i, 0).noalias() =
             D0(0) * m_SD_precompute_col_ordered.block<1, 16>(i, 0).cwiseProduct(
                         scaled_F_Transpose_col_ordered.block<16, 1>(0, 0).transpose());
@@ -1330,14 +1326,14 @@ void ChElementBeamANCF_TR08::ComputeInternalJacobianDamping(ChMatrixRef& H,
                          scaled_F_Transpose_col_ordered.block<16, 1>(16, 2).transpose()));
     }
 
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 27, 4> ChunkSDvA;
-    ChunkSDvA.resize(27, 4);
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 27, 4> ChunkSDvB;
-    ChunkSDvB.resize(27, 4);
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 27, 4> ChunkSDvC;
-    ChunkSDvC.resize(27, 4);
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 24, 4> ChunkSDvA;
+    ChunkSDvA.resize(24, 4);
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 24, 4> ChunkSDvB;
+    ChunkSDvB.resize(24, 4);
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 24, 4> ChunkSDvC;
+    ChunkSDvC.resize(24, 4);
 
-    for (auto i = 0; i < 9; i++) {
+    for (auto i = 0; i < 8; i++) {
         ChunkSDvA.block<1, 4>(3 * i, 0).noalias() = m_SD_precompute_col_ordered.block<1, 4>(i, 48).cwiseProduct(
             scaled_F_Transpose_col_ordered.block<4, 1>(48, 0).transpose());
         ChunkSDvB.block<1, 4>(3 * i, 0).noalias() = m_SD_precompute_col_ordered.block<1, 4>(i, 52).cwiseProduct(
@@ -1362,11 +1358,11 @@ void ChElementBeamANCF_TR08::ComputeInternalJacobianDamping(ChMatrixRef& H,
 
     const ChMatrix33<double>& Dv = GetMaterial()->Get_Dv();
 
-    Scaled_Combined_partial_epsilon_partial_e_Transpose.block<27, 4>(0, 96).noalias() =
+    Scaled_Combined_partial_epsilon_partial_e_Transpose.block<24, 4>(0, 96).noalias() =
         Dv(0, 0) * ChunkSDvA + Dv(0, 1) * ChunkSDvB + Dv(0, 2) * ChunkSDvC;
-    Scaled_Combined_partial_epsilon_partial_e_Transpose.block<27, 4>(0, 100).noalias() =
+    Scaled_Combined_partial_epsilon_partial_e_Transpose.block<24, 4>(0, 100).noalias() =
         Dv(1, 0) * ChunkSDvA + Dv(1, 1) * ChunkSDvB + Dv(1, 2) * ChunkSDvC;
-    Scaled_Combined_partial_epsilon_partial_e_Transpose.block<27, 4>(0, 104).noalias() =
+    Scaled_Combined_partial_epsilon_partial_e_Transpose.block<24, 4>(0, 104).noalias() =
         Dv(2, 0) * ChunkSDvA + Dv(2, 1) * ChunkSDvB + Dv(2, 2) * ChunkSDvC;
 
     H = partial_epsilon_partial_e_Transpose * Scaled_Combined_partial_epsilon_partial_e_Transpose.transpose();
@@ -1566,11 +1562,11 @@ void ChElementBeamANCF_TR08::ComputeInternalJacobianDamping(ChMatrixRef& H,
     ChVectorN<double, 4> Sdiag_2_Dv_Block =
         Dv(0, 2) * Ediag_0_Dv_Block + Dv(1, 2) * Ediag_1_Dv_Block + Dv(2, 2) * Ediag_2_Dv_Block;
 
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 9, 60> S_scaled_SD_precompute_col_ordered;
-    S_scaled_SD_precompute_col_ordered.resize(9, 60);
-    // ChMatrixNM<double, 9, 60> S_scaled_SD_precompute_col_ordered;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 8, 60> S_scaled_SD_precompute_col_ordered;
+    S_scaled_SD_precompute_col_ordered.resize(8, 60);
+    // ChMatrixNM<double, 8, 60> S_scaled_SD_precompute_col_ordered;
 
-    for (auto i = 0; i < 9; i++) {
+    for (auto i = 0; i < 8; i++) {
         // S_scaled_SD_precompute_col_ordered.block<1, 16>(i, 0).noalias() =
         // SPK2_0_D0_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, 16>(i, 0));
         // S_scaled_SD_precompute_col_ordered.block<1, 16>(i, 0) +=
@@ -1615,19 +1611,19 @@ void ChElementBeamANCF_TR08::ComputeInternalJacobianDamping(ChMatrixRef& H,
             Sdiag_2_Dv_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, 4>(i, 56));
     }
 
-    // Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 9, 9> Jacobian_CompactPart;
-    // Jacobian_CompactPart.resize(9, 9);
-    // ChMatrixNM<double, 9, 9> Jacobian_CompactPart = Mfactor * m_MassMatrix + Kfactor * m_SD_precompute_col_ordered *
+    // Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 8, 8> Jacobian_CompactPart;
+    // Jacobian_CompactPart.resize(8, 8);
+    // ChMatrixNM<double, 8, 8> Jacobian_CompactPart = Mfactor * m_MassMatrix + Kfactor * m_SD_precompute_col_ordered *
     // S_scaled_SD_precompute_col_ordered.transpose();
-    ChMatrixNM<double, 9, 9> Jacobian_CompactPart =
+    ChMatrixNM<double, 8, 8> Jacobian_CompactPart =
         m_SD_precompute_col_ordered * S_scaled_SD_precompute_col_ordered.transpose();
     Jacobian_CompactPart *= Kfactor;
     Jacobian_CompactPart += Mfactor * m_MassMatrix;
     // Jacobian_CompactPart.noalias() = Mfactor * m_MassMatrix + Kfactor * m_SD_precompute_col_ordered *
     // S_scaled_SD_precompute_col_ordered.transpose();
 
-    for (unsigned int i = 0; i < 9; i++) {
-        for (unsigned int j = 0; j < 9; j++) {
+    for (unsigned int i = 0; i < 8; i++) {
+        for (unsigned int j = 0; j < 8; j++) {
             H(3 * i, 3 * j) += Jacobian_CompactPart(i, j);
             H(3 * i + 1, 3 * j + 1) += Jacobian_CompactPart(i, j);
             H(3 * i + 2, 3 * j + 2) += Jacobian_CompactPart(i, j);
@@ -1636,19 +1632,19 @@ void ChElementBeamANCF_TR08::ComputeInternalJacobianDamping(ChMatrixRef& H,
 }
 
 // Calculate the calculate the Jacobian of the internal force integrand without damping included
-void ChElementBeamANCF_TR08::ComputeInternalJacobianNoDamping(ChMatrixRef& H, double Kfactor, double Mfactor) {
-    ChMatrixNM<double, 9, 3> e_bar;
+void ChElementBeamANCF_3243_TR08::ComputeInternalJacobianNoDamping(ChMatrixRef& H, double Kfactor, double Mfactor) {
+    ChMatrixNM<double, 8, 3> e_bar;
     CalcCoordMatrix(e_bar);
 
     // Calculate F is one big block and then split up afterwards to improve efficiency (hopefully)
     ChMatrixNMc<double, 60, 3> F_Transpose_CombinedBlock_col_ordered;
     F_Transpose_CombinedBlock_col_ordered = m_SD_precompute_col_ordered.transpose() * e_bar;
 
-    // ChMatrixNM<double, 27, 180> partial_epsilon_partial_e_Transpose;
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 27, 180> partial_epsilon_partial_e_Transpose;
-    partial_epsilon_partial_e_Transpose.resize(27, 108);
+    // ChMatrixNM<double, 24, 180> partial_epsilon_partial_e_Transpose;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 24, 180> partial_epsilon_partial_e_Transpose;
+    partial_epsilon_partial_e_Transpose.resize(24, 108);
 
-    for (auto i = 0; i < 9; i++) {
+    for (auto i = 0; i < 8; i++) {
         partial_epsilon_partial_e_Transpose.block<1, 16>(3 * i, 0).noalias() =
             m_SD_precompute_col_ordered.block<1, 16>(i, 0).cwiseProduct(
                 F_Transpose_CombinedBlock_col_ordered.block<16, 1>(0, 0).transpose());
@@ -1764,14 +1760,14 @@ void ChElementBeamANCF_TR08::ComputeInternalJacobianNoDamping(ChMatrixRef& H, do
         scaled_F_Transpose_col_ordered.block<4, 1>(56, i).array() *= m_GQWeight_det_J_0xi_Dv.array();
     }
 
-    // ChMatrixNM<double, 27, 108> Scaled_Combined_partial_epsilon_partial_e_Transpose;
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 27, 180>
+    // ChMatrixNM<double, 24, 108> Scaled_Combined_partial_epsilon_partial_e_Transpose;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 24, 180>
         Scaled_Combined_partial_epsilon_partial_e_Transpose;
-    Scaled_Combined_partial_epsilon_partial_e_Transpose.resize(27, 108);
+    Scaled_Combined_partial_epsilon_partial_e_Transpose.resize(24, 108);
 
     const ChVectorN<double, 6>& D0 = GetMaterial()->Get_D0();
 
-    for (auto i = 0; i < 9; i++) {
+    for (auto i = 0; i < 8; i++) {
         Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, 16>(3 * i, 0).noalias() =
             D0(0) * m_SD_precompute_col_ordered.block<1, 16>(i, 0).cwiseProduct(
                         scaled_F_Transpose_col_ordered.block<16, 1>(0, 0).transpose());
@@ -1848,14 +1844,14 @@ void ChElementBeamANCF_TR08::ComputeInternalJacobianNoDamping(ChMatrixRef& H, do
                          scaled_F_Transpose_col_ordered.block<16, 1>(16, 2).transpose()));
     }
 
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 27, 4> ChunkSDvA;
-    ChunkSDvA.resize(27, 4);
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 27, 4> ChunkSDvB;
-    ChunkSDvB.resize(27, 4);
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 27, 4> ChunkSDvC;
-    ChunkSDvC.resize(27, 4);
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 24, 4> ChunkSDvA;
+    ChunkSDvA.resize(24, 4);
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 24, 4> ChunkSDvB;
+    ChunkSDvB.resize(24, 4);
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 24, 4> ChunkSDvC;
+    ChunkSDvC.resize(24, 4);
 
-    for (auto i = 0; i < 9; i++) {
+    for (auto i = 0; i < 8; i++) {
         ChunkSDvA.block<1, 4>(3 * i, 0).noalias() = m_SD_precompute_col_ordered.block<1, 4>(i, 48).cwiseProduct(
             scaled_F_Transpose_col_ordered.block<4, 1>(48, 0).transpose());
         ChunkSDvB.block<1, 4>(3 * i, 0).noalias() = m_SD_precompute_col_ordered.block<1, 4>(i, 52).cwiseProduct(
@@ -1880,11 +1876,11 @@ void ChElementBeamANCF_TR08::ComputeInternalJacobianNoDamping(ChMatrixRef& H, do
 
     const ChMatrix33<double>& Dv = GetMaterial()->Get_Dv();
 
-    Scaled_Combined_partial_epsilon_partial_e_Transpose.block<27, 4>(0, 96).noalias() =
+    Scaled_Combined_partial_epsilon_partial_e_Transpose.block<24, 4>(0, 96).noalias() =
         Dv(0, 0) * ChunkSDvA + Dv(0, 1) * ChunkSDvB + Dv(0, 2) * ChunkSDvC;
-    Scaled_Combined_partial_epsilon_partial_e_Transpose.block<27, 4>(0, 100).noalias() =
+    Scaled_Combined_partial_epsilon_partial_e_Transpose.block<24, 4>(0, 100).noalias() =
         Dv(1, 0) * ChunkSDvA + Dv(1, 1) * ChunkSDvB + Dv(1, 2) * ChunkSDvC;
-    Scaled_Combined_partial_epsilon_partial_e_Transpose.block<27, 4>(0, 104).noalias() =
+    Scaled_Combined_partial_epsilon_partial_e_Transpose.block<24, 4>(0, 104).noalias() =
         Dv(2, 0) * ChunkSDvA + Dv(2, 1) * ChunkSDvB + Dv(2, 2) * ChunkSDvC;
 
     H = partial_epsilon_partial_e_Transpose * Scaled_Combined_partial_epsilon_partial_e_Transpose.transpose();
@@ -1985,11 +1981,11 @@ void ChElementBeamANCF_TR08::ComputeInternalJacobianNoDamping(ChMatrixRef& H, do
     ChVectorN<double, 4> Sdiag_2_Dv_Block =
         Dv(0, 2) * Ediag_0_Dv_Block + Dv(1, 2) * Ediag_1_Dv_Block + Dv(2, 2) * Ediag_2_Dv_Block;
 
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 9, 60> S_scaled_SD_precompute_col_ordered;
-    S_scaled_SD_precompute_col_ordered.resize(9, 60);
-    // ChMatrixNM<double, 9, 60> S_scaled_SD_precompute_col_ordered;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 8, 60> S_scaled_SD_precompute_col_ordered;
+    S_scaled_SD_precompute_col_ordered.resize(8, 60);
+    // ChMatrixNM<double, 8, 60> S_scaled_SD_precompute_col_ordered;
 
-    for (auto i = 0; i < 9; i++) {
+    for (auto i = 0; i < 8; i++) {
         // S_scaled_SD_precompute_col_ordered.block<1, 16>(i, 0).noalias() =
         // SPK2_0_D0_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, 16>(i, 0));
         // S_scaled_SD_precompute_col_ordered.block<1, 16>(i, 0) +=
@@ -2034,19 +2030,19 @@ void ChElementBeamANCF_TR08::ComputeInternalJacobianNoDamping(ChMatrixRef& H, do
             Sdiag_2_Dv_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, 4>(i, 56));
     }
 
-    // Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 9, 9> Jacobian_CompactPart;
-    // Jacobian_CompactPart.resize(9, 9);
-    // ChMatrixNM<double, 9, 9> Jacobian_CompactPart = Mfactor * m_MassMatrix + Kfactor * m_SD_precompute_col_ordered *
+    // Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 8, 8> Jacobian_CompactPart;
+    // Jacobian_CompactPart.resize(8, 8);
+    // ChMatrixNM<double, 8, 8> Jacobian_CompactPart = Mfactor * m_MassMatrix + Kfactor * m_SD_precompute_col_ordered *
     // S_scaled_SD_precompute_col_ordered.transpose();
-    ChMatrixNM<double, 9, 9> Jacobian_CompactPart =
+    ChMatrixNM<double, 8, 8> Jacobian_CompactPart =
         m_SD_precompute_col_ordered * S_scaled_SD_precompute_col_ordered.transpose();
     Jacobian_CompactPart *= Kfactor;
     Jacobian_CompactPart += Mfactor * m_MassMatrix;
     // Jacobian_CompactPart.noalias() = Mfactor * m_MassMatrix + Kfactor * m_SD_precompute_col_ordered *
     // S_scaled_SD_precompute_col_ordered.transpose();
 
-    for (unsigned int i = 0; i < 9; i++) {
-        for (unsigned int j = 0; j < 9; j++) {
+    for (unsigned int i = 0; i < 8; i++) {
+        for (unsigned int j = 0; j < 8; j++) {
             H(3 * i, 3 * j) += Jacobian_CompactPart(i, j);
             H(3 * i + 1, 3 * j + 1) += Jacobian_CompactPart(i, j);
             H(3 * i + 2, 3 * j + 2) += Jacobian_CompactPart(i, j);
@@ -2054,16 +2050,16 @@ void ChElementBeamANCF_TR08::ComputeInternalJacobianNoDamping(ChMatrixRef& H, do
     }
 }
 
-void ChElementBeamANCF_TR08::ComputeInternalJacobians(ChMatrixNM<double, 27, 27>& JacobianMatrix,
-                                                      double Kfactor,
-                                                      double Rfactor) {
-    // The integrated quantity represents the 27x27 Jacobian
+void ChElementBeamANCF_3243_TR08::ComputeInternalJacobians(ChMatrixNM<double, 24, 24>& JacobianMatrix,
+                                                           double Kfactor,
+                                                           double Rfactor) {
+    // The integrated quantity represents the 24x24 Jacobian
     //      Kfactor * [K] + Rfactor * [R]
 
-    ChVectorDynamic<double> FiOrignal(27);
-    ChVectorDynamic<double> FiDelta(27);
-    // ChMatrixNMc<double, 9, 3> e_bar;
-    // ChMatrixNMc<double, 9, 3> e_bar_dot;
+    ChVectorDynamic<double> FiOrignal(24);
+    ChVectorDynamic<double> FiDelta(24);
+    // ChMatrixNMc<double, 8, 3> e_bar;
+    // ChMatrixNMc<double, 8, 3> e_bar_dot;
 
     // CalcCoordMatrix(e_bar);
     // CalcCoordDerivMatrix(e_bar_dot);
@@ -2077,11 +2073,11 @@ void ChElementBeamANCF_TR08::ComputeInternalJacobians(ChMatrixNM<double, 27, 27>
     // using the common calculations with an if statement for the damping in the middle to calculate the different
     // P_transpose_scaled_Block components
     if (m_damping_enabled) {
-        ChMatrixNM<double, 9, 6> ebar_ebardot;
+        ChMatrixNM<double, 8, 6> ebar_ebardot;
         CalcCombinedCoordMatrix(ebar_ebardot);
 
         ComputeInternalForcesAtState(FiOrignal, ebar_ebardot);
-        for (unsigned int i = 0; i < 27; i++) {
+        for (unsigned int i = 0; i < 24; i++) {
             ebar_ebardot(i / 3, i % 3) = ebar_ebardot(i / 3, i % 3) + delta;
             ComputeInternalForcesAtState(FiDelta, ebar_ebardot);
             JacobianMatrix.col(i) = -Kfactor / delta * (FiDelta - FiOrignal);
@@ -2093,11 +2089,11 @@ void ChElementBeamANCF_TR08::ComputeInternalJacobians(ChMatrixNM<double, 27, 27>
             ebar_ebardot(i / 3, (i % 3) + 3) = ebar_ebardot(i / 3, (i % 3) + 3) - delta;
         }
     } else {
-        ChMatrixNMc<double, 9, 3> e_bar;
+        ChMatrixNMc<double, 8, 3> e_bar;
         CalcCoordMatrix(e_bar);
 
         ComputeInternalForcesAtStateNoDamping(FiOrignal, e_bar);
-        for (unsigned int i = 0; i < 27; i++) {
+        for (unsigned int i = 0; i < 24; i++) {
             e_bar(i / 3, i % 3) = e_bar(i / 3, i % 3) + delta;
             ComputeInternalForcesAtStateNoDamping(FiDelta, e_bar);
             JacobianMatrix.col(i) = -Kfactor / delta * (FiDelta - FiOrignal);
@@ -2110,10 +2106,10 @@ void ChElementBeamANCF_TR08::ComputeInternalJacobians(ChMatrixNM<double, 27, 27>
 // Shape functions
 // -----------------------------------------------------------------------------
 
-// 3x27 Sparse Form of the Normalized Shape Functions
+// 3x24 Sparse Form of the Normalized Shape Functions
 // [s1*I_3x3, s2*I_3x3, s3*I_3x3, ...]
-void ChElementBeamANCF_TR08::Calc_Sxi(ChMatrixNM<double, 3, 27>& Sxi, double xi, double eta, double zeta) {
-    ChVectorN<double, 9> Sxi_compact;
+void ChElementBeamANCF_3243_TR08::Calc_Sxi(ChMatrixNM<double, 3, 24>& Sxi, double xi, double eta, double zeta) {
+    ChVectorN<double, 8> Sxi_compact;
     Calc_Sxi_compact(Sxi_compact, xi, eta, zeta);
     Sxi.setZero();
 
@@ -2125,21 +2121,23 @@ void ChElementBeamANCF_TR08::Calc_Sxi(ChMatrixNM<double, 3, 27>& Sxi, double xi,
     }
 }
 
-// 9x1 Vector Form of the Normalized Shape Functions
+// 8x1 Vector Form of the Normalized Shape Functions
 // [s1; s2; s3; ...]
-void ChElementBeamANCF_TR08::Calc_Sxi_compact(ChVectorN<double, 9>& Sxi_compact, double xi, double eta, double zeta) {
-    Sxi_compact(0) = 0.5 * (xi * xi - xi);
-    Sxi_compact(1) = 0.25 * m_thicknessY * eta * (xi * xi - xi);
-    Sxi_compact(2) = 0.25 * m_thicknessZ * zeta * (xi * xi - xi);
-    Sxi_compact(3) = 0.5 * (xi * xi + xi);
-    Sxi_compact(4) = 0.25 * m_thicknessY * eta * (xi * xi + xi);
-    Sxi_compact(5) = 0.25 * m_thicknessZ * zeta * (xi * xi + xi);
-    Sxi_compact(6) = 1.0 - xi * xi;
-    Sxi_compact(7) = 0.5 * m_thicknessY * eta * (1.0 - xi * xi);
-    Sxi_compact(8) = 0.5 * m_thicknessZ * zeta * (1.0 - xi * xi);
+void ChElementBeamANCF_3243_TR08::Calc_Sxi_compact(ChVectorN<double, 8>& Sxi_compact,
+                                                   double xi,
+                                                   double eta,
+                                                   double zeta) {
+    Sxi_compact(0) = 0.25 * (xi * xi * xi - 3 * xi + 2);
+    Sxi_compact(1) = 0.125 * m_lenX * (xi * xi * xi - xi * xi - xi + 1);
+    Sxi_compact(2) = 0.25 * m_thicknessY * eta * (1 - xi);
+    Sxi_compact(3) = 0.25 * m_thicknessZ * zeta * (1 - xi);
+    Sxi_compact(4) = 0.25 * (-xi * xi * xi + 3 * xi + 2);
+    Sxi_compact(5) = 0.125 * m_lenX * (xi * xi * xi + xi * xi - xi - 1);
+    Sxi_compact(6) = 0.25 * m_thicknessY * eta * (1 + xi);
+    Sxi_compact(7) = 0.25 * m_thicknessZ * zeta * (1 + xi);
 }
 
-// Calculate the 27x3 Compact Shape Function Derivative Matrix modified by the inverse of the element Jacobian
+// Calculate the 24x3 Compact Shape Function Derivative Matrix modified by the inverse of the element Jacobian
 //            [partial(s_1)/(partial xi)      partial(s_2)/(partial xi)     ...]T
 // Sxi_D_0xi = [partial(s_1)/(partial eta)     partial(s_2)/(partial eta)    ...]  J_0xi^(-1)
 //            [partial(s_1)/(partial zeta)    partial(s_2)/(partial zeta)   ...]
@@ -2147,146 +2145,130 @@ void ChElementBeamANCF_TR08::Calc_Sxi_compact(ChVectorN<double, 9>& Sxi_compact,
 //      thin three-dimensional beam elements in the absolute nodal coordinate formulation,
 //      Proceedings of Multibody Dynamics 2005 ECCOMAS Thematic Conference, Madrid, Spain, 2005.
 
-void ChElementBeamANCF_TR08::Calc_Sxi_D(ChMatrixNMc<double, 9, 3>& Sxi_D, double xi, double eta, double zeta) {
-    Sxi_D(0, 0) = xi - 0.5;
-    Sxi_D(1, 0) = 0.25 * m_thicknessY * eta * (2.0 * xi - 1.0);
-    Sxi_D(2, 0) = 0.25 * m_thicknessZ * zeta * (2.0 * xi - 1.0);
-    Sxi_D(3, 0) = xi + 0.5;
-    Sxi_D(4, 0) = 0.25 * m_thicknessY * eta * (2.0 * xi + 1.0);
-    Sxi_D(5, 0) = 0.25 * m_thicknessZ * zeta * (2.0 * xi + 1.0);
-    Sxi_D(6, 0) = -2.0 * xi;
-    Sxi_D(7, 0) = -m_thicknessY * eta * xi;
-    Sxi_D(8, 0) = -m_thicknessZ * zeta * xi;
+void ChElementBeamANCF_3243_TR08::Calc_Sxi_D(ChMatrixNMc<double, 8, 3>& Sxi_D, double xi, double eta, double zeta) {
+    Sxi_D(0, 0) = 0.75 * (xi * xi - 1);
+    Sxi_D(1, 0) = 0.125 * m_lenX * (3 * xi * xi - 2 * xi - 1);
+    Sxi_D(2, 0) = -0.25 * m_thicknessY * eta;
+    Sxi_D(3, 0) = -0.25 * m_thicknessZ * zeta;
+    Sxi_D(4, 0) = 0.75 * (-xi * xi + 1);
+    Sxi_D(5, 0) = 0.125 * m_lenX * (3 * xi * xi + 2 * xi - 1);
+    Sxi_D(6, 0) = 0.25 * m_thicknessY * eta;
+    Sxi_D(7, 0) = 0.25 * m_thicknessZ * zeta;
 
     Sxi_D(0, 1) = 0.0;
-    Sxi_D(1, 1) = 0.25 * m_thicknessY * (xi * xi - xi);
-    Sxi_D(2, 1) = 0.0;
+    Sxi_D(1, 1) = 0.0;
+    Sxi_D(2, 1) = 0.25 * m_thicknessY * (-xi + 1);
     Sxi_D(3, 1) = 0.0;
-    Sxi_D(4, 1) = 0.25 * m_thicknessY * (xi * xi + xi);
+    Sxi_D(4, 1) = 0.0;
     Sxi_D(5, 1) = 0.0;
-    Sxi_D(6, 1) = 0.0;
-    Sxi_D(7, 1) = 0.5 * m_thicknessY * (1 - xi * xi);
-    Sxi_D(8, 1) = 0.0;
+    Sxi_D(6, 1) = 0.25 * m_thicknessY * (xi + 1);
+    Sxi_D(7, 1) = 0.0;
 
     Sxi_D(0, 2) = 0.0;
     Sxi_D(1, 2) = 0.0;
-    Sxi_D(2, 2) = 0.25 * m_thicknessZ * (xi * xi - xi);
-    Sxi_D(3, 2) = 0.0;
+    Sxi_D(2, 2) = 0.0;
+    Sxi_D(3, 2) = 0.25 * m_thicknessZ * (-xi + 1);
     Sxi_D(4, 2) = 0.0;
-    Sxi_D(5, 2) = 0.25 * m_thicknessZ * (xi * xi + xi);
+    Sxi_D(5, 2) = 0.0;
     Sxi_D(6, 2) = 0.0;
-    Sxi_D(7, 2) = 0.0;
-    Sxi_D(8, 2) = 0.5 * m_thicknessZ * (1 - xi * xi);
+    Sxi_D(7, 2) = 0.25 * m_thicknessZ * (xi + 1);
 }
 
 // -----------------------------------------------------------------------------
 // Helper functions
 // -----------------------------------------------------------------------------
 
-void ChElementBeamANCF_TR08::CalcCoordMatrix(ChMatrixNMc<double, 9, 3>& e) {
+void ChElementBeamANCF_3243_TR08::CalcCoordMatrix(ChMatrixNMc<double, 8, 3>& e) {
     e.row(0) = m_nodes[0]->GetPos().eigen();
     e.row(1) = m_nodes[0]->GetD().eigen();
     e.row(2) = m_nodes[0]->GetDD().eigen();
+    e.row(3) = m_nodes[0]->GetDDD().eigen();
 
-    e.row(3) = m_nodes[1]->GetPos().eigen();
-    e.row(4) = m_nodes[1]->GetD().eigen();
-    e.row(5) = m_nodes[1]->GetDD().eigen();
-
-    e.row(6) = m_nodes[2]->GetPos().eigen();
-    e.row(7) = m_nodes[2]->GetD().eigen();
-    e.row(8) = m_nodes[2]->GetDD().eigen();
+    e.row(4) = m_nodes[1]->GetPos().eigen();
+    e.row(5) = m_nodes[1]->GetD().eigen();
+    e.row(6) = m_nodes[1]->GetDD().eigen();
+    e.row(7) = m_nodes[1]->GetDDD().eigen();
 }
 
-void ChElementBeamANCF_TR08::CalcCoordMatrix(ChMatrixNM<double, 9, 3>& e) {
+void ChElementBeamANCF_3243_TR08::CalcCoordMatrix(ChMatrixNM<double, 8, 3>& e) {
     e.block<1, 3>(0, 0) = m_nodes[0]->GetPos().eigen();
     e.block<1, 3>(1, 0) = m_nodes[0]->GetD().eigen();
     e.block<1, 3>(2, 0) = m_nodes[0]->GetDD().eigen();
+    e.block<1, 3>(3, 0) = m_nodes[0]->GetDDD().eigen();
 
-    e.block<1, 3>(3, 0) = m_nodes[1]->GetPos().eigen();
-    e.block<1, 3>(4, 0) = m_nodes[1]->GetD().eigen();
-    e.block<1, 3>(5, 0) = m_nodes[1]->GetDD().eigen();
-
-    e.block<1, 3>(6, 0) = m_nodes[2]->GetPos().eigen();
-    e.block<1, 3>(7, 0) = m_nodes[2]->GetD().eigen();
-    e.block<1, 3>(8, 0) = m_nodes[2]->GetDD().eigen();
+    e.block<1, 3>(4, 0) = m_nodes[1]->GetPos().eigen();
+    e.block<1, 3>(5, 0) = m_nodes[1]->GetD().eigen();
+    e.block<1, 3>(6, 0) = m_nodes[1]->GetDD().eigen();
+    e.block<1, 3>(7, 0) = m_nodes[1]->GetDDD().eigen();
 }
 
-void ChElementBeamANCF_TR08::CalcCoordVector(ChVectorN<double, 27>& e) {
+void ChElementBeamANCF_3243_TR08::CalcCoordVector(ChVectorN<double, 24>& e) {
     e.segment(0, 3) = m_nodes[0]->GetPos().eigen();
     e.segment(3, 3) = m_nodes[0]->GetD().eigen();
     e.segment(6, 3) = m_nodes[0]->GetDD().eigen();
+    e.segment(9, 3) = m_nodes[0]->GetDDD().eigen();
 
-    e.segment(9, 3) = m_nodes[1]->GetPos().eigen();
-    e.segment(12, 3) = m_nodes[1]->GetD().eigen();
-    e.segment(15, 3) = m_nodes[1]->GetDD().eigen();
-
-    e.segment(18, 3) = m_nodes[2]->GetPos().eigen();
-    e.segment(21, 3) = m_nodes[2]->GetD().eigen();
-    e.segment(24, 3) = m_nodes[2]->GetDD().eigen();
+    e.segment(12, 3) = m_nodes[1]->GetPos().eigen();
+    e.segment(15, 3) = m_nodes[1]->GetD().eigen();
+    e.segment(18, 3) = m_nodes[1]->GetDD().eigen();
+    e.segment(21, 3) = m_nodes[1]->GetDDD().eigen();
 }
 
-void ChElementBeamANCF_TR08::CalcCoordDerivMatrix(ChMatrixNMc<double, 9, 3>& edot) {
+void ChElementBeamANCF_3243_TR08::CalcCoordDerivMatrix(ChMatrixNMc<double, 8, 3>& edot) {
     edot.row(0) = m_nodes[0]->GetPos_dt().eigen();
     edot.row(1) = m_nodes[0]->GetD_dt().eigen();
     edot.row(2) = m_nodes[0]->GetDD_dt().eigen();
+    edot.row(3) = m_nodes[0]->GetDDD_dt().eigen();
 
-    edot.row(3) = m_nodes[1]->GetPos_dt().eigen();
-    edot.row(4) = m_nodes[1]->GetD_dt().eigen();
-    edot.row(5) = m_nodes[1]->GetDD_dt().eigen();
-
-    edot.row(6) = m_nodes[2]->GetPos_dt().eigen();
-    edot.row(7) = m_nodes[2]->GetD_dt().eigen();
-    edot.row(8) = m_nodes[2]->GetDD_dt().eigen();
+    edot.row(4) = m_nodes[1]->GetPos_dt().eigen();
+    edot.row(5) = m_nodes[1]->GetD_dt().eigen();
+    edot.row(6) = m_nodes[1]->GetDD_dt().eigen();
+    edot.row(7) = m_nodes[1]->GetDDD_dt().eigen();
 }
 
-void ChElementBeamANCF_TR08::CalcCoordDerivVector(ChVectorN<double, 27>& edot) {
+void ChElementBeamANCF_3243_TR08::CalcCoordDerivVector(ChVectorN<double, 24>& edot) {
     edot.segment(0, 3) = m_nodes[0]->GetPos_dt().eigen();
     edot.segment(3, 3) = m_nodes[0]->GetD_dt().eigen();
     edot.segment(6, 3) = m_nodes[0]->GetDD_dt().eigen();
+    edot.segment(9, 3) = m_nodes[0]->GetDDD_dt().eigen();
 
-    edot.segment(9, 3) = m_nodes[1]->GetPos_dt().eigen();
-    edot.segment(12, 3) = m_nodes[1]->GetD_dt().eigen();
-    edot.segment(15, 3) = m_nodes[1]->GetDD_dt().eigen();
-
-    edot.segment(18, 3) = m_nodes[2]->GetPos_dt().eigen();
-    edot.segment(21, 3) = m_nodes[2]->GetD_dt().eigen();
-    edot.segment(24, 3) = m_nodes[2]->GetDD_dt().eigen();
+    edot.segment(12, 3) = m_nodes[1]->GetPos_dt().eigen();
+    edot.segment(15, 3) = m_nodes[1]->GetD_dt().eigen();
+    edot.segment(18, 3) = m_nodes[1]->GetDD_dt().eigen();
+    edot.segment(21, 3) = m_nodes[1]->GetDDD_dt().eigen();
 }
 
-void ChElementBeamANCF_TR08::CalcCombinedCoordMatrix(ChMatrixNM<double, 9, 6>& ebar_ebardot) {
+void ChElementBeamANCF_3243_TR08::CalcCombinedCoordMatrix(ChMatrixNM<double, 8, 6>& ebar_ebardot) {
     ebar_ebardot.block<1, 3>(0, 0) = m_nodes[0]->GetPos().eigen();
     ebar_ebardot.block<1, 3>(0, 3) = m_nodes[0]->GetPos_dt().eigen();
     ebar_ebardot.block<1, 3>(1, 0) = m_nodes[0]->GetD().eigen();
     ebar_ebardot.block<1, 3>(1, 3) = m_nodes[0]->GetD_dt().eigen();
     ebar_ebardot.block<1, 3>(2, 0) = m_nodes[0]->GetDD().eigen();
     ebar_ebardot.block<1, 3>(2, 3) = m_nodes[0]->GetDD_dt().eigen();
+    ebar_ebardot.block<1, 3>(3, 0) = m_nodes[0]->GetDDD().eigen();
+    ebar_ebardot.block<1, 3>(3, 3) = m_nodes[0]->GetDDD_dt().eigen();
 
-    ebar_ebardot.block<1, 3>(3, 0) = m_nodes[1]->GetPos().eigen();
-    ebar_ebardot.block<1, 3>(3, 3) = m_nodes[1]->GetPos_dt().eigen();
-    ebar_ebardot.block<1, 3>(4, 0) = m_nodes[1]->GetD().eigen();
-    ebar_ebardot.block<1, 3>(4, 3) = m_nodes[1]->GetD_dt().eigen();
-    ebar_ebardot.block<1, 3>(5, 0) = m_nodes[1]->GetDD().eigen();
-    ebar_ebardot.block<1, 3>(5, 3) = m_nodes[1]->GetDD_dt().eigen();
-
-    ebar_ebardot.block<1, 3>(6, 0) = m_nodes[2]->GetPos().eigen();
-    ebar_ebardot.block<1, 3>(6, 3) = m_nodes[2]->GetPos_dt().eigen();
-    ebar_ebardot.block<1, 3>(7, 0) = m_nodes[2]->GetD().eigen();
-    ebar_ebardot.block<1, 3>(7, 3) = m_nodes[2]->GetD_dt().eigen();
-    ebar_ebardot.block<1, 3>(8, 0) = m_nodes[2]->GetDD().eigen();
-    ebar_ebardot.block<1, 3>(8, 3) = m_nodes[2]->GetDD_dt().eigen();
+    ebar_ebardot.block<1, 3>(4, 0) = m_nodes[1]->GetPos().eigen();
+    ebar_ebardot.block<1, 3>(4, 3) = m_nodes[1]->GetPos_dt().eigen();
+    ebar_ebardot.block<1, 3>(5, 0) = m_nodes[1]->GetD().eigen();
+    ebar_ebardot.block<1, 3>(5, 3) = m_nodes[1]->GetD_dt().eigen();
+    ebar_ebardot.block<1, 3>(6, 0) = m_nodes[1]->GetDD().eigen();
+    ebar_ebardot.block<1, 3>(6, 3) = m_nodes[1]->GetDD_dt().eigen();
+    ebar_ebardot.block<1, 3>(7, 0) = m_nodes[1]->GetDDD().eigen();
+    ebar_ebardot.block<1, 3>(7, 3) = m_nodes[1]->GetDDD_dt().eigen();
 }
 
 // Calculate the 3x3 Element Jacobian at the given point (xi,eta,zeta) in the element
-void ChElementBeamANCF_TR08::Calc_J_0xi(ChMatrix33<double>& J_0xi, double xi, double eta, double zeta) {
-    ChMatrixNMc<double, 9, 3> Sxi_D;
+void ChElementBeamANCF_3243_TR08::Calc_J_0xi(ChMatrix33<double>& J_0xi, double xi, double eta, double zeta) {
+    ChMatrixNMc<double, 8, 3> Sxi_D;
     Calc_Sxi_D(Sxi_D, xi, eta, zeta);
 
     J_0xi = m_e0_bar.transpose() * Sxi_D;
 }
 
 // Calculate the determinate of the 3x3 Element Jacobian at the given point (xi,eta,zeta) in the element
-double ChElementBeamANCF_TR08::Calc_det_J_0xi(double xi, double eta, double zeta) {
-    ChMatrixNMc<double, 9, 3> Sxi_D;
+double ChElementBeamANCF_3243_TR08::Calc_det_J_0xi(double xi, double eta, double zeta) {
+    ChMatrixNMc<double, 8, 3> Sxi_D;
     ChMatrix33<double> J_0xi;
 
     Calc_Sxi_D(Sxi_D, xi, eta, zeta);
@@ -2297,7 +2279,7 @@ double ChElementBeamANCF_TR08::Calc_det_J_0xi(double xi, double eta, double zeta
 // -----------------------------------------------------------------------------
 // Interface to ChElementShell base class
 // -----------------------------------------------------------------------------
-// ChVector<> ChElementBeamANCF_TR08::EvaluateBeamSectionStrains() {
+// ChVector<> ChElementBeamANCF_3243_TR08::EvaluateBeamSectionStrains() {
 //    // Element shape function
 //    ShapeVector N;
 //    this->ShapeFunctions(N, 0, 0, 0);
@@ -2424,7 +2406,7 @@ double ChElementBeamANCF_TR08::Calc_det_J_0xi(double xi, double eta, double zeta
 //    return ChVector<>(strain(0), strain(1), strain(2));
 //}
 //
-// void ChElementBeamANCF_TR08::EvaluateSectionDisplacement(const double u,
+// void ChElementBeamANCF_3243_TR08::EvaluateSectionDisplacement(const double u,
 //                                                    const double v,
 //                                                    ChVector<>& u_displ,
 //                                                    ChVector<>& u_rotaz) {
@@ -2433,14 +2415,14 @@ double ChElementBeamANCF_TR08::Calc_det_J_0xi(double xi, double eta, double zeta
 //    u_rotaz = VNULL;  // no angles.. this is ANCF (or maybe return here the slope derivatives?)
 //}
 
-void ChElementBeamANCF_TR08::EvaluateSectionFrame(const double xi, ChVector<>& point, ChQuaternion<>& rot) {
-    ChMatrixNMc<double, 9, 3> e_bar;
-    ChVectorN<double, 9> Sxi_compact;
-    ChMatrixNMc<double, 9, 3> Sxi_D;
+void ChElementBeamANCF_3243_TR08::EvaluateSectionFrame(const double eta, ChVector<>& point, ChQuaternion<>& rot) {
+    ChMatrixNMc<double, 8, 3> e_bar;
+    ChVectorN<double, 8> Sxi_compact;
+    ChMatrixNMc<double, 8, 3> Sxi_D;
 
     CalcCoordMatrix(e_bar);
-    Calc_Sxi_compact(Sxi_compact, xi, 0, 0);
-    Calc_Sxi_D(Sxi_D, xi, 0, 0);
+    Calc_Sxi_compact(Sxi_compact, eta, 0, 0);
+    Calc_Sxi_D(Sxi_D, eta, 0, 0);
 
     // r = Se
     point = e_bar.transpose() * Sxi_compact;
@@ -2460,7 +2442,7 @@ void ChElementBeamANCF_TR08::EvaluateSectionFrame(const double xi, ChVector<>& p
     rot = msect.Get_A_quaternion();
 }
 
-// void ChElementBeamANCF_TR08::EvaluateSectionPoint(const double u,
+// void ChElementBeamANCF_3243_TR08::EvaluateSectionPoint(const double u,
 //                                             const double v,
 //                                             ChVector<>& point) {
 //    ChVector<> u_displ;
@@ -2488,47 +2470,42 @@ void ChElementBeamANCF_TR08::EvaluateSectionFrame(const double xi, ChVector<>& p
 // -----------------------------------------------------------------------------
 
 // Gets all the DOFs packed in a single vector (position part).
-void ChElementBeamANCF_TR08::LoadableGetStateBlock_x(int block_offset, ChState& mD) {
+void ChElementBeamANCF_3243_TR08::LoadableGetStateBlock_x(int block_offset, ChState& mD) {
     mD.segment(block_offset + 0, 3) = m_nodes[0]->GetPos().eigen();
     mD.segment(block_offset + 3, 3) = m_nodes[0]->GetD().eigen();
     mD.segment(block_offset + 6, 3) = m_nodes[0]->GetDD().eigen();
+    mD.segment(block_offset + 9, 3) = m_nodes[0]->GetDDD().eigen();
 
-    mD.segment(block_offset + 9, 3) = m_nodes[1]->GetPos().eigen();
-    mD.segment(block_offset + 12, 3) = m_nodes[1]->GetD().eigen();
-    mD.segment(block_offset + 15, 3) = m_nodes[1]->GetDD().eigen();
-
-    mD.segment(block_offset + 18, 3) = m_nodes[2]->GetPos().eigen();
-    mD.segment(block_offset + 21, 3) = m_nodes[2]->GetD().eigen();
-    mD.segment(block_offset + 24, 3) = m_nodes[2]->GetDD().eigen();
+    mD.segment(block_offset + 12, 3) = m_nodes[1]->GetPos().eigen();
+    mD.segment(block_offset + 15, 3) = m_nodes[1]->GetD().eigen();
+    mD.segment(block_offset + 18, 3) = m_nodes[1]->GetDD().eigen();
+    mD.segment(block_offset + 21, 3) = m_nodes[1]->GetDDD().eigen();
 }
 
 // Gets all the DOFs packed in a single vector (velocity part).
-void ChElementBeamANCF_TR08::LoadableGetStateBlock_w(int block_offset, ChStateDelta& mD) {
+void ChElementBeamANCF_3243_TR08::LoadableGetStateBlock_w(int block_offset, ChStateDelta& mD) {
     mD.segment(block_offset + 0, 3) = m_nodes[0]->GetPos_dt().eigen();
     mD.segment(block_offset + 3, 3) = m_nodes[0]->GetD_dt().eigen();
     mD.segment(block_offset + 6, 3) = m_nodes[0]->GetDD_dt().eigen();
+    mD.segment(block_offset + 9, 3) = m_nodes[0]->GetDDD_dt().eigen();
 
-    mD.segment(block_offset + 9, 3) = m_nodes[1]->GetPos_dt().eigen();
-    mD.segment(block_offset + 12, 3) = m_nodes[1]->GetD_dt().eigen();
-    mD.segment(block_offset + 15, 3) = m_nodes[1]->GetDD_dt().eigen();
-
-    mD.segment(block_offset + 18, 3) = m_nodes[2]->GetPos_dt().eigen();
-    mD.segment(block_offset + 21, 3) = m_nodes[2]->GetD_dt().eigen();
-    mD.segment(block_offset + 24, 3) = m_nodes[2]->GetDD_dt().eigen();
+    mD.segment(block_offset + 12, 3) = m_nodes[1]->GetPos_dt().eigen();
+    mD.segment(block_offset + 15, 3) = m_nodes[1]->GetD_dt().eigen();
+    mD.segment(block_offset + 18, 3) = m_nodes[1]->GetDD_dt().eigen();
+    mD.segment(block_offset + 21, 3) = m_nodes[1]->GetDDD_dt().eigen();
 }
 
 /// Increment all DOFs using a delta.
-void ChElementBeamANCF_TR08::LoadableStateIncrement(const unsigned int off_x,
-                                                    ChState& x_new,
-                                                    const ChState& x,
-                                                    const unsigned int off_v,
-                                                    const ChStateDelta& Dv) {
+void ChElementBeamANCF_3243_TR08::LoadableStateIncrement(const unsigned int off_x,
+                                                         ChState& x_new,
+                                                         const ChState& x,
+                                                         const unsigned int off_v,
+                                                         const ChStateDelta& Dv) {
     m_nodes[0]->NodeIntStateIncrement(off_x, x_new, x, off_v, Dv);
-    m_nodes[1]->NodeIntStateIncrement(off_x + 9, x_new, x, off_v + 9, Dv);
-    m_nodes[2]->NodeIntStateIncrement(off_x + 18, x_new, x, off_v + 18, Dv);
+    m_nodes[1]->NodeIntStateIncrement(off_x + 12, x_new, x, off_v + 12, Dv);
 }
 
-// void ChElementBeamANCF_TR08::EvaluateSectionVelNorm(double U, ChVector<>& Result) {
+// void ChElementBeamANCF_3243_TR08::EvaluateSectionVelNorm(double U, ChVector<>& Result) {
 //    ShapeVector N;
 //    ShapeFunctions(N, U, 0, 0);
 //    for (unsigned int ii = 0; ii < 3; ii++) {
@@ -2538,16 +2515,17 @@ void ChElementBeamANCF_TR08::LoadableStateIncrement(const unsigned int off_x,
 //}
 
 // Get the pointers to the contained ChVariables, appending to the mvars vector.
-void ChElementBeamANCF_TR08::LoadableGetVariables(std::vector<ChVariables*>& mvars) {
+void ChElementBeamANCF_3243_TR08::LoadableGetVariables(std::vector<ChVariables*>& mvars) {
     for (int i = 0; i < m_nodes.size(); ++i) {
         mvars.push_back(&m_nodes[i]->Variables());
         mvars.push_back(&m_nodes[i]->Variables_D());
         mvars.push_back(&m_nodes[i]->Variables_DD());
+        mvars.push_back(&m_nodes[i]->Variables_DDD());
     }
 }
 
 // Evaluate N'*F , where N is the shape function evaluated at (U) coordinates of the centerline.
-void ChElementBeamANCF_TR08::ComputeNF(
+void ChElementBeamANCF_3243_TR08::ComputeNF(
     const double U,              // parametric coordinate in surface
     ChVectorDynamic<>& Qi,       // Return result of Q = N'*F  here
     double& detJ,                // Return det[J] here
@@ -2559,7 +2537,7 @@ void ChElementBeamANCF_TR08::ComputeNF(
 }
 
 // Evaluate N'*F , where N is the shape function evaluated at (U,V,W) coordinates of the surface.
-void ChElementBeamANCF_TR08::ComputeNF(
+void ChElementBeamANCF_3243_TR08::ComputeNF(
     const double U,              // parametric coordinate in volume
     const double V,              // parametric coordinate in volume
     const double W,              // parametric coordinate in volume
@@ -2570,19 +2548,19 @@ void ChElementBeamANCF_TR08::ComputeNF(
     ChVectorDynamic<>* state_w   // if != 0, update state (speed part) to this, then evaluate Q
 ) {
     // Compute the generalized force vector for the applied force
-    ChMatrixNM<double, 3, 27> Sxi;
-    Calc_Sxi(Sxi, U, V, W);
+    ChMatrixNM<double, 3, 24> Sxi;
+    Calc_Sxi(Sxi, U, 0, 0);
     Qi = Sxi.transpose() * F.segment(0, 3);
 
     // Compute the generalized force vector for the applied moment
-    ChMatrixNMc<double, 9, 3> e_bar;
-    ChMatrixNMc<double, 9, 3> Sxi_D;
-    ChMatrixNM<double, 3, 9> Sxi_D_transpose;
+    ChMatrixNMc<double, 8, 3> e_bar;
+    ChMatrixNMc<double, 8, 3> Sxi_D;
+    ChMatrixNM<double, 3, 8> Sxi_D_transpose;
     ChMatrix33<double> J_Cxi;
     ChMatrix33<double> J_Cxi_Inv;
-    ChVectorN<double, 9> G_A;
-    ChVectorN<double, 9> G_B;
-    ChVectorN<double, 9> G_C;
+    ChVectorN<double, 8> G_A;
+    ChVectorN<double, 8> G_B;
+    ChVectorN<double, 8> G_C;
     ChVectorN<double, 3> M_scaled = 0.5 * F.segment(3, 3);
 
     CalcCoordMatrix(e_bar);
@@ -2605,7 +2583,7 @@ void ChElementBeamANCF_TR08::ComputeNF(
 
     // Compute G'M without actually forming the complete matrix "G" (since it has a sparsity pattern to it)
     //// MIKE Clean-up when slicing becomes available in Eigen 3.4
-    for (unsigned int i = 0; i < 9; i++) {
+    for (unsigned int i = 0; i < 8; i++) {
         Qi(3 * i) += M_scaled(1) * G_C(i) - M_scaled(2) * G_B(i);
         Qi((3 * i) + 1) += M_scaled(2) * G_A(i) - M_scaled(0) * G_C(i);
         Qi((3 * i) + 2) += M_scaled(0) * G_B(i) - M_scaled(1) * G_A(i);
@@ -2622,14 +2600,14 @@ void ChElementBeamANCF_TR08::ComputeNF(
 // -----------------------------------------------------------------------------
 
 // Calculate average element density (needed for ChLoaderVolumeGravity).
-double ChElementBeamANCF_TR08::GetDensity() {
+double ChElementBeamANCF_3243_TR08::GetDensity() {
     return GetMaterial()->Get_rho();
 }
 
 // Calculate tangent to the centerline at (U) coordinates.
-ChVector<> ChElementBeamANCF_TR08::ComputeTangent(const double U) {
-    ChMatrixNMc<double, 9, 3> e_bar;
-    ChMatrixNMc<double, 9, 3> Sxi_D;
+ChVector<> ChElementBeamANCF_3243_TR08::ComputeTangent(const double U) {
+    ChMatrixNMc<double, 8, 3> e_bar;
+    ChMatrixNMc<double, 8, 3> Sxi_D;
     ChVector<> r_xi;
 
     CalcCoordMatrix(e_bar);
@@ -2643,50 +2621,52 @@ ChVector<> ChElementBeamANCF_TR08::ComputeTangent(const double U) {
 
 //#ifndef CH_QUADRATURE_STATIC_TABLES
 #define CH_QUADRATURE_STATIC_TABLES 10
-ChQuadratureTables static_tables_TR08(1, CH_QUADRATURE_STATIC_TABLES);
+ChQuadratureTables static_tables_2_TR08(1, CH_QUADRATURE_STATIC_TABLES);
 //#endif // !CH_QUADRATURE_STATIC_TABLES
 
-ChQuadratureTables* ChElementBeamANCF_TR08::GetStaticGQTables() {
-    return &static_tables_TR08;
+ChQuadratureTables* ChElementBeamANCF_3243_TR08::GetStaticGQTables() {
+    return &static_tables_2_TR08;
 }
 
 ////////////////////////////////////////////////////////////////
 
 // ============================================================================
-// Implementation of ChMaterialBeamANCF_TR08 methods
+// Implementation of ChMaterialBeamANCF_3243_TR08 methods
 // ============================================================================
 
 // Construct an isotropic material.
-ChMaterialBeamANCF_TR08::ChMaterialBeamANCF_TR08(double rho,        // material density
-                                                 double E,          // Young's modulus
-                                                 double nu,         // Poisson ratio
-                                                 const double& k1,  // Shear correction factor along beam local y axis
-                                                 const double& k2   // Shear correction factor along beam local z axis
-                                                 )
+ChMaterialBeamANCF_3243_TR08::ChMaterialBeamANCF_3243_TR08(
+    double rho,        // material density
+    double E,          // Young's modulus
+    double nu,         // Poisson ratio
+    const double& k1,  // Shear correction factor along beam local y axis
+    const double& k2   // Shear correction factor along beam local z axis
+    )
     : m_rho(rho) {
     double G = 0.5 * E / (1 + nu);
     Calc_D0_Dv(ChVector<>(E), ChVector<>(nu), ChVector<>(G), k1, k2);
 }
 
 // Construct a (possibly) orthotropic material.
-ChMaterialBeamANCF_TR08::ChMaterialBeamANCF_TR08(double rho,            // material density
-                                                 const ChVector<>& E,   // elasticity moduli (E_x, E_y, E_z)
-                                                 const ChVector<>& nu,  // Poisson ratios (nu_xy, nu_xz, nu_yz)
-                                                 const ChVector<>& G,   // shear moduli (G_xy, G_xz, G_yz)
-                                                 const double& k1,  // Shear correction factor along beam local y axis
-                                                 const double& k2   // Shear correction factor along beam local z axis
-                                                 )
+ChMaterialBeamANCF_3243_TR08::ChMaterialBeamANCF_3243_TR08(
+    double rho,            // material density
+    const ChVector<>& E,   // elasticity moduli (E_x, E_y, E_z)
+    const ChVector<>& nu,  // Poisson ratios (nu_xy, nu_xz, nu_yz)
+    const ChVector<>& G,   // shear moduli (G_xy, G_xz, G_yz)
+    const double& k1,      // Shear correction factor along beam local y axis
+    const double& k2       // Shear correction factor along beam local z axis
+    )
     : m_rho(rho) {
     Calc_D0_Dv(E, nu, G, k1, k2);
 }
 
 // Calculate the matrix form of two stiffness tensors used by the ANCF beam for selective reduced integration of the
 // Poisson effect
-void ChMaterialBeamANCF_TR08::Calc_D0_Dv(const ChVector<>& E,
-                                         const ChVector<>& nu,
-                                         const ChVector<>& G,
-                                         double k1,
-                                         double k2) {
+void ChMaterialBeamANCF_3243_TR08::Calc_D0_Dv(const ChVector<>& E,
+                                              const ChVector<>& nu,
+                                              const ChVector<>& G,
+                                              double k1,
+                                              double k2) {
     // orthotropic material ref: http://homes.civil.aau.dk/lda/Continuum/material.pdf
     // except position of the shear terms is different to match the original ANCF reference paper
 

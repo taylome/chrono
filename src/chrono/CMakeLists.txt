@@ -444,6 +444,7 @@ set(ChronoEngine_fea_nodes_SOURCES
     fea/ChNodeFEAxyzP.cpp
     fea/ChNodeFEAxyzD.cpp
     fea/ChNodeFEAxyzDD.cpp
+	fea/ChNodeFEAxyzDDD.cpp
     fea/ChNodeFEAcurv.cpp
 )
 
@@ -454,6 +455,7 @@ set(ChronoEngine_fea_nodes_HEADERS
     fea/ChNodeFEAxyzP.h
     fea/ChNodeFEAxyzD.h
     fea/ChNodeFEAxyzDD.h
+	fea/ChNodeFEAxyzDDD.h
     fea/ChNodeFEAcurv.h
 )
 
@@ -471,8 +473,20 @@ set(ChronoEngine_fea_elements_SOURCES
 	fea/ChElementBeamANCF_TR06.cpp
 	fea/ChElementBeamANCF_TR07.cpp
 	fea/ChElementBeamANCF_TR08.cpp
+	fea/ChElementBeamANCF_TR08b.cpp
 	fea/ChElementBeamANCF_TR09.cpp
 	fea/ChElementBeamANCF_TR10.cpp
+	fea/ChElementBeamANCF_3243_TR01.cpp
+	fea/ChElementBeamANCF_3243_TR02.cpp
+	fea/ChElementBeamANCF_3243_TR03.cpp
+	fea/ChElementBeamANCF_3243_TR04.cpp
+	fea/ChElementBeamANCF_3243_TR05.cpp
+	fea/ChElementBeamANCF_3243_TR06.cpp
+	fea/ChElementBeamANCF_3243_TR07.cpp
+	fea/ChElementBeamANCF_3243_TR08.cpp
+	fea/ChElementBeamANCF_3243_TR08b.cpp
+	fea/ChElementBeamANCF_3243_TR09.cpp
+	fea/ChElementBeamANCF_3243_TR10.cpp
     fea/ChElementBeamEuler.cpp
     fea/ChElementBeamIGA.cpp
     fea/ChElementCableANCF.cpp
@@ -507,8 +521,20 @@ set(ChronoEngine_fea_elements_HEADERS
 	fea/ChElementBeamANCF_TR06.h
 	fea/ChElementBeamANCF_TR07.h
 	fea/ChElementBeamANCF_TR08.h
+	fea/ChElementBeamANCF_TR08b.h
 	fea/ChElementBeamANCF_TR09.h
 	fea/ChElementBeamANCF_TR10.h
+	fea/ChElementBeamANCF_3243_TR01.h
+	fea/ChElementBeamANCF_3243_TR02.h
+	fea/ChElementBeamANCF_3243_TR03.h
+	fea/ChElementBeamANCF_3243_TR04.h
+	fea/ChElementBeamANCF_3243_TR05.h
+	fea/ChElementBeamANCF_3243_TR06.h
+	fea/ChElementBeamANCF_3243_TR07.h
+	fea/ChElementBeamANCF_3243_TR08.h
+	fea/ChElementBeamANCF_3243_TR08b.h
+	fea/ChElementBeamANCF_3243_TR09.h
+	fea/ChElementBeamANCF_3243_TR10.h
     fea/ChElementBeamEuler.h
     fea/ChElementBeamIGA.h
     fea/ChElementCableANCF.h

@@ -32,8 +32,13 @@ ENDIF("${isSystemDir}" STREQUAL "-1")
 #--------------------------------------------------------------
 # Propagate to subdirectories
 
-option(BUILD_ANCF_ANALYSIS_BEAMTHREE "Build FEA Analysis programs for ANCF elements" TRUE)
+option(BUILD_ANCF_ANALYSIS_BEAMTWO "Build FEA Analysis Programs for ANCF 2 Node Beam Elements" TRUE)
+option(BUILD_ANCF_ANALYSIS_BEAMTHREE "Build FEA Analysis Programs for ANCF 3 Node Beam Elements" TRUE)
+mark_as_advanced(FORCE BUILD_ANCF_ANALYSIS_BEAMTWO)
 mark_as_advanced(FORCE BUILD_ANCF_ANALYSIS_BEAMTHREE)
+if(BUILD_ANCF_ANALYSIS_BEAMTWO)
+	add_subdirectory(ancf_2node_beam)
+endif()
 if(BUILD_ANCF_ANALYSIS_BEAMTHREE)
 	add_subdirectory(ancf_3node_beam)
 endif()

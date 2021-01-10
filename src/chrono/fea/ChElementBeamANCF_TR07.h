@@ -253,11 +253,11 @@ class ChApi ChElementBeamANCF_TR07 : public ChElementBeam, public ChLoadableU, p
     virtual void EvaluateSectionDisplacement(const double eta, ChVector<>& u_displ, ChVector<>& u_rotaz) override {}
 
     /// Gets the absolute xyz position of a point on the beam line,
-    /// and the absolute rotation of section plane, at abscissa 'eta'.
-    /// Note, eta=-1 at node1, eta=+1 at node2.
+    /// and the absolute rotation of section plane, at abscissa 'xi'.
+    /// Note, xi=-1 at node1, xi=+1 at node2.
     /// Note, 'displ' is the displ.state of 2 nodes, ex. get it as GetStateBlock()
     /// Results are corotated (expressed in world reference)
-    virtual void EvaluateSectionFrame(const double eta, ChVector<>& point, ChQuaternion<>& rot) override;
+    virtual void EvaluateSectionFrame(const double xi, ChVector<>& point, ChQuaternion<>& rot) override;
 
     // Functions for ChLoadable interface
     // ----------------------------------
@@ -358,10 +358,10 @@ class ChApi ChElementBeamANCF_TR07 : public ChElementBeam, public ChLoadableU, p
     void ComputeInternalJacobians(ChMatrixNM<double, 27, 27>& JacobianMatrix, double Kfactor, double Rfactor);
 
     // Calculate the calculate the Jacobian of the internal force integrand with damping included
-    void ComputeInternalJacobianDamping(ChMatrixRef H, double Kfactor, double Rfactor, double Mfactor);
+    void ComputeInternalJacobianDamping(ChMatrixRef& H, double Kfactor, double Rfactor, double Mfactor);
 
     // Calculate the calculate the Jacobian of the internal force integrand without damping included
-    void ComputeInternalJacobianNoDamping(ChMatrixRef H, double Kfactor, double Mfactor);
+    void ComputeInternalJacobianNoDamping(ChMatrixRef& H, double Kfactor, double Mfactor);
 
     // Calculate the generalized internal force for the element given the provided current state coordinates with
     // damping included

@@ -214,8 +214,8 @@ void ChElementBeamANCF_TR04::ComputeInternalForces(ChVectorDynamic<>& Fi) {
 }
 
 void ChElementBeamANCF_TR04::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
-                                                          ChMatrixNM<double, 3, 9>& ebar,
-                                                          ChMatrixNM<double, 3, 9>& ebardot) {
+                                                          const ChMatrixNM<double, 3, 9>& ebar,
+                                                          const ChMatrixNM<double, 3, 9>& ebardot) {
     // Set Fi to zero since the results from each GQ point will be added to this vector
     Fi.setZero();
 
@@ -228,7 +228,7 @@ void ChElementBeamANCF_TR04::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
     unsigned int GQ_idx_eta_zeta = 1;  // 2 Point Gauss-Quadrature;
 
     // Calculate the portion of the Selective Reduced Integration that does account for the Poisson effect
-    ChVectorN<double, 6> D0 = GetMaterial()->Get_D0();
+    const ChVectorN<double, 6>& D0 = GetMaterial()->Get_D0();
     for (unsigned int it_xi = 0; it_xi < GQTable->Lroots[GQ_idx_xi].size(); it_xi++) {
         for (unsigned int it_eta = 0; it_eta < GQTable->Lroots[GQ_idx_eta_zeta].size(); it_eta++) {
             for (unsigned int it_zeta = 0; it_zeta < GQTable->Lroots[GQ_idx_eta_zeta].size(); it_zeta++) {
@@ -248,7 +248,7 @@ void ChElementBeamANCF_TR04::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
     // Calculate the portion of the Selective Reduced Integration that account for the Poisson effect, but only on the
     // beam axis
     if (GetStrainFormulation() == ChElementBeamANCF_TR04::StrainFormulation::CMPoisson) {
-        ChMatrix33<double> Dv = GetMaterial()->Get_Dv();
+        const ChMatrix33<double>& Dv = GetMaterial()->Get_Dv();
 
         for (unsigned int it_xi = 0; it_xi < GQTable->Lroots[GQ_idx_xi].size(); it_xi++) {
             double GQ_weight = GQTable->Weight[GQ_idx_xi][it_xi] * 2 * 2;
@@ -265,9 +265,9 @@ void ChElementBeamANCF_TR04::ComputeInternalForcesSingleGQPnt(ChVectorN<double, 
                                                               double xi,
                                                               double eta,
                                                               double zeta,
-                                                              ChVectorN<double, 6>& D0,
-                                                              ChMatrixNM<double, 3, 9>& ebar,
-                                                              ChMatrixNM<double, 3, 9>& ebardot) {
+                                                              const ChVectorN<double, 6>& D0,
+                                                              const ChMatrixNM<double, 3, 9>& ebar,
+                                                              const ChMatrixNM<double, 3, 9>& ebardot) {
     // Calculate the normalized shape function derivatives with respect to xi, eta, and zeta
     // Note: This will later be modified by J_0xi_Inv to account for a potentially non-straight reference configuration
     ChMatrixNMc<double, 9, 3> Sbar_xi_D;
@@ -330,9 +330,9 @@ void ChElementBeamANCF_TR04::ComputeInternalForcesSingleGQPnt(ChVectorN<double, 
                                                               double xi,
                                                               double eta,
                                                               double zeta,
-                                                              ChMatrix33<double>& Dv,
-                                                              ChMatrixNM<double, 3, 9>& ebar,
-                                                              ChMatrixNM<double, 3, 9>& ebardot) {
+                                                              const ChMatrix33<double>& Dv,
+                                                              const ChMatrixNM<double, 3, 9>& ebar,
+                                                              const ChMatrixNM<double, 3, 9>& ebardot) {
     // Calculate the normalized shape function derivatives with respect to xi, eta, and zeta
     // Note: This will later be modified by J_0xi_Inv to account for a potentially non-straight reference configuration
     ChMatrixNMc<double, 9, 3> Sbar_xi_D;
@@ -380,9 +380,9 @@ void ChElementBeamANCF_TR04::ComputeInternalForcesSingleGQPnt(ChVectorN<double, 
                                                               double xi,
                                                               double eta,
                                                               double zeta,
-                                                              ChMatrixNM<double, 6, 6>& D,
-                                                              ChMatrixNM<double, 3, 9>& ebar,
-                                                              ChMatrixNM<double, 3, 9>& ebardot) {
+                                                              const ChMatrixNM<double, 6, 6>& D,
+                                                              const ChMatrixNM<double, 3, 9>& ebar,
+                                                              const ChMatrixNM<double, 3, 9>& ebardot) {
     // Calculate the normalized shape function derivatives with respect to xi, eta, and zeta
     // Note: This will later be modified by J_0xi_Inv to account for a potentially non-straight reference configuration
     ChMatrixNMc<double, 9, 3> Sbar_xi_D;
@@ -891,6 +891,36 @@ double ChElementBeamANCF_TR04::Calc_det_J_0xi(double xi, double eta, double zeta
 //    point.y() = N(0) * pA.y() + N(2) * pB.y() + N(4) * pC.y() + N(6) * pD.y();
 //    point.z() = N(0) * pA.z() + N(2) * pB.z() + N(4) * pC.z() + N(6) * pD.z();
 //}
+
+void ChElementBeamANCF_TR04::EvaluateSectionFrame(const double xi, ChVector<>& point, ChQuaternion<>& rot) {
+
+    ChMatrixNM<double, 3, 27> Sxi;
+    ChMatrixNM<double, 3, 27>  Sxi_xi;
+    ChMatrixNM<double, 3, 27>  Sxi_eta;
+    Calc_Sxi(Sxi, xi, 0, 0);
+    Calc_Sxi_xi(Sxi_xi, xi, 0, 0);
+    Calc_Sxi_eta(Sxi_eta, xi, 0, 0);
+
+    ChVectorN<double, 27> e;
+    CalcCoordVector(e);
+
+    // r = Se
+    point = Sxi * e;
+
+    // Since ANCF does not use rotations, calculate an approximate
+    // rotation based off the position vector gradients
+    ChVector<double> BeamAxisTangent = Sxi_xi * e;
+    ChVector<double> CrossSectionY = Sxi_eta * e;
+
+    // Since the position vector gradients are not in general orthogonal,
+    // set the Dx direction tangent to the beam axis and
+    // compute the Dy and Dz directions by using a
+    // Gram-Schmidt orthonormalization, guided by the cross section Y direction
+    ChMatrix33<> msect;
+    msect.Set_A_Xdir(BeamAxisTangent, CrossSectionY);
+
+    rot = msect.Get_A_quaternion();
+}
 
 // -----------------------------------------------------------------------------
 // Functions for ChLoadable interface

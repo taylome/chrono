@@ -23,18 +23,17 @@
 #include "chrono/physics/ChSystemSMC.h"
 #include "chrono/solver/ChDirectSolverLS.h"
 
-#include "chrono/fea/ChElementBeamANCF.h"
-#include "chrono/fea/ChElementBeamANCF_TR01.h"
-#include "chrono/fea/ChElementBeamANCF_TR02.h"
-#include "chrono/fea/ChElementBeamANCF_TR03.h"
-#include "chrono/fea/ChElementBeamANCF_TR04.h"
-#include "chrono/fea/ChElementBeamANCF_TR05.h"
-#include "chrono/fea/ChElementBeamANCF_TR06.h"
-#include "chrono/fea/ChElementBeamANCF_TR07.h"
-#include "chrono/fea/ChElementBeamANCF_TR08.h"
-#include "chrono/fea/ChElementBeamANCF_TR08b.h"
-#include "chrono/fea/ChElementBeamANCF_TR09.h"
-#include "chrono/fea/ChElementBeamANCF_TR10.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR01.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR02.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR03.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR04.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR05.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR06.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR07.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR08.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR08b.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR09.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR10.h"
 
 #include "chrono/fea/ChMesh.h"
 
@@ -102,27 +101,26 @@ ANCFBeamTest<num_elements, ElementVersion, MaterialVersion>::ANCFBeamTest() {
     m_system->Add(mesh);
 
     // Populate the mesh container with a the nodes and elements for the meshed beam
-    int num_nodes = (2 * num_elements) + 1;
+    int num_nodes = num_elements + 1;
     double dx = length / (num_nodes - 1);
 
     // Setup beam cross section gradients to initially align with the global y and z directions
-    ChVector<> dir1(0, 1, 0);
-    ChVector<> dir2(0, 0, 1);
+    ChVector<> dir1(1, 0, 0);
+    ChVector<> dir2(0, 1, 0);
+    ChVector<> dir3(0, 0, 1);
 
     // Create the first node and fix it completely to ground (Cantilever constraint)
-    auto nodeA = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(0, 0, 0.0), dir1, dir2);
+    auto nodeA = chrono_types::make_shared<ChNodeFEAxyzDDD>(ChVector<>(0, 0, 0.0), dir1, dir2, dir3);
     nodeA->SetFixed(true);
     mesh->AddNode(nodeA);
 
     for (int i = 1; i <= num_elements; i++) {
-        auto nodeB = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(dx * (2 * i), 0, 0), dir1, dir2);
-        auto nodeC = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(dx * (2 * i - 1), 0, 0), dir1, dir2);
+        auto nodeB = chrono_types::make_shared<ChNodeFEAxyzDDD>(ChVector<>(dx * i, 0, 0), dir1, dir2, dir3);
         mesh->AddNode(nodeB);
-        mesh->AddNode(nodeC);
 
         auto element = chrono_types::make_shared<ElementVersion>();
-        element->SetNodes(nodeA, nodeB, nodeC);
-        element->SetDimensions(2 * dx, thickness, width);
+        element->SetNodes(nodeA, nodeB);
+        element->SetDimensions(dx, thickness, width);
         element->SetMaterial(material);
         element->SetAlphaDamp(0.01);
         element->SetGravityOn(
@@ -149,11 +147,12 @@ void ANCFBeamTest<num_elements, ElementVersion, MaterialVersion>::PerturbNodes()
         //#pragma omp parallel for
         for (unsigned int in = 0; in < NodeList.size(); in++) {
             Perturbation.eigen().Random();
-            //auto Node = std::dynamic_pointer_cast<ChNodeFEAxyzDD>(NodeList[in]);
-            auto Node = std::static_pointer_cast<ChNodeFEAxyzDD>(NodeList[in]);
+            //auto Node = std::dynamic_pointer_cast<ChNodeFEAxyzDDD>(NodeList[in]);
+            auto Node = std::static_pointer_cast<ChNodeFEAxyzDDD>(NodeList[in]);
             Node->SetPos(Node->GetPos() + 1e-6 * Perturbation);
             Node->SetD(Node->GetD() + 1e-6 * Perturbation);
             Node->SetDD(Node->GetDD() + 1e-6 * Perturbation);
+            Node->SetDDD(Node->GetDDD() + 1e-6 * Perturbation);
         }
     }
 }
@@ -163,7 +162,7 @@ double ANCFBeamTest<num_elements, ElementVersion, MaterialVersion>::GetInternalF
     ChTimer<> timer_internal_forces;
     timer_internal_forces.reset();
 
-    ChVectorDynamic<double> Fi(27);
+    ChVectorDynamic<double> Fi(24);
 
     auto MeshList = m_system->Get_meshlist();
     for (auto& Mesh : MeshList) {
@@ -184,7 +183,7 @@ double ANCFBeamTest<num_elements, ElementVersion, MaterialVersion>::GetJacobian(
     ChTimer<> timer_KRM;
     timer_KRM.reset();
 
-    ChMatrixNM<double, 27, 27> H;
+    ChMatrixNM<double, 24, 24> H;
 
     auto MeshList = m_system->Get_meshlist();
     for (auto& Mesh : MeshList) {
@@ -238,52 +237,48 @@ int main(int argc, char* argv[]) {
                  "Calc Time (ms)"
               << std::endl;
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF, ChMaterialBeamANCF> BeamTest_Org;
-    std::cout << "ChElementBeamANCF_Org, ";
-    BeamTest_Org.PrintTimingResults(num_steps);
-
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_TR01, ChMaterialBeamANCF_TR01> BeamTest_TR01;
-    std::cout << "ChElementBeamANCF_TR01, ";
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3243_TR01, ChMaterialBeamANCF_3243_TR01> BeamTest_TR01;
+    std::cout << "ChElementBeamANCF_3243_TR01, ";
     BeamTest_TR01.PrintTimingResults(num_steps);
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_TR02, ChMaterialBeamANCF_TR02> BeamTest_TR02;
-    std::cout << "ChElementBeamANCF_TR02, ";
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3243_TR02, ChMaterialBeamANCF_3243_TR02> BeamTest_TR02;
+    std::cout << "ChElementBeamANCF_3243_TR02, ";
     BeamTest_TR02.PrintTimingResults(num_steps);
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_TR03, ChMaterialBeamANCF_TR03> BeamTest_TR03;
-    std::cout << "ChElementBeamANCF_TR03, ";
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3243_TR03, ChMaterialBeamANCF_3243_TR03> BeamTest_TR03;
+    std::cout << "ChElementBeamANCF_3243_TR03, ";
     BeamTest_TR03.PrintTimingResults(num_steps);
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_TR04, ChMaterialBeamANCF_TR04> BeamTest_TR04;
-    std::cout << "ChElementBeamANCF_TR04, ";
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3243_TR04, ChMaterialBeamANCF_3243_TR04> BeamTest_TR04;
+    std::cout << "ChElementBeamANCF_3243_TR04, ";
     BeamTest_TR04.PrintTimingResults(num_steps);
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_TR05, ChMaterialBeamANCF_TR05> BeamTest_TR05;
-    std::cout << "ChElementBeamANCF_TR05, ";
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3243_TR05, ChMaterialBeamANCF_3243_TR05> BeamTest_TR05;
+    std::cout << "ChElementBeamANCF_3243_TR05, ";
     BeamTest_TR05.PrintTimingResults(num_steps);
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_TR06, ChMaterialBeamANCF_TR06> BeamTest_TR06;
-    std::cout << "ChElementBeamANCF_TR06, ";
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3243_TR06, ChMaterialBeamANCF_3243_TR06> BeamTest_TR06;
+    std::cout << "ChElementBeamANCF_3243_TR06, ";
     BeamTest_TR06.PrintTimingResults(num_steps);
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_TR07, ChMaterialBeamANCF_TR07> BeamTest_TR07;
-    std::cout << "ChElementBeamANCF_TR07, ";
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3243_TR07, ChMaterialBeamANCF_3243_TR07> BeamTest_TR07;
+    std::cout << "ChElementBeamANCF_3243_TR07, ";
     BeamTest_TR07.PrintTimingResults(num_steps);
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_TR08, ChMaterialBeamANCF_TR08> BeamTest_TR08;
-    std::cout << "ChElementBeamANCF_TR08, ";
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3243_TR08, ChMaterialBeamANCF_3243_TR08> BeamTest_TR08;
+    std::cout << "ChElementBeamANCF_3243_TR08, ";
     BeamTest_TR08.PrintTimingResults(num_steps);
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_TR08b, ChMaterialBeamANCF_TR08b> BeamTest_TR08b;
-    std::cout << "ChElementBeamANCF_TR08b, ";
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3243_TR08b, ChMaterialBeamANCF_3243_TR08b> BeamTest_TR08b;
+    std::cout << "ChElementBeamANCF_3243_TR08b, ";
     BeamTest_TR08b.PrintTimingResults(num_steps);
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_TR09, ChMaterialBeamANCF_TR09> BeamTest_TR09;
-    std::cout << "ChElementBeamANCF_TR09, ";
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3243_TR09, ChMaterialBeamANCF_3243_TR09> BeamTest_TR09;
+    std::cout << "ChElementBeamANCF_3243_TR09, ";
     BeamTest_TR09.PrintTimingResults(num_steps);
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_TR10, ChMaterialBeamANCF_TR10> BeamTest_TR10;
-    std::cout << "ChElementBeamANCF_TR10, ";
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3243_TR10, ChMaterialBeamANCF_3243_TR10> BeamTest_TR10;
+    std::cout << "ChElementBeamANCF_3243_TR10, ";
     BeamTest_TR10.PrintTimingResults(num_steps);
 
     return (0);

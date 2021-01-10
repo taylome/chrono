@@ -289,13 +289,13 @@ void ChElementBeamANCF_TR06::ComputeInternalForces(ChVectorDynamic<>& Fi) {
 }
 
 void ChElementBeamANCF_TR06::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
-                                                          ChMatrixNM<double, 3, 9>& ebar,
-                                                          ChMatrixNM<double, 3, 9>& ebardot) {
+                                                          const ChMatrixNM<double, 3, 9>& ebar,
+                                                          const ChMatrixNM<double, 3, 9>& ebardot) {
     ChMatrixNM<double, 9, 3> QiCompact;
     QiCompact.setZero();
 
     // Calculate the portion of the Selective Reduced Integration that does account for the Poisson effect
-    ChVectorN<double, 6> D0 = GetMaterial()->Get_D0();
+    const ChVectorN<double, 6>& D0 = GetMaterial()->Get_D0();
     for (unsigned int GQpnt = 0; GQpnt < 16; GQpnt++) {
         ChMatrixNMc<double, 9, 3> Sbar_xi_D = m_SD_precompute_D0.block<9, 3>(0, 3 * GQpnt);
 
@@ -346,7 +346,7 @@ void ChElementBeamANCF_TR06::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
     // Calculate the portion of the Selective Reduced Integration that account for the Poisson effect, but only on the
     // beam axis
     if (GetStrainFormulation() == ChElementBeamANCF_TR06::StrainFormulation::CMPoisson) {
-        ChMatrix33<double> Dv = GetMaterial()->Get_Dv();
+        const ChMatrix33<double>& Dv = GetMaterial()->Get_Dv();
 
         for (unsigned int GQpnt = 0; GQpnt < 4; GQpnt++) {
             ChMatrixNMc<double, 9, 3> Sbar_xi_D = m_SD_precompute_Dv.block<9, 3>(0, 3 * GQpnt);
@@ -429,7 +429,7 @@ void ChElementBeamANCF_TR06::ComputeInternalJacobians(ChMatrixNM<double, 27, 27>
     }
 }
 
-void ChElementBeamANCF_TR06::ComputeInternalJacobianDamping(ChMatrixRef H,
+void ChElementBeamANCF_TR06::ComputeInternalJacobianDamping(ChMatrixRef& H,
                                                             double Kfactor,
                                                             double Rfactor,
                                                             double Mfactor) {
@@ -456,7 +456,7 @@ void ChElementBeamANCF_TR06::ComputeInternalJacobianDamping(ChMatrixRef H,
     CalcCoordDerivMatrix(ebardot);
 
     // Calculate the portion of the Selective Reduced Integration that does account for the Poisson effect
-    ChVectorN<double, 6> D0 = GetMaterial()->Get_D0();
+    const ChVectorN<double, 6>& D0 = GetMaterial()->Get_D0();
     for (unsigned int GQpnt = 0; GQpnt < 16; GQpnt++) {
         ChMatrixNMc<double, 9, 3> Sbar_xi_D = m_SD_precompute_D0.block<9, 3>(0, 3 * GQpnt);
 
@@ -548,7 +548,7 @@ void ChElementBeamANCF_TR06::ComputeInternalJacobianDamping(ChMatrixRef H,
     // Calculate the portion of the Selective Reduced Integration that account for the Poisson effect, but only on the
     // beam axis
     if (GetStrainFormulation() == ChElementBeamANCF_TR06::StrainFormulation::CMPoisson) {
-        ChMatrix33<double> Dv = GetMaterial()->Get_Dv();
+        const ChMatrix33<double>& Dv = GetMaterial()->Get_Dv();
 
         for (unsigned int GQpnt = 0; GQpnt < 4; GQpnt++) {
             ChMatrixNMc<double, 9, 3> Sbar_xi_D = m_SD_precompute_Dv.block<9, 3>(0, 3 * GQpnt);
@@ -610,7 +610,7 @@ void ChElementBeamANCF_TR06::ComputeInternalJacobianDamping(ChMatrixRef H,
     }
 }
 
-void ChElementBeamANCF_TR06::ComputeInternalJacobianNoDamping(ChMatrixRef H, double Kfactor, double Mfactor) {
+void ChElementBeamANCF_TR06::ComputeInternalJacobianNoDamping(ChMatrixRef& H, double Kfactor, double Mfactor) {
     H.setZero();
 
     ChMatrixNM<double, 9, 9> Jacobian_CompactPart = Mfactor * m_MassMatrix;
@@ -632,7 +632,7 @@ void ChElementBeamANCF_TR06::ComputeInternalJacobianNoDamping(ChMatrixRef H, dou
     CalcCoordMatrix(ebar);
 
     // Calculate the portion of the Selective Reduced Integration that does account for the Poisson effect
-    ChVectorN<double, 6> D0 = GetMaterial()->Get_D0();
+    const ChVectorN<double, 6>& D0 = GetMaterial()->Get_D0();
     for (unsigned int GQpnt = 0; GQpnt < 16; GQpnt++) {
         ChMatrixNMc<double, 9, 3> Sbar_xi_D = m_SD_precompute_D0.block<9, 3>(0, 3 * GQpnt);
 
@@ -703,7 +703,7 @@ void ChElementBeamANCF_TR06::ComputeInternalJacobianNoDamping(ChMatrixRef H, dou
     // Calculate the portion of the Selective Reduced Integration that account for the Poisson effect, but only on the
     // beam axis
     if (GetStrainFormulation() == ChElementBeamANCF_TR06::StrainFormulation::CMPoisson) {
-        ChMatrix33<double> Dv = GetMaterial()->Get_Dv();
+        const ChMatrix33<double>& Dv = GetMaterial()->Get_Dv();
 
         for (unsigned int GQpnt = 0; GQpnt < 4; GQpnt++) {
             ChMatrixNMc<double, 9, 3> Sbar_xi_D = m_SD_precompute_Dv.block<9, 3>(0, 3 * GQpnt);
@@ -1151,6 +1151,36 @@ double ChElementBeamANCF_TR06::Calc_det_J_0xi(double xi, double eta, double zeta
 //    point.y() = N(0) * pA.y() + N(2) * pB.y() + N(4) * pC.y() + N(6) * pD.y();
 //    point.z() = N(0) * pA.z() + N(2) * pB.z() + N(4) * pC.z() + N(6) * pD.z();
 //}
+
+void ChElementBeamANCF_TR06::EvaluateSectionFrame(const double xi, ChVector<>& point, ChQuaternion<>& rot) {
+
+    ChMatrixNM<double, 3, 27> Sxi;
+    ChMatrixNM<double, 3, 27>  Sxi_xi;
+    ChMatrixNM<double, 3, 27>  Sxi_eta;
+    Calc_Sxi(Sxi, xi, 0, 0);
+    Calc_Sxi_xi(Sxi_xi, xi, 0, 0);
+    Calc_Sxi_eta(Sxi_eta, xi, 0, 0);
+
+    ChVectorN<double, 27> e;
+    CalcCoordVector(e);
+
+    // r = Se
+    point = Sxi * e;
+
+    // Since ANCF does not use rotations, calculate an approximate
+    // rotation based off the position vector gradients
+    ChVector<double> BeamAxisTangent = Sxi_xi * e;
+    ChVector<double> CrossSectionY = Sxi_eta * e;
+
+    // Since the position vector gradients are not in general orthogonal,
+    // set the Dx direction tangent to the beam axis and
+    // compute the Dy and Dz directions by using a
+    // Gram-Schmidt orthonormalization, guided by the cross section Y direction
+    ChMatrix33<> msect;
+    msect.Set_A_Xdir(BeamAxisTangent, CrossSectionY);
+
+    rot = msect.Get_A_quaternion();
+}
 
 // -----------------------------------------------------------------------------
 // Functions for ChLoadable interface

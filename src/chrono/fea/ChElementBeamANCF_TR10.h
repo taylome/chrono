@@ -247,11 +247,11 @@ class ChApi ChElementBeamANCF_TR10 : public ChElementBeam, public ChLoadableU, p
     virtual void EvaluateSectionDisplacement(const double eta, ChVector<>& u_displ, ChVector<>& u_rotaz) override {}
 
     /// Gets the absolute xyz position of a point on the beam line,
-    /// and the absolute rotation of section plane, at abscissa 'eta'.
-    /// Note, eta=-1 at node1, eta=+1 at node2.
+    /// and the absolute rotation of section plane, at abscissa 'xi'.
+    /// Note, xi=-1 at node1, xi=+1 at node2.
     /// Note, 'displ' is the displ.state of 2 nodes, ex. get it as GetStateBlock()
     /// Results are corotated (expressed in world reference)
-    virtual void EvaluateSectionFrame(const double eta, ChVector<>& point, ChQuaternion<>& rot) override;
+    virtual void EvaluateSectionFrame(const double xi, ChVector<>& point, ChQuaternion<>& rot) override;
 
     // Functions for ChLoadable interface
     // ----------------------------------
@@ -353,8 +353,8 @@ class ChApi ChElementBeamANCF_TR10 : public ChElementBeam, public ChLoadableU, p
 
     // Calculate the generalized internal force for the element given the provided current state coordinates
     void ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
-                                      ChMatrixNMc<double, 9, 3>& e_bar,
-                                      ChMatrixNMc<double, 9, 3>& e_bar_dot);
+                                      const ChMatrixNMc<double, 9, 3>& e_bar,
+                                      const ChMatrixNMc<double, 9, 3>& e_bar_dot);
 
     // Return the pre-computed generalized force due to gravity
     void Get_GravityFrc(ChVectorN<double, 27>& Gi) { Gi = m_GravForce; }

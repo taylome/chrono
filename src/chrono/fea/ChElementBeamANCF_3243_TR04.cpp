@@ -11,31 +11,29 @@
 // =============================================================================
 // Authors: Michael Taylor, Antonio Recuero, Radu Serban
 // =============================================================================
-// ANCF beam element with 3 nodes. Description of this element and its internal
-// forces may be found in Nachbagauer, Gruber, Gerstmayr, "Structural and Continuum
-// Mechanics Approaches for a 3D Shear Deformable ANCF Beam Finite Element:
-// Application to Static and Linearized Dynamic Examples", Journal of Computational
-// and Nonlinear Dynamics, 2013, April 2013, Vol. 8, 021004.
+// Fully Parameterized ANCF beam element with 2 nodes. Description of this element
+// and its internal forces may be found in
 // =============================================================================
 // Internal Force Calculation Method is based on:  Gerstmayr, J., Shabana, A.A.:
 // Efficient integration of the elastic forces and thin three-dimensional beam
 // elements in the absolute nodal coordinate formulation.In: Proceedings of the
 // Multibody Dynamics Eccomas thematic Conference, Madrid(2005)
 // =============================================================================
-// TR05 = a Gerstmayr style implementation of the element with pre-calculation
+// TR04 = a Gerstmayr style implementation of the element with no pre-calculation
 //     of the terms needed for the generalized internal force calculation
 //
-//  Mass Matrix = Constant, pre-calculated 27x27 matrix
+//  Mass Matrix = Constant, pre-calculated 24x24 matrix
 //
-//  Generalized Force due to gravity = Constant 27x1 Vector
+//  Generalized Force due to gravity = Constant 24x1 Vector
 //     (assumption that gravity is constant too)
 //
 //  Generalized Internal Force Vector = Calculated using the Gerstmayr method:
-//     Dense Math: e_bar = 3x9 and S_bar = 9x1
+//     Dense Math: e_bar = 3x8 and S_bar = 8x1
+//     Inverse of the Element Jacobian (J_0xi) is generated from e0 every time
 //     Math is a translation from the method presented by Gerstmayr and Shabana
 //     1 less than "Full Integration" Number of GQ Integration Points (4x2x2)
 //     GQ integration is performed one GQ point at a time
-//     Pre-calculation of terms for the generalized internal force calculation
+//     No pre-calculation of terms for the generalized internal force calculation
 //
 //  Jacobian of the Generalized Internal Force Vector = Calculated by numeric
 //     differentiation
@@ -44,7 +42,7 @@
 
 #include "chrono/core/ChQuadrature.h"
 #include "chrono/physics/ChSystem.h"
-#include "chrono/fea/ChElementBeamANCF_TR05.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR04.h"
 #include <cmath>
 
 namespace chrono {
@@ -54,36 +52,32 @@ namespace fea {
 // Constructor
 // ------------------------------------------------------------------------------
 
-ChElementBeamANCF_TR05::ChElementBeamANCF_TR05()
+ChElementBeamANCF_3243_TR04::ChElementBeamANCF_3243_TR04()
     : m_gravity_on(false), m_thicknessY(0), m_thicknessZ(0), m_lenX(0), m_Alpha(0), m_damping_enabled(false) {
-    m_nodes.resize(3);
+    m_nodes.resize(2);
 }
 
 // ------------------------------------------------------------------------------
 // Set element nodes
 // ------------------------------------------------------------------------------
 
-void ChElementBeamANCF_TR05::SetNodes(std::shared_ptr<ChNodeFEAxyzDD> nodeA,
-                                      std::shared_ptr<ChNodeFEAxyzDD> nodeB,
-                                      std::shared_ptr<ChNodeFEAxyzDD> nodeC) {
+void ChElementBeamANCF_3243_TR04::SetNodes(std::shared_ptr<ChNodeFEAxyzDDD> nodeA,
+                                           std::shared_ptr<ChNodeFEAxyzDDD> nodeB) {
     assert(nodeA);
     assert(nodeB);
-    assert(nodeC);
 
     m_nodes[0] = nodeA;
     m_nodes[1] = nodeB;
-    m_nodes[2] = nodeC;
 
     std::vector<ChVariables*> mvars;
     mvars.push_back(&m_nodes[0]->Variables());
     mvars.push_back(&m_nodes[0]->Variables_D());
     mvars.push_back(&m_nodes[0]->Variables_DD());
+    mvars.push_back(&m_nodes[0]->Variables_DDD());
     mvars.push_back(&m_nodes[1]->Variables());
     mvars.push_back(&m_nodes[1]->Variables_D());
     mvars.push_back(&m_nodes[1]->Variables_DD());
-    mvars.push_back(&m_nodes[2]->Variables());
-    mvars.push_back(&m_nodes[2]->Variables_D());
-    mvars.push_back(&m_nodes[2]->Variables_DD());
+    mvars.push_back(&m_nodes[1]->Variables_DDD());
 
     Kmatr.SetVariables(mvars);
 }
@@ -93,43 +87,42 @@ void ChElementBeamANCF_TR05::SetNodes(std::shared_ptr<ChNodeFEAxyzDD> nodeA,
 // -----------------------------------------------------------------------------
 
 // Initial element setup.
-void ChElementBeamANCF_TR05::SetupInitial(ChSystem* system) {
+void ChElementBeamANCF_3243_TR04::SetupInitial(ChSystem* system) {
     // Initial positions and slopes of the element nodes
     // These values define the reference configuration of the element
     CalcCoordMatrix(m_ebar0);
 
     // Compute mass matrix and gravitational forces and store them since they are constants
     ComputeMassMatrixAndGravityForce(system->Get_G_acc());
-
-    // Compute Pre-computed matrices and vectors for the generalized internal force calcualtions
-    PrecomputeInternalForceMatricesWeights();
 }
 
 // State update.
-void ChElementBeamANCF_TR05::Update() {
+void ChElementBeamANCF_3243_TR04::Update() {
     ChElementGeneric::Update();
 }
 
 // Fill the D vector with the current field values at the element nodes.
-void ChElementBeamANCF_TR05::GetStateBlock(ChVectorDynamic<>& mD) {
+void ChElementBeamANCF_3243_TR04::GetStateBlock(ChVectorDynamic<>& mD) {
     mD.segment(0, 3) = m_nodes[0]->GetPos().eigen();
     mD.segment(3, 3) = m_nodes[0]->GetD().eigen();
     mD.segment(6, 3) = m_nodes[0]->GetDD().eigen();
-    mD.segment(9, 3) = m_nodes[1]->GetPos().eigen();
-    mD.segment(12, 3) = m_nodes[1]->GetD().eigen();
-    mD.segment(15, 3) = m_nodes[1]->GetDD().eigen();
-    mD.segment(18, 3) = m_nodes[2]->GetPos().eigen();
-    mD.segment(21, 3) = m_nodes[2]->GetD().eigen();
-    mD.segment(24, 3) = m_nodes[2]->GetDD().eigen();
+    mD.segment(9, 3) = m_nodes[0]->GetDDD().eigen();
+    mD.segment(12, 3) = m_nodes[1]->GetPos().eigen();
+    mD.segment(15, 3) = m_nodes[1]->GetD().eigen();
+    mD.segment(18, 3) = m_nodes[1]->GetDD().eigen();
+    mD.segment(21, 3) = m_nodes[1]->GetDDD().eigen();
 }
 
 // Calculate the global matrix H as a linear combination of K, R, and M:
 //   H = Mfactor * [M] + Kfactor * [K] + Rfactor * [R]
-void ChElementBeamANCF_TR05::ComputeKRMmatricesGlobal(ChMatrixRef H, double Kfactor, double Rfactor, double Mfactor) {
-    assert((H.rows() == 27) && (H.cols() == 27));
+void ChElementBeamANCF_3243_TR04::ComputeKRMmatricesGlobal(ChMatrixRef H,
+                                                           double Kfactor,
+                                                           double Rfactor,
+                                                           double Mfactor) {
+    assert((H.rows() == 24) && (H.cols() == 24));
 
     // Calculate the linear combination Kfactor*[K] + Rfactor*[R]
-    ChMatrixNM<double, 27, 27> JacobianMatrix;
+    ChMatrixNM<double, 24, 24> JacobianMatrix;
     ComputeInternalJacobians(JacobianMatrix, Kfactor, Rfactor);
 
     // Load Jac + Mfactor*[M] into H
@@ -137,14 +130,14 @@ void ChElementBeamANCF_TR05::ComputeKRMmatricesGlobal(ChMatrixRef H, double Kfac
 }
 
 // Return the mass matrix.
-void ChElementBeamANCF_TR05::ComputeMmatrixGlobal(ChMatrixRef M) {
+void ChElementBeamANCF_3243_TR04::ComputeMmatrixGlobal(ChMatrixRef M) {
     M = m_MassMatrix;
 }
 
 // -----------------------------------------------------------------------------
 // Mass Matrix & Generalized Force Due to Gravity Calculation
 // -----------------------------------------------------------------------------
-void ChElementBeamANCF_TR05::ComputeMassMatrixAndGravityForce(const ChVector<>& g_acc) {
+void ChElementBeamANCF_3243_TR04::ComputeMassMatrixAndGravityForce(const ChVector<>& g_acc) {
     // For this element, 5 GQ Points are needed in the xi direction
     //  and 2 GQ Points are needed in the eta & zeta directions
     //  for exact integration of the element's mass matrix, even if
@@ -172,7 +165,7 @@ void ChElementBeamANCF_TR05::ComputeMassMatrixAndGravityForce(const ChVector<>& 
                 double eta = GQTable->Lroots[GQ_idx_eta_zeta][it_eta];
                 double zeta = GQTable->Lroots[GQ_idx_eta_zeta][it_zeta];
                 double det_J_0xi = Calc_det_J_0xi(xi, eta, zeta);  // determinate of the element Jacobian (volume ratio)
-                ChMatrixNM<double, 3, 27> Sxi;                     // 3x27 Normalized Shape Function Matrix
+                ChMatrixNM<double, 3, 24> Sxi;                     // 3x24 Normalized Shape Function Matrix
                 Calc_Sxi(Sxi, xi, eta, zeta);
 
                 m_GravForce += (GQ_weight * rho * det_J_0xi) * Sxi.transpose() * g_acc.eigen();
@@ -183,59 +176,9 @@ void ChElementBeamANCF_TR05::ComputeMassMatrixAndGravityForce(const ChVector<>& 
 }
 
 /// This class computes and adds corresponding masses to ElementGeneric member m_TotalMass
-void ChElementBeamANCF_TR05::ComputeNodalMass() {
-    m_nodes[0]->m_TotalMass += m_MassMatrix(0, 0) + m_MassMatrix(0, 9) + m_MassMatrix(0, 18);
-    m_nodes[1]->m_TotalMass += m_MassMatrix(9, 9) + m_MassMatrix(9, 0) + m_MassMatrix(9, 18);
-    m_nodes[2]->m_TotalMass += m_MassMatrix(18, 18) + m_MassMatrix(18, 0) + m_MassMatrix(18, 9);
-}
-
-// Precalculate constant matrices and scalars for the internal force calculations
-void ChElementBeamANCF_TR05::PrecomputeInternalForceMatricesWeights() {
-    ChQuadratureTables* GQTable = GetStaticGQTables();
-    unsigned int GQ_idx_xi = 3;        // 4 Point Gauss-Quadrature;
-    unsigned int GQ_idx_eta_zeta = 1;  // 2 Point Gauss-Quadrature;
-
-    // Precalculate the matrices of normalized shape function derivatives corrected for a potentially non-straight
-    // reference configuration & GQ Weights times the determiate of the element Jacobian for later Calculating the
-    // portion of the Selective Reduced Integration that does account for the Poisson effect
-    for (unsigned int it_xi = 0; it_xi < GQTable->Lroots[GQ_idx_xi].size(); it_xi++) {
-        for (unsigned int it_eta = 0; it_eta < GQTable->Lroots[GQ_idx_eta_zeta].size(); it_eta++) {
-            for (unsigned int it_zeta = 0; it_zeta < GQTable->Lroots[GQ_idx_eta_zeta].size(); it_zeta++) {
-                double GQ_weight = GQTable->Weight[GQ_idx_xi][it_xi] * GQTable->Weight[GQ_idx_eta_zeta][it_eta] *
-                                   GQTable->Weight[GQ_idx_eta_zeta][it_zeta];
-                double xi = GQTable->Lroots[GQ_idx_xi][it_xi];
-                double eta = GQTable->Lroots[GQ_idx_eta_zeta][it_eta];
-                double zeta = GQTable->Lroots[GQ_idx_eta_zeta][it_zeta];
-                auto index = it_zeta + it_eta * GQTable->Lroots[GQ_idx_eta_zeta].size() +
-                             it_xi * GQTable->Lroots[GQ_idx_eta_zeta].size() * GQTable->Lroots[GQ_idx_eta_zeta].size();
-                ChMatrix33<double>
-                    J_0xi;  // Element Jacobian between the reference configuration and normalized configuration
-                ChMatrixNMc<double, 9, 3> Sxi_D;  // Matrix of normalized shape function derivatives
-
-                Calc_Sxi_D(Sxi_D, xi, eta, zeta);
-                J_0xi.noalias() = m_ebar0 * Sxi_D;
-
-                m_SD_precompute_D0.block(0, 3 * index, 9, 3) = Sxi_D * J_0xi.inverse();
-                m_GQWeight_det_J_0xi_D0(index) = -J_0xi.determinant() * GQ_weight;
-            }
-        }
-    }
-
-    // Precalculate the matrices of normalized shape function derivatives corrected for a potentially non-straight
-    // reference configuration & GQ Weights times the determiate of the element Jacobian for later Calculate the portion
-    // of the Selective Reduced Integration that account for the Poisson effect, but only on the beam axis
-    for (unsigned int it_xi = 0; it_xi < GQTable->Lroots[GQ_idx_xi].size(); it_xi++) {
-        double GQ_weight = GQTable->Weight[GQ_idx_xi][it_xi] * 2 * 2;
-        double xi = GQTable->Lroots[GQ_idx_xi][it_xi];
-        ChMatrix33<double> J_0xi;  // Element Jacobian between the reference configuration and normalized configuration
-        ChMatrixNMc<double, 9, 3> Sxi_D;  // Matrix of normalized shape function derivatives
-
-        Calc_Sxi_D(Sxi_D, xi, 0, 0);
-        J_0xi.noalias() = m_ebar0 * Sxi_D;
-
-        m_SD_precompute_Dv.block(0, 3 * it_xi, 9, 3) = Sxi_D * J_0xi.inverse();
-        m_GQWeight_det_J_0xi_Dv(it_xi) = -J_0xi.determinant() * GQ_weight;
-    }
+void ChElementBeamANCF_3243_TR04::ComputeNodalMass() {
+    m_nodes[0]->m_TotalMass += m_MassMatrix(0, 0) + m_MassMatrix(0, 12);
+    m_nodes[1]->m_TotalMass += m_MassMatrix(12, 12) + m_MassMatrix(12, 0);
 }
 
 // -----------------------------------------------------------------------------
@@ -243,7 +186,7 @@ void ChElementBeamANCF_TR05::PrecomputeInternalForceMatricesWeights() {
 // -----------------------------------------------------------------------------
 
 // Set structural damping.
-void ChElementBeamANCF_TR05::SetAlphaDamp(double a) {
+void ChElementBeamANCF_3243_TR04::SetAlphaDamp(double a) {
     m_Alpha = a;
     if (std::abs(m_Alpha) > 1e-10)
         m_damping_enabled = true;
@@ -251,9 +194,9 @@ void ChElementBeamANCF_TR05::SetAlphaDamp(double a) {
         m_damping_enabled = false;
 }
 
-void ChElementBeamANCF_TR05::ComputeInternalForces(ChVectorDynamic<>& Fi) {
-    ChMatrixNM<double, 3, 9> ebar;
-    ChMatrixNM<double, 3, 9> ebardot;
+void ChElementBeamANCF_3243_TR04::ComputeInternalForces(ChVectorDynamic<>& Fi) {
+    ChMatrixNM<double, 3, 8> ebar;
+    ChMatrixNM<double, 3, 8> ebardot;
 
     CalcCoordMatrix(ebar);
     CalcCoordDerivMatrix(ebardot);
@@ -264,122 +207,255 @@ void ChElementBeamANCF_TR05::ComputeInternalForces(ChVectorDynamic<>& Fi) {
     }
 }
 
-void ChElementBeamANCF_TR05::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
-                                                          const ChMatrixNM<double, 3, 9>& ebar,
-                                                          const ChMatrixNM<double, 3, 9>& ebardot) {
-    ChMatrixNM<double, 9, 3> QiCompact;
-    QiCompact.setZero();
+void ChElementBeamANCF_3243_TR04::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
+                                                               const ChMatrixNM<double, 3, 8>& ebar,
+                                                               const ChMatrixNM<double, 3, 8>& ebardot) {
+    // Set Fi to zero since the results from each GQ point will be added to this vector
+    Fi.setZero();
+
+    // Straight & Normalized Internal Force Integrand is of order : 8 in xi, order : 4 in eta, and order : 4 in zeta.
+    // This requires GQ 5 points along the xi direction and 3 points along the eta and zeta directions for "Full
+    // Integration"
+
+    ChQuadratureTables* GQTable = GetStaticGQTables();
+    unsigned int GQ_idx_xi = 3;        // 4 Point Gauss-Quadrature;
+    unsigned int GQ_idx_eta_zeta = 1;  // 2 Point Gauss-Quadrature;
 
     // Calculate the portion of the Selective Reduced Integration that does account for the Poisson effect
     const ChVectorN<double, 6>& D0 = GetMaterial()->Get_D0();
-    for (unsigned int GQpnt = 0; GQpnt < 16; GQpnt++) {
-        ChMatrixNMc<double, 9, 3> Sbar_xi_D = m_SD_precompute_D0.block<9, 3>(0, 3 * GQpnt);
+    for (unsigned int it_xi = 0; it_xi < GQTable->Lroots[GQ_idx_xi].size(); it_xi++) {
+        for (unsigned int it_eta = 0; it_eta < GQTable->Lroots[GQ_idx_eta_zeta].size(); it_eta++) {
+            for (unsigned int it_zeta = 0; it_zeta < GQTable->Lroots[GQ_idx_eta_zeta].size(); it_zeta++) {
+                double GQ_weight = GQTable->Weight[GQ_idx_xi][it_xi] * GQTable->Weight[GQ_idx_eta_zeta][it_eta] *
+                                   GQTable->Weight[GQ_idx_eta_zeta][it_zeta];
+                double xi = GQTable->Lroots[GQ_idx_xi][it_xi];
+                double eta = GQTable->Lroots[GQ_idx_eta_zeta][it_eta];
+                double zeta = GQTable->Lroots[GQ_idx_eta_zeta][it_zeta];
+                ChVectorN<double, 24> Qi;
+                ComputeInternalForcesSingleGQPnt(Qi, xi, eta, zeta, D0, ebar, ebardot);
 
-        // Calculate the Deformation Gradient at the current point
-        ChMatrixNMc<double, 3, 3> F = ebar * Sbar_xi_D;
-
-        // Calculate the Green-Lagrange strain tensor at the current point in Voigt notation
-        ChVectorN<double, 6> epsilon_combined;
-        epsilon_combined(0) = 0.5 * (F.col(0).dot(F.col(0)) - 1);
-        epsilon_combined(1) = 0.5 * (F.col(1).dot(F.col(1)) - 1);
-        epsilon_combined(2) = 0.5 * (F.col(2).dot(F.col(2)) - 1);
-        epsilon_combined(3) = F.col(1).dot(F.col(2));
-        epsilon_combined(4) = F.col(0).dot(F.col(2));
-        epsilon_combined(5) = F.col(0).dot(F.col(1));
-
-        if (m_damping_enabled) {
-            // Calculate the time derivative of the Deformation Gradient at the current point
-            ChMatrixNMc<double, 3, 3> Fdot = ebardot * Sbar_xi_D;
-
-            // Calculate the time derivative of the Green-Lagrange strain tensor in Voigt notation
-            // and combine it with epsilon assuming a Linear Kelvin-Voigt Viscoelastic material model
-            epsilon_combined(0) += m_Alpha * F.col(0).dot(Fdot.col(0));
-            epsilon_combined(1) += m_Alpha * F.col(1).dot(Fdot.col(1));
-            epsilon_combined(2) += m_Alpha * F.col(2).dot(Fdot.col(2));
-            epsilon_combined(3) += m_Alpha * (F.col(1).dot(Fdot.col(2)) + Fdot.col(1).dot(F.col(2)));
-            epsilon_combined(4) += m_Alpha * (F.col(0).dot(Fdot.col(2)) + Fdot.col(0).dot(F.col(2)));
-            epsilon_combined(5) += m_Alpha * (F.col(0).dot(Fdot.col(1)) + Fdot.col(0).dot(F.col(1)));
+                Fi += GQ_weight * Qi;
+            }
         }
-        epsilon_combined = epsilon_combined.cwiseProduct(D0) * m_GQWeight_det_J_0xi_D0(GQpnt);
-
-        ChMatrixNM<double, 3, 3> SPK2;  // 2nd Piola Kirchhoff Stress tensor
-        SPK2(0, 0) = epsilon_combined(0);
-        SPK2(1, 1) = epsilon_combined(1);
-        SPK2(2, 2) = epsilon_combined(2);
-        SPK2(1, 2) = epsilon_combined(3);
-        SPK2(2, 1) = epsilon_combined(3);
-        SPK2(0, 2) = epsilon_combined(4);
-        SPK2(2, 0) = epsilon_combined(4);
-        SPK2(0, 1) = epsilon_combined(5);
-        SPK2(1, 0) = epsilon_combined(5);
-
-        // Calculate the transpose of the (1st Piola Kirchhoff Stress tensor = F*SPK2) scaled by the negative of the
-        // determinate of the element Jacobian.  Note that SPK2 is symmetric.
-        ChMatrixNM<double, 3, 3> P_transpose_scaled = SPK2 * F.transpose();
-        QiCompact += Sbar_xi_D * P_transpose_scaled;
     }
 
     // Calculate the portion of the Selective Reduced Integration that account for the Poisson effect, but only on the
     // beam axis
-    if (GetStrainFormulation() == ChElementBeamANCF_TR05::StrainFormulation::CMPoisson) {
+    if (GetStrainFormulation() == ChElementBeamANCF_3243_TR04::StrainFormulation::CMPoisson) {
         const ChMatrix33<double>& Dv = GetMaterial()->Get_Dv();
 
-        for (unsigned int GQpnt = 0; GQpnt < 4; GQpnt++) {
-            ChMatrixNMc<double, 9, 3> Sbar_xi_D = m_SD_precompute_Dv.block<9, 3>(0, 3 * GQpnt);
+        for (unsigned int it_xi = 0; it_xi < GQTable->Lroots[GQ_idx_xi].size(); it_xi++) {
+            double GQ_weight = GQTable->Weight[GQ_idx_xi][it_xi] * 2 * 2;
+            double xi = GQTable->Lroots[GQ_idx_xi][it_xi];
+            ChVectorN<double, 24> Qi;
+            ComputeInternalForcesSingleGQPnt(Qi, xi, 0, 0, Dv, ebar, ebardot);
 
-            // Calculate the Deformation Gradient at the current point
-            ChMatrixNMc<double, 3, 3> F = ebar * Sbar_xi_D;
-
-            // Calculate the Green-Lagrange strain tensor at the current point in Voigt notation (due to the material,
-            // only diagonal terms are needed)
-            ChVectorN<double, 3> epsilon_combined;
-            epsilon_combined(0) = 0.5 * (F.col(0).dot(F.col(0)) - 1);
-            epsilon_combined(1) = 0.5 * (F.col(1).dot(F.col(1)) - 1);
-            epsilon_combined(2) = 0.5 * (F.col(2).dot(F.col(2)) - 1);
-
-            if (m_damping_enabled) {
-                // Calculate the time derivative of the Deformation Gradient at the current point
-                ChMatrixNMc<double, 3, 3> Fdot = ebardot * Sbar_xi_D;
-
-                // Calculate the time derivative of the Green-Lagrange strain tensor in Voigt notation
-                // and combine it with epsilon assuming a Linear Kelvin-Voigt Viscoelastic material model
-                // (due to the material, only need the first 3 rows are needed)
-                epsilon_combined(0) += m_Alpha * F.col(0).dot(Fdot.col(0));
-                epsilon_combined(1) += m_Alpha * F.col(1).dot(Fdot.col(1));
-                epsilon_combined(2) += m_Alpha * F.col(2).dot(Fdot.col(2));
-            }
-            epsilon_combined = Dv * (epsilon_combined * m_GQWeight_det_J_0xi_Dv(GQpnt));
-
-            // Calculate the transpose of the (1st Piola Kirchhoff Stress tensor = F*SPK2) scaled by the negative of the
-            // determinate of the element Jacobian.  Note that SPK2 is symmetric.
-            ChMatrixNM<double, 3, 3> P_transpose_scaled = epsilon_combined.asDiagonal() * F.transpose();
-            QiCompact += Sbar_xi_D * P_transpose_scaled;
+            Fi += GQ_weight * Qi;
         }
     }
+}
 
-    Eigen::Map<ChVectorN<double, 27>> QiReshaped(QiCompact.data(), QiCompact.size());
-    Fi = QiReshaped;
+void ChElementBeamANCF_3243_TR04::ComputeInternalForcesSingleGQPnt(ChVectorN<double, 24>& Qi,
+                                                                   double xi,
+                                                                   double eta,
+                                                                   double zeta,
+                                                                   const ChVectorN<double, 6>& D0,
+                                                                   const ChMatrixNM<double, 3, 8>& ebar,
+                                                                   const ChMatrixNM<double, 3, 8>& ebardot) {
+    // Calculate the normalized shape function derivatives with respect to xi, eta, and zeta
+    // Note: This will later be modified by J_0xi_Inv to account for a potentially non-straight reference configuration
+    ChMatrixNMc<double, 8, 3> Sbar_xi_D;
+    Calc_Sxi_D(Sbar_xi_D, xi, eta, zeta);
+
+    // Element Jacobian Matrix at the current point (xi, eta, zeta)
+    ChMatrix33<double> J_0xi = m_ebar0 * Sbar_xi_D;
+
+    // Modify the normalized shape function derivatives by J_0xi_Inv to account for a potentially non-straight reference
+    // configuration
+    Sbar_xi_D *= J_0xi.inverse();
+
+    // Calculate the Deformation Gradient at the current point
+    ChMatrixNMc<double, 3, 3> F = ebar * Sbar_xi_D;
+
+    // Calculate the Green-Lagrange strain tensor at the current point in Voigt notation
+    ChVectorN<double, 6> epsilon_combined;
+    epsilon_combined(0) = 0.5 * (F.col(0).dot(F.col(0)) - 1);
+    epsilon_combined(1) = 0.5 * (F.col(1).dot(F.col(1)) - 1);
+    epsilon_combined(2) = 0.5 * (F.col(2).dot(F.col(2)) - 1);
+    epsilon_combined(3) = F.col(1).dot(F.col(2));
+    epsilon_combined(4) = F.col(0).dot(F.col(2));
+    epsilon_combined(5) = F.col(0).dot(F.col(1));
+
+    if (m_damping_enabled) {
+        // Calculate the time derivative of the Deformation Gradient at the current point
+        ChMatrixNMc<double, 3, 3> Fdot = ebardot * Sbar_xi_D;
+
+        // Calculate the time derivative of the Green-Lagrange strain tensor in Voigt notation
+        // and combine it with epsilon assuming a Linear Kelvin-Voigt Viscoelastic material model
+        epsilon_combined(0) += m_Alpha * F.col(0).dot(Fdot.col(0));
+        epsilon_combined(1) += m_Alpha * F.col(1).dot(Fdot.col(1));
+        epsilon_combined(2) += m_Alpha * F.col(2).dot(Fdot.col(2));
+        epsilon_combined(3) += m_Alpha * (F.col(1).dot(Fdot.col(2)) + Fdot.col(1).dot(F.col(2)));
+        epsilon_combined(4) += m_Alpha * (F.col(0).dot(Fdot.col(2)) + Fdot.col(0).dot(F.col(2)));
+        epsilon_combined(5) += m_Alpha * (F.col(0).dot(Fdot.col(1)) + Fdot.col(0).dot(F.col(1)));
+    }
+    epsilon_combined = epsilon_combined.cwiseProduct(D0) * -J_0xi.determinant();
+
+    ChMatrixNM<double, 3, 3> SPK2;  // 2nd Piola Kirchhoff Stress tensor
+    SPK2(0, 0) = epsilon_combined(0);
+    SPK2(1, 1) = epsilon_combined(1);
+    SPK2(2, 2) = epsilon_combined(2);
+    SPK2(1, 2) = epsilon_combined(3);
+    SPK2(2, 1) = epsilon_combined(3);
+    SPK2(0, 2) = epsilon_combined(4);
+    SPK2(2, 0) = epsilon_combined(4);
+    SPK2(0, 1) = epsilon_combined(5);
+    SPK2(1, 0) = epsilon_combined(5);
+
+    // Calculate the transpose of the (1st Piola Kirchhoff Stress tensor = F*SPK2) scaled by the negative of the
+    // determinate of the element Jacobian.  Note that SPK2 is symmetric.
+    ChMatrixNM<double, 3, 3> P_transpose_scaled = SPK2 * F.transpose();
+    ChMatrixNM<double, 8, 3> QiCompact = Sbar_xi_D * P_transpose_scaled;
+    Eigen::Map<ChVectorN<double, 24>> QiReshaped(QiCompact.data(), QiCompact.size());
+    Qi = QiReshaped;
+}
+
+void ChElementBeamANCF_3243_TR04::ComputeInternalForcesSingleGQPnt(ChVectorN<double, 24>& Qi,
+                                                                   double xi,
+                                                                   double eta,
+                                                                   double zeta,
+                                                                   const ChMatrix33<double>& Dv,
+                                                                   const ChMatrixNM<double, 3, 8>& ebar,
+                                                                   const ChMatrixNM<double, 3, 8>& ebardot) {
+    // Calculate the normalized shape function derivatives with respect to xi, eta, and zeta
+    // Note: This will later be modified by J_0xi_Inv to account for a potentially non-straight reference configuration
+    ChMatrixNMc<double, 8, 3> Sbar_xi_D;
+    Calc_Sxi_D(Sbar_xi_D, xi, eta, zeta);
+
+    // Element Jacobian Matrix at the current point (xi, eta, zeta)
+    ChMatrix33<double> J_0xi = m_ebar0 * Sbar_xi_D;
+
+    // Modify the normalized shape function derivatives by J_0xi_Inv to account for a potentially non-straight reference
+    // configuration
+    Sbar_xi_D *= J_0xi.inverse();
+
+    // Calculate the Deformation Gradient at the current point
+    ChMatrixNMc<double, 3, 3> F = ebar * Sbar_xi_D;
+
+    // Calculate the Green-Lagrange strain tensor at the current point in Voigt notation (due to the material, only
+    // diagonal terms are needed)
+    ChVectorN<double, 3> epsilon_combined;
+    epsilon_combined(0) = 0.5 * (F.col(0).dot(F.col(0)) - 1);
+    epsilon_combined(1) = 0.5 * (F.col(1).dot(F.col(1)) - 1);
+    epsilon_combined(2) = 0.5 * (F.col(2).dot(F.col(2)) - 1);
+
+    if (m_damping_enabled) {
+        // Calculate the time derivative of the Deformation Gradient at the current point
+        ChMatrixNMc<double, 3, 3> Fdot = ebardot * Sbar_xi_D;
+
+        // Calculate the time derivative of the Green-Lagrange strain tensor in Voigt notation
+        // and combine it with epsilon assuming a Linear Kelvin-Voigt Viscoelastic material model
+        // (due to the material, only need the first 3 rows are needed)
+        epsilon_combined(0) += m_Alpha * F.col(0).dot(Fdot.col(0));
+        epsilon_combined(1) += m_Alpha * F.col(1).dot(Fdot.col(1));
+        epsilon_combined(2) += m_Alpha * F.col(2).dot(Fdot.col(2));
+    }
+    epsilon_combined = Dv * (epsilon_combined * -J_0xi.determinant());
+
+    // Calculate the transpose of the (1st Piola Kirchhoff Stress tensor = F*SPK2) scaled by the negative of the
+    // determinate of the element Jacobian.  Note that SPK2 is symmetric.
+    ChMatrixNM<double, 3, 3> P_transpose_scaled = epsilon_combined.asDiagonal() * F.transpose();
+    ChMatrixNM<double, 8, 3> QiCompact = Sbar_xi_D * P_transpose_scaled;
+    Eigen::Map<ChVectorN<double, 24>> QiReshaped(QiCompact.data(), QiCompact.size());
+    Qi = QiReshaped;
+}
+
+void ChElementBeamANCF_3243_TR04::ComputeInternalForcesSingleGQPnt(ChVectorN<double, 24>& Qi,
+                                                                   double xi,
+                                                                   double eta,
+                                                                   double zeta,
+                                                                   const ChMatrixNM<double, 6, 6>& D,
+                                                                   const ChMatrixNM<double, 3, 8>& ebar,
+                                                                   const ChMatrixNM<double, 3, 8>& ebardot) {
+    // Calculate the normalized shape function derivatives with respect to xi, eta, and zeta
+    // Note: This will later be modified by J_0xi_Inv to account for a potentially non-straight reference configuration
+    ChMatrixNMc<double, 8, 3> Sbar_xi_D;
+    Calc_Sxi_D(Sbar_xi_D, xi, eta, zeta);
+
+    // Element Jacobian Matrix at the current point (xi, eta, zeta)
+    ChMatrix33<double> J_0xi = m_ebar0 * Sbar_xi_D;
+
+    // Modify the normalized shape function derivatives by J_0xi_Inv to account for a potentially non-straight reference
+    // configuration
+    Sbar_xi_D *= J_0xi.inverse();
+
+    // Calculate the Deformation Gradient at the current point
+    ChMatrixNMc<double, 3, 3> F = ebar * Sbar_xi_D;
+
+    // Calculate the Green-Lagrange strain tensor at the current point in Voigt notation
+    ChVectorN<double, 6> epsilon_combined;
+    epsilon_combined(0) = 0.5 * (F.col(0).dot(F.col(0)) - 1);
+    epsilon_combined(1) = 0.5 * (F.col(1).dot(F.col(1)) - 1);
+    epsilon_combined(2) = 0.5 * (F.col(2).dot(F.col(2)) - 1);
+    epsilon_combined(3) = F.col(1).dot(F.col(2));
+    epsilon_combined(4) = F.col(0).dot(F.col(2));
+    epsilon_combined(5) = F.col(0).dot(F.col(1));
+
+    if (m_damping_enabled) {
+        // Calculate the time derivative of the Deformation Gradient at the current point
+        ChMatrixNMc<double, 3, 3> Fdot = ebardot * Sbar_xi_D;
+
+        // Calculate the time derivative of the Green-Lagrange strain tensor in Voigt notation
+        // and combine it with epsilon assuming a Linear Kelvin-Voigt Viscoelastic material model
+        epsilon_combined(0) += m_Alpha * F.col(0).dot(Fdot.col(0));
+        epsilon_combined(1) += m_Alpha * F.col(1).dot(Fdot.col(1));
+        epsilon_combined(2) += m_Alpha * F.col(2).dot(Fdot.col(2));
+        epsilon_combined(3) += m_Alpha * (F.col(1).dot(Fdot.col(2)) + Fdot.col(1).dot(F.col(2)));
+        epsilon_combined(4) += m_Alpha * (F.col(0).dot(Fdot.col(2)) + Fdot.col(0).dot(F.col(2)));
+        epsilon_combined(5) += m_Alpha * (F.col(0).dot(Fdot.col(1)) + Fdot.col(0).dot(F.col(1)));
+    }
+    epsilon_combined *= -J_0xi.determinant();
+
+    ChVectorN<double, 6> sigmaPK2 = D * epsilon_combined;  // 2nd Piola Kirchhoff Stress tensor in Voigt notation
+
+    ChMatrixNM<double, 3, 3> SPK2;  // 2nd Piola Kirchhoff Stress tensor
+    SPK2(0, 0) = sigmaPK2(0);
+    SPK2(1, 1) = sigmaPK2(1);
+    SPK2(2, 2) = sigmaPK2(2);
+    SPK2(1, 2) = sigmaPK2(3);
+    SPK2(2, 1) = sigmaPK2(3);
+    SPK2(0, 2) = sigmaPK2(4);
+    SPK2(2, 0) = sigmaPK2(4);
+    SPK2(0, 1) = sigmaPK2(5);
+    SPK2(1, 0) = sigmaPK2(5);
+
+    // Calculate the transpose of the (1st Piola Kirchhoff Stress tensor = F*SPK2) scaled by the negative of the
+    // determinate of the element Jacobian.  Note that SPK2 is symmetric.
+    ChMatrixNM<double, 3, 3> P_transpose_scaled = SPK2 * F.transpose();
+    ChMatrixNM<double, 8, 3> QiCompact = Sbar_xi_D * P_transpose_scaled;
+    Eigen::Map<ChVectorN<double, 24>> QiReshaped(QiCompact.data(), QiCompact.size());
+    Qi = QiReshaped;
 }
 
 // -----------------------------------------------------------------------------
 // Jacobians of internal forces
 // -----------------------------------------------------------------------------
 
-void ChElementBeamANCF_TR05::ComputeInternalJacobians(ChMatrixNM<double, 27, 27>& JacobianMatrix,
-                                                      double Kfactor,
-                                                      double Rfactor) {
-    // The integrated quantity represents the 27x27 Jacobian
+void ChElementBeamANCF_3243_TR04::ComputeInternalJacobians(ChMatrixNM<double, 24, 24>& JacobianMatrix,
+                                                           double Kfactor,
+                                                           double Rfactor) {
+    // The integrated quantity represents the 24x24 Jacobian
     //      Kfactor * [K] + Rfactor * [R]
     // Note that the matrices with current nodal coordinates and velocities are
     // already available in m_d and m_d_dt (as set in ComputeInternalForces).
     // Similarly, the ANS strain and strain derivatives are already available in
     // m_strainANS and m_strainANS_D (as calculated in ComputeInternalForces).
 
-    ChVectorDynamic<double> FiOrignal(27);
-    ChVectorDynamic<double> FiDelta(27);
+    ChVectorDynamic<double> FiOrignal(24);
+    ChVectorDynamic<double> FiDelta(24);
 
-    ChMatrixNM<double, 3, 9> ebar;
-    ChMatrixNM<double, 3, 9> ebardot;
+    ChMatrixNM<double, 3, 8> ebar;
+    ChMatrixNM<double, 3, 8> ebardot;
 
     CalcCoordMatrix(ebar);
     CalcCoordDerivMatrix(ebardot);
@@ -390,7 +466,7 @@ void ChElementBeamANCF_TR05::ComputeInternalJacobians(ChMatrixNM<double, 27, 27>
     // Since the generalized force vector due to gravity is a constant, it doesn't affect this
     // Jacobian calculation
     ComputeInternalForcesAtState(FiOrignal, ebar, ebardot);
-    for (unsigned int i = 0; i < 27; i++) {
+    for (unsigned int i = 0; i < 24; i++) {
         ebar(i % 3, i / 3) += delta;
         ComputeInternalForcesAtState(FiDelta, ebar, ebardot);
         JacobianMatrix.col(i) = -Kfactor / delta * (FiDelta - FiOrignal);
@@ -409,10 +485,10 @@ void ChElementBeamANCF_TR05::ComputeInternalJacobians(ChMatrixNM<double, 27, 27>
 // Shape functions
 // -----------------------------------------------------------------------------
 
-// 3x27 Sparse Form of the Normalized Shape Functions
+// 3x24 Sparse Form of the Normalized Shape Functions
 // [s1*I_3x3, s2*I_3x3, s3*I_3x3, ...]
-void ChElementBeamANCF_TR05::Calc_Sxi(ChMatrixNM<double, 3, 27>& Sxi, double xi, double eta, double zeta) {
-    ChVectorN<double, 9> Sxi_compact;
+void ChElementBeamANCF_3243_TR04::Calc_Sxi(ChMatrixNM<double, 3, 24>& Sxi, double xi, double eta, double zeta) {
+    ChVectorN<double, 8> Sxi_compact;
     Calc_Sxi_compact(Sxi_compact, xi, eta, zeta);
     Sxi.setZero();
 
@@ -423,24 +499,26 @@ void ChElementBeamANCF_TR05::Calc_Sxi(ChMatrixNM<double, 3, 27>& Sxi, double xi,
     }
 }
 
-// 9x1 Vector Form of the Normalized Shape Functions
+// 8x1 Vector Form of the Normalized Shape Functions
 // [s1; s2; s3; ...]
-void ChElementBeamANCF_TR05::Calc_Sxi_compact(ChVectorN<double, 9>& Sxi_compact, double xi, double eta, double zeta) {
-    Sxi_compact(0) = 0.5 * (xi * xi - xi);
-    Sxi_compact(1) = 0.25 * m_thicknessY * eta * (xi * xi - xi);
-    Sxi_compact(2) = 0.25 * m_thicknessZ * zeta * (xi * xi - xi);
-    Sxi_compact(3) = 0.5 * (xi * xi + xi);
-    Sxi_compact(4) = 0.25 * m_thicknessY * eta * (xi * xi + xi);
-    Sxi_compact(5) = 0.25 * m_thicknessZ * zeta * (xi * xi + xi);
-    Sxi_compact(6) = 1.0 - xi * xi;
-    Sxi_compact(7) = 0.5 * m_thicknessY * eta * (1.0 - xi * xi);
-    Sxi_compact(8) = 0.5 * m_thicknessZ * zeta * (1.0 - xi * xi);
+void ChElementBeamANCF_3243_TR04::Calc_Sxi_compact(ChVectorN<double, 8>& Sxi_compact,
+                                                   double xi,
+                                                   double eta,
+                                                   double zeta) {
+    Sxi_compact(0) = 0.25 * (xi * xi * xi - 3 * xi + 2);
+    Sxi_compact(1) = 0.125 * m_lenX * (xi * xi * xi - xi * xi - xi + 1);
+    Sxi_compact(2) = 0.25 * m_thicknessY * eta * (1 - xi);
+    Sxi_compact(3) = 0.25 * m_thicknessZ * zeta * (1 - xi);
+    Sxi_compact(4) = 0.25 * (-xi * xi * xi + 3 * xi + 2);
+    Sxi_compact(5) = 0.125 * m_lenX * (xi * xi * xi + xi * xi - xi - 1);
+    Sxi_compact(6) = 0.25 * m_thicknessY * eta * (1 + xi);
+    Sxi_compact(7) = 0.25 * m_thicknessZ * zeta * (1 + xi);
 }
 
-// 3x27 Sparse Form of the partial derivatives of Normalized Shape Functions with respect to xi
+// 3x24 Sparse Form of the partial derivatives of Normalized Shape Functions with respect to xi
 // [s1*I_3x3, s2*I_3x3, s3*I_3x3, ...]
-void ChElementBeamANCF_TR05::Calc_Sxi_xi(ChMatrixNM<double, 3, 27>& Sxi_xi, double xi, double eta, double zeta) {
-    ChVectorN<double, 9> Sxi_xi_compact;
+void ChElementBeamANCF_3243_TR04::Calc_Sxi_xi(ChMatrixNM<double, 3, 24>& Sxi_xi, double xi, double eta, double zeta) {
+    ChVectorN<double, 8> Sxi_xi_compact;
     Calc_Sxi_xi_compact(Sxi_xi_compact, xi, eta, zeta);
     Sxi_xi.setZero();
 
@@ -451,27 +529,26 @@ void ChElementBeamANCF_TR05::Calc_Sxi_xi(ChMatrixNM<double, 3, 27>& Sxi_xi, doub
     }
 }
 
-// 9x1 Vector Form of the partial derivatives of Normalized Shape Functions with respect to xi
+// 8x1 Vector Form of the partial derivatives of Normalized Shape Functions with respect to xi
 // [s1; s2; s3; ...]
-void ChElementBeamANCF_TR05::Calc_Sxi_xi_compact(ChVectorN<double, 9>& Sxi_xi_compact,
-                                                 double xi,
-                                                 double eta,
-                                                 double zeta) {
-    Sxi_xi_compact(0) = xi - 0.5;
-    Sxi_xi_compact(1) = 0.25 * m_thicknessY * eta * (2.0 * xi - 1.0);
-    Sxi_xi_compact(2) = 0.25 * m_thicknessZ * zeta * (2.0 * xi - 1.0);
-    Sxi_xi_compact(3) = xi + 0.5;
-    Sxi_xi_compact(4) = 0.25 * m_thicknessY * eta * (2.0 * xi + 1.0);
-    Sxi_xi_compact(5) = 0.25 * m_thicknessZ * zeta * (2.0 * xi + 1.0);
-    Sxi_xi_compact(6) = -2.0 * xi;
-    Sxi_xi_compact(7) = -m_thicknessY * eta * xi;
-    Sxi_xi_compact(8) = -m_thicknessZ * zeta * xi;
+void ChElementBeamANCF_3243_TR04::Calc_Sxi_xi_compact(ChVectorN<double, 8>& Sxi_xi_compact,
+                                                      double xi,
+                                                      double eta,
+                                                      double zeta) {
+    Sxi_xi_compact(0) = 0.75 * (xi * xi - 1);
+    Sxi_xi_compact(1) = 0.125 * m_lenX * (3 * xi * xi - 2 * xi - 1);
+    Sxi_xi_compact(2) = -0.25 * m_thicknessY * eta;
+    Sxi_xi_compact(3) = -0.25 * m_thicknessZ * zeta;
+    Sxi_xi_compact(4) = 0.75 * (-xi * xi + 1);
+    Sxi_xi_compact(5) = 0.125 * m_lenX * (3 * xi * xi + 2 * xi - 1);
+    Sxi_xi_compact(6) = 0.25 * m_thicknessY * eta;
+    Sxi_xi_compact(7) = 0.25 * m_thicknessZ * zeta;
 }
 
-// 3x27 Sparse Form of the partial derivatives of Normalized Shape Functions with respect to eta
+// 3x24 Sparse Form of the partial derivatives of Normalized Shape Functions with respect to eta
 // [s1*I_3x3, s2*I_3x3, s3*I_3x3, ...]
-void ChElementBeamANCF_TR05::Calc_Sxi_eta(ChMatrixNM<double, 3, 27>& Sxi_eta, double xi, double eta, double zeta) {
-    ChVectorN<double, 9> Sxi_eta_compact;
+void ChElementBeamANCF_3243_TR04::Calc_Sxi_eta(ChMatrixNM<double, 3, 24>& Sxi_eta, double xi, double eta, double zeta) {
+    ChVectorN<double, 8> Sxi_eta_compact;
     Calc_Sxi_eta_compact(Sxi_eta_compact, xi, eta, zeta);
     Sxi_eta.setZero();
 
@@ -482,27 +559,29 @@ void ChElementBeamANCF_TR05::Calc_Sxi_eta(ChMatrixNM<double, 3, 27>& Sxi_eta, do
     }
 }
 
-// 9x1 Vector Form of the partial derivatives of Normalized Shape Functions with respect to eta
+// 8x1 Vector Form of the partial derivatives of Normalized Shape Functions with respect to eta
 // [s1; s2; s3; ...]
-void ChElementBeamANCF_TR05::Calc_Sxi_eta_compact(ChVectorN<double, 9>& Sxi_eta_compact,
-                                                  double xi,
-                                                  double eta,
-                                                  double zeta) {
+void ChElementBeamANCF_3243_TR04::Calc_Sxi_eta_compact(ChVectorN<double, 8>& Sxi_eta_compact,
+                                                       double xi,
+                                                       double eta,
+                                                       double zeta) {
     Sxi_eta_compact(0) = 0.0;
-    Sxi_eta_compact(1) = 0.25 * m_thicknessY * (xi * xi - xi);
-    Sxi_eta_compact(2) = 0.0;
+    Sxi_eta_compact(1) = 0.0;
+    Sxi_eta_compact(2) = 0.25 * m_thicknessY * (-xi + 1);
     Sxi_eta_compact(3) = 0.0;
-    Sxi_eta_compact(4) = 0.25 * m_thicknessY * (xi * xi + xi);
+    Sxi_eta_compact(4) = 0.0;
     Sxi_eta_compact(5) = 0.0;
-    Sxi_eta_compact(6) = 0.0;
-    Sxi_eta_compact(7) = 0.5 * m_thicknessY * (1 - xi * xi);
-    Sxi_eta_compact(8) = 0.0;
+    Sxi_eta_compact(6) = 0.25 * m_thicknessY * (xi + 1);
+    Sxi_eta_compact(7) = 0.0;
 }
 
-// 3x27 Sparse Form of the partial derivatives of Normalized Shape Functions with respect to zeta
+// 3x24 Sparse Form of the partial derivatives of Normalized Shape Functions with respect to zeta
 // [s1*I_3x3, s2*I_3x3, s3*I_3x3, ...]
-void ChElementBeamANCF_TR05::Calc_Sxi_zeta(ChMatrixNM<double, 3, 27>& Sxi_zeta, double xi, double eta, double zeta) {
-    ChVectorN<double, 9> Sxi_zeta_compact;
+void ChElementBeamANCF_3243_TR04::Calc_Sxi_zeta(ChMatrixNM<double, 3, 24>& Sxi_zeta,
+                                                double xi,
+                                                double eta,
+                                                double zeta) {
+    ChVectorN<double, 8> Sxi_zeta_compact;
     Calc_Sxi_zeta_compact(Sxi_zeta_compact, xi, eta, zeta);
     Sxi_zeta.setZero();
 
@@ -513,118 +592,106 @@ void ChElementBeamANCF_TR05::Calc_Sxi_zeta(ChMatrixNM<double, 3, 27>& Sxi_zeta, 
     }
 }
 
-// 9x1 Vector Form of the partial derivatives of Normalized Shape Functions with respect to eta
+// 8x1 Vector Form of the partial derivatives of Normalized Shape Functions with respect to eta
 // [s1; s2; s3; ...]
-void ChElementBeamANCF_TR05::Calc_Sxi_zeta_compact(ChVectorN<double, 9>& Sxi_zeta_compact,
-                                                   double xi,
-                                                   double eta,
-                                                   double zeta) {
+void ChElementBeamANCF_3243_TR04::Calc_Sxi_zeta_compact(ChVectorN<double, 8>& Sxi_zeta_compact,
+                                                        double xi,
+                                                        double eta,
+                                                        double zeta) {
     Sxi_zeta_compact(0) = 0.0;
     Sxi_zeta_compact(1) = 0.0;
-    Sxi_zeta_compact(2) = 0.25 * m_thicknessZ * (xi * xi - xi);
-    Sxi_zeta_compact(3) = 0.0;
+    Sxi_zeta_compact(2) = 0.0;
+    Sxi_zeta_compact(3) = 0.25 * m_thicknessZ * (-xi + 1);
     Sxi_zeta_compact(4) = 0.0;
-    Sxi_zeta_compact(5) = 0.25 * m_thicknessZ * (xi * xi + xi);
+    Sxi_zeta_compact(5) = 0.0;
     Sxi_zeta_compact(6) = 0.0;
-    Sxi_zeta_compact(7) = 0.0;
-    Sxi_zeta_compact(8) = 0.5 * m_thicknessZ * (1 - xi * xi);
+    Sxi_zeta_compact(7) = 0.25 * m_thicknessZ * (xi + 1);
 }
 
-void ChElementBeamANCF_TR05::Calc_Sxi_D(ChMatrixNMc<double, 9, 3>& Sxi_D, double xi, double eta, double zeta) {
-    Sxi_D(0, 0) = xi - 0.5;
-    Sxi_D(1, 0) = 0.25 * m_thicknessY * eta * (2.0 * xi - 1.0);
-    Sxi_D(2, 0) = 0.25 * m_thicknessZ * zeta * (2.0 * xi - 1.0);
-    Sxi_D(3, 0) = xi + 0.5;
-    Sxi_D(4, 0) = 0.25 * m_thicknessY * eta * (2.0 * xi + 1.0);
-    Sxi_D(5, 0) = 0.25 * m_thicknessZ * zeta * (2.0 * xi + 1.0);
-    Sxi_D(6, 0) = -2.0 * xi;
-    Sxi_D(7, 0) = -m_thicknessY * eta * xi;
-    Sxi_D(8, 0) = -m_thicknessZ * zeta * xi;
+void ChElementBeamANCF_3243_TR04::Calc_Sxi_D(ChMatrixNMc<double, 8, 3>& Sxi_D, double xi, double eta, double zeta) {
+    Sxi_D(0, 0) = 0.75 * (xi * xi - 1);
+    Sxi_D(1, 0) = 0.125 * m_lenX * (3 * xi * xi - 2 * xi - 1);
+    Sxi_D(2, 0) = -0.25 * m_thicknessY * eta;
+    Sxi_D(3, 0) = -0.25 * m_thicknessZ * zeta;
+    Sxi_D(4, 0) = 0.75 * (-xi * xi + 1);
+    Sxi_D(5, 0) = 0.125 * m_lenX * (3 * xi * xi + 2 * xi - 1);
+    Sxi_D(6, 0) = 0.25 * m_thicknessY * eta;
+    Sxi_D(7, 0) = 0.25 * m_thicknessZ * zeta;
 
     Sxi_D(0, 1) = 0.0;
-    Sxi_D(1, 1) = 0.25 * m_thicknessY * (xi * xi - xi);
-    Sxi_D(2, 1) = 0.0;
+    Sxi_D(1, 1) = 0.0;
+    Sxi_D(2, 1) = 0.25 * m_thicknessY * (-xi + 1);
     Sxi_D(3, 1) = 0.0;
-    Sxi_D(4, 1) = 0.25 * m_thicknessY * (xi * xi + xi);
+    Sxi_D(4, 1) = 0.0;
     Sxi_D(5, 1) = 0.0;
-    Sxi_D(6, 1) = 0.0;
-    Sxi_D(7, 1) = 0.5 * m_thicknessY * (1 - xi * xi);
-    Sxi_D(8, 1) = 0.0;
+    Sxi_D(6, 1) = 0.25 * m_thicknessY * (xi + 1);
+    Sxi_D(7, 1) = 0.0;
 
     Sxi_D(0, 2) = 0.0;
     Sxi_D(1, 2) = 0.0;
-    Sxi_D(2, 2) = 0.25 * m_thicknessZ * (xi * xi - xi);
-    Sxi_D(3, 2) = 0.0;
+    Sxi_D(2, 2) = 0.0;
+    Sxi_D(3, 2) = 0.25 * m_thicknessZ * (-xi + 1);
     Sxi_D(4, 2) = 0.0;
-    Sxi_D(5, 2) = 0.25 * m_thicknessZ * (xi * xi + xi);
+    Sxi_D(5, 2) = 0.0;
     Sxi_D(6, 2) = 0.0;
-    Sxi_D(7, 2) = 0.0;
-    Sxi_D(8, 2) = 0.5 * m_thicknessZ * (1 - xi * xi);
+    Sxi_D(7, 2) = 0.25 * m_thicknessZ * (xi + 1);
 }
 
 // -----------------------------------------------------------------------------
 // Helper functions
 // -----------------------------------------------------------------------------
 
-void ChElementBeamANCF_TR05::CalcCoordVector(ChVectorN<double, 27>& e) {
+void ChElementBeamANCF_3243_TR04::CalcCoordVector(ChVectorN<double, 24>& e) {
     e.segment(0, 3) = m_nodes[0]->GetPos().eigen();
     e.segment(3, 3) = m_nodes[0]->GetD().eigen();
     e.segment(6, 3) = m_nodes[0]->GetDD().eigen();
+    e.segment(9, 3) = m_nodes[0]->GetDDD().eigen();
 
-    e.segment(9, 3) = m_nodes[1]->GetPos().eigen();
-    e.segment(12, 3) = m_nodes[1]->GetD().eigen();
-    e.segment(15, 3) = m_nodes[1]->GetDD().eigen();
-
-    e.segment(18, 3) = m_nodes[2]->GetPos().eigen();
-    e.segment(21, 3) = m_nodes[2]->GetD().eigen();
-    e.segment(24, 3) = m_nodes[2]->GetDD().eigen();
+    e.segment(12, 3) = m_nodes[1]->GetPos().eigen();
+    e.segment(15, 3) = m_nodes[1]->GetD().eigen();
+    e.segment(18, 3) = m_nodes[1]->GetDD().eigen();
+    e.segment(21, 3) = m_nodes[1]->GetDDD().eigen();
 }
 
-void ChElementBeamANCF_TR05::CalcCoordMatrix(ChMatrixNM<double, 3, 9>& ebar) {
+void ChElementBeamANCF_3243_TR04::CalcCoordMatrix(ChMatrixNM<double, 3, 8>& ebar) {
     ebar.col(0) = m_nodes[0]->GetPos().eigen();
     ebar.col(1) = m_nodes[0]->GetD().eigen();
     ebar.col(2) = m_nodes[0]->GetDD().eigen();
+    ebar.col(3) = m_nodes[0]->GetDDD().eigen();
 
-    ebar.col(3) = m_nodes[1]->GetPos().eigen();
-    ebar.col(4) = m_nodes[1]->GetD().eigen();
-    ebar.col(5) = m_nodes[1]->GetDD().eigen();
-
-    ebar.col(6) = m_nodes[2]->GetPos().eigen();
-    ebar.col(7) = m_nodes[2]->GetD().eigen();
-    ebar.col(8) = m_nodes[2]->GetDD().eigen();
+    ebar.col(4) = m_nodes[1]->GetPos().eigen();
+    ebar.col(5) = m_nodes[1]->GetD().eigen();
+    ebar.col(6) = m_nodes[1]->GetDD().eigen();
+    ebar.col(7) = m_nodes[1]->GetDDD().eigen();
 }
 
-void ChElementBeamANCF_TR05::CalcCoordDerivVector(ChVectorN<double, 27>& edot) {
+void ChElementBeamANCF_3243_TR04::CalcCoordDerivVector(ChVectorN<double, 24>& edot) {
     edot.segment(0, 3) = m_nodes[0]->GetPos_dt().eigen();
     edot.segment(3, 3) = m_nodes[0]->GetD_dt().eigen();
     edot.segment(6, 3) = m_nodes[0]->GetDD_dt().eigen();
+    edot.segment(9, 3) = m_nodes[0]->GetDDD_dt().eigen();
 
-    edot.segment(9, 3) = m_nodes[1]->GetPos_dt().eigen();
-    edot.segment(12, 3) = m_nodes[1]->GetD_dt().eigen();
-    edot.segment(15, 3) = m_nodes[1]->GetDD_dt().eigen();
-
-    edot.segment(18, 3) = m_nodes[2]->GetPos_dt().eigen();
-    edot.segment(21, 3) = m_nodes[2]->GetD_dt().eigen();
-    edot.segment(24, 3) = m_nodes[2]->GetDD_dt().eigen();
+    edot.segment(12, 3) = m_nodes[1]->GetPos_dt().eigen();
+    edot.segment(15, 3) = m_nodes[1]->GetD_dt().eigen();
+    edot.segment(18, 3) = m_nodes[1]->GetDD_dt().eigen();
+    edot.segment(21, 3) = m_nodes[1]->GetDDD_dt().eigen();
 }
 
-void ChElementBeamANCF_TR05::CalcCoordDerivMatrix(ChMatrixNM<double, 3, 9>& ebardot) {
+void ChElementBeamANCF_3243_TR04::CalcCoordDerivMatrix(ChMatrixNM<double, 3, 8>& ebardot) {
     ebardot.col(0) = m_nodes[0]->GetPos_dt().eigen();
     ebardot.col(1) = m_nodes[0]->GetD_dt().eigen();
     ebardot.col(2) = m_nodes[0]->GetDD_dt().eigen();
+    ebardot.col(3) = m_nodes[0]->GetDDD_dt().eigen();
 
-    ebardot.col(3) = m_nodes[1]->GetPos_dt().eigen();
-    ebardot.col(4) = m_nodes[1]->GetD_dt().eigen();
-    ebardot.col(5) = m_nodes[1]->GetDD_dt().eigen();
-
-    ebardot.col(6) = m_nodes[2]->GetPos_dt().eigen();
-    ebardot.col(7) = m_nodes[2]->GetD_dt().eigen();
-    ebardot.col(8) = m_nodes[2]->GetDD_dt().eigen();
+    ebardot.col(4) = m_nodes[1]->GetPos_dt().eigen();
+    ebardot.col(5) = m_nodes[1]->GetD_dt().eigen();
+    ebardot.col(6) = m_nodes[1]->GetDD_dt().eigen();
+    ebardot.col(7) = m_nodes[1]->GetDDD_dt().eigen();
 }
 
 // Calculate the 3x3 Element Jacobian at the given point (xi,eta,zeta) in the element
-void ChElementBeamANCF_TR05::Calc_J_0xi(ChMatrix33<double>& J_0xi, double xi, double eta, double zeta) {
-    ChMatrixNMc<double, 9, 3> Sxi_D;
+void ChElementBeamANCF_3243_TR04::Calc_J_0xi(ChMatrix33<double>& J_0xi, double xi, double eta, double zeta) {
+    ChMatrixNMc<double, 8, 3> Sxi_D;
 
     Calc_Sxi_D(Sxi_D, xi, eta, zeta);
 
@@ -632,7 +699,7 @@ void ChElementBeamANCF_TR05::Calc_J_0xi(ChMatrix33<double>& J_0xi, double xi, do
 }
 
 // Calculate the determinate of the 3x3 Element Jacobian at the given point (xi,eta,zeta) in the element
-double ChElementBeamANCF_TR05::Calc_det_J_0xi(double xi, double eta, double zeta) {
+double ChElementBeamANCF_3243_TR04::Calc_det_J_0xi(double xi, double eta, double zeta) {
     ChMatrix33<double> J_0xi;
     Calc_J_0xi(J_0xi, xi, eta, zeta);
 
@@ -642,7 +709,7 @@ double ChElementBeamANCF_TR05::Calc_det_J_0xi(double xi, double eta, double zeta
 // -----------------------------------------------------------------------------
 // Interface to ChElementShell base class
 // -----------------------------------------------------------------------------
-// ChVector<> ChElementBeamANCF_TR05::EvaluateBeamSectionStrains() {
+// ChVector<> ChElementBeamANCF_3243_TR04::EvaluateBeamSectionStrains() {
 //    // Element shape function
 //    ChMatrixNM<double, 1, 9> N;
 //    this->ShapeFunctions(N, 0, 0, 0);
@@ -769,7 +836,7 @@ double ChElementBeamANCF_TR05::Calc_det_J_0xi(double xi, double eta, double zeta
 //    return ChVector<>(strain(0), strain(1), strain(2));
 //}
 //
-// void ChElementBeamANCF_TR05::EvaluateSectionDisplacement(const double u,
+// void ChElementBeamANCF_3243_TR04::EvaluateSectionDisplacement(const double u,
 //                                                    const double v,
 //                                                    ChVector<>& u_displ,
 //                                                    ChVector<>& u_rotaz) {
@@ -778,7 +845,7 @@ double ChElementBeamANCF_TR05::Calc_det_J_0xi(double xi, double eta, double zeta
 //    u_rotaz = VNULL;  // no angles.. this is ANCF (or maybe return here the slope derivatives?)
 //}
 //
-// void ChElementBeamANCF_TR05::EvaluateSectionFrame(const double u,
+// void ChElementBeamANCF_3243_TR04::EvaluateSectionFrame(const double u,
 //                                             const double v,
 //                                             ChVector<>& point,
 //                                             ChQuaternion<>& rot) {
@@ -787,7 +854,7 @@ double ChElementBeamANCF_TR05::Calc_det_J_0xi(double xi, double eta, double zeta
 //    rot = QUNIT;  // or maybe use gram-schmidt to get csys of section from slopes?
 //}
 //
-// void ChElementBeamANCF_TR05::EvaluateSectionPoint(const double u,
+// void ChElementBeamANCF_3243_TR04::EvaluateSectionPoint(const double u,
 //                                             const double v,
 //                                             ChVector<>& point) {
 //    ChVector<> u_displ;
@@ -810,16 +877,15 @@ double ChElementBeamANCF_TR05::Calc_det_J_0xi(double xi, double eta, double zeta
 //    point.z() = N(0) * pA.z() + N(2) * pB.z() + N(4) * pC.z() + N(6) * pD.z();
 //}
 
-void ChElementBeamANCF_TR05::EvaluateSectionFrame(const double xi, ChVector<>& point, ChQuaternion<>& rot) {
-
-    ChMatrixNM<double, 3, 27> Sxi;
-    ChMatrixNM<double, 3, 27>  Sxi_xi;
-    ChMatrixNM<double, 3, 27>  Sxi_eta;
+void ChElementBeamANCF_3243_TR04::EvaluateSectionFrame(const double xi, ChVector<>& point, ChQuaternion<>& rot) {
+    ChMatrixNM<double, 3, 24> Sxi;
+    ChMatrixNM<double, 3, 24> Sxi_xi;
+    ChMatrixNM<double, 3, 24> Sxi_eta;
     Calc_Sxi(Sxi, xi, 0, 0);
     Calc_Sxi_xi(Sxi_xi, xi, 0, 0);
     Calc_Sxi_eta(Sxi_eta, xi, 0, 0);
 
-    ChVectorN<double, 27> e;
+    ChVectorN<double, 24> e;
     CalcCoordVector(e);
 
     // r = Se
@@ -845,47 +911,42 @@ void ChElementBeamANCF_TR05::EvaluateSectionFrame(const double xi, ChVector<>& p
 // -----------------------------------------------------------------------------
 
 // Gets all the DOFs packed in a single vector (position part).
-void ChElementBeamANCF_TR05::LoadableGetStateBlock_x(int block_offset, ChState& mD) {
+void ChElementBeamANCF_3243_TR04::LoadableGetStateBlock_x(int block_offset, ChState& mD) {
     mD.segment(block_offset + 0, 3) = m_nodes[0]->GetPos().eigen();
     mD.segment(block_offset + 3, 3) = m_nodes[0]->GetD().eigen();
     mD.segment(block_offset + 6, 3) = m_nodes[0]->GetDD().eigen();
+    mD.segment(block_offset + 9, 3) = m_nodes[0]->GetDDD().eigen();
 
-    mD.segment(block_offset + 9, 3) = m_nodes[1]->GetPos().eigen();
-    mD.segment(block_offset + 12, 3) = m_nodes[1]->GetD().eigen();
-    mD.segment(block_offset + 15, 3) = m_nodes[1]->GetDD().eigen();
-
-    mD.segment(block_offset + 18, 3) = m_nodes[2]->GetPos().eigen();
-    mD.segment(block_offset + 21, 3) = m_nodes[2]->GetD().eigen();
-    mD.segment(block_offset + 24, 3) = m_nodes[2]->GetDD().eigen();
+    mD.segment(block_offset + 12, 3) = m_nodes[1]->GetPos().eigen();
+    mD.segment(block_offset + 15, 3) = m_nodes[1]->GetD().eigen();
+    mD.segment(block_offset + 18, 3) = m_nodes[1]->GetDD().eigen();
+    mD.segment(block_offset + 21, 3) = m_nodes[1]->GetDDD().eigen();
 }
 
 // Gets all the DOFs packed in a single vector (velocity part).
-void ChElementBeamANCF_TR05::LoadableGetStateBlock_w(int block_offset, ChStateDelta& mD) {
+void ChElementBeamANCF_3243_TR04::LoadableGetStateBlock_w(int block_offset, ChStateDelta& mD) {
     mD.segment(block_offset + 0, 3) = m_nodes[0]->GetPos_dt().eigen();
     mD.segment(block_offset + 3, 3) = m_nodes[0]->GetD_dt().eigen();
     mD.segment(block_offset + 6, 3) = m_nodes[0]->GetDD_dt().eigen();
+    mD.segment(block_offset + 9, 3) = m_nodes[0]->GetDDD_dt().eigen();
 
-    mD.segment(block_offset + 9, 3) = m_nodes[1]->GetPos_dt().eigen();
-    mD.segment(block_offset + 12, 3) = m_nodes[1]->GetD_dt().eigen();
-    mD.segment(block_offset + 15, 3) = m_nodes[1]->GetDD_dt().eigen();
-
-    mD.segment(block_offset + 18, 3) = m_nodes[2]->GetPos_dt().eigen();
-    mD.segment(block_offset + 21, 3) = m_nodes[2]->GetD_dt().eigen();
-    mD.segment(block_offset + 24, 3) = m_nodes[2]->GetDD_dt().eigen();
+    mD.segment(block_offset + 12, 3) = m_nodes[1]->GetPos_dt().eigen();
+    mD.segment(block_offset + 15, 3) = m_nodes[1]->GetD_dt().eigen();
+    mD.segment(block_offset + 18, 3) = m_nodes[1]->GetDD_dt().eigen();
+    mD.segment(block_offset + 21, 3) = m_nodes[1]->GetDDD_dt().eigen();
 }
 
 /// Increment all DOFs using a delta.
-void ChElementBeamANCF_TR05::LoadableStateIncrement(const unsigned int off_x,
-                                                    ChState& x_new,
-                                                    const ChState& x,
-                                                    const unsigned int off_v,
-                                                    const ChStateDelta& Dv) {
+void ChElementBeamANCF_3243_TR04::LoadableStateIncrement(const unsigned int off_x,
+                                                         ChState& x_new,
+                                                         const ChState& x,
+                                                         const unsigned int off_v,
+                                                         const ChStateDelta& Dv) {
     m_nodes[0]->NodeIntStateIncrement(off_x, x_new, x, off_v, Dv);
-    m_nodes[1]->NodeIntStateIncrement(off_x + 9, x_new, x, off_v + 9, Dv);
-    m_nodes[2]->NodeIntStateIncrement(off_x + 18, x_new, x, off_v + 18, Dv);
+    m_nodes[1]->NodeIntStateIncrement(off_x + 12, x_new, x, off_v + 12, Dv);
 }
 
-// void ChElementBeamANCF_TR05::EvaluateSectionVelNorm(double U, ChVector<>& Result) {
+// void ChElementBeamANCF_3243_TR04::EvaluateSectionVelNorm(double U, ChVector<>& Result) {
 //    ChMatrixNM<double, 1, 9> N;
 //    ShapeFunctions(N, U, 0, 0);
 //    for (unsigned int ii = 0; ii < 3; ii++) {
@@ -895,16 +956,17 @@ void ChElementBeamANCF_TR05::LoadableStateIncrement(const unsigned int off_x,
 //}
 
 // Get the pointers to the contained ChVariables, appending to the mvars vector.
-void ChElementBeamANCF_TR05::LoadableGetVariables(std::vector<ChVariables*>& mvars) {
+void ChElementBeamANCF_3243_TR04::LoadableGetVariables(std::vector<ChVariables*>& mvars) {
     for (int i = 0; i < m_nodes.size(); ++i) {
         mvars.push_back(&m_nodes[i]->Variables());
         mvars.push_back(&m_nodes[i]->Variables_D());
         mvars.push_back(&m_nodes[i]->Variables_DD());
+        mvars.push_back(&m_nodes[i]->Variables_DDD());
     }
 }
 
 // Evaluate N'*F , where N is the shape function evaluated at (U) coordinates of the centerline.
-void ChElementBeamANCF_TR05::ComputeNF(
+void ChElementBeamANCF_3243_TR04::ComputeNF(
     const double U,              // parametric coordinate in surface
     ChVectorDynamic<>& Qi,       // Return result of Q = N'*F  here
     double& detJ,                // Return det[J] here
@@ -913,18 +975,18 @@ void ChElementBeamANCF_TR05::ComputeNF(
     ChVectorDynamic<>* state_w   // if != 0, update state (speed part) to this, then evaluate Q
 ) {
     // Compute the generalized force vector for the applied force
-    ChMatrixNM<double, 3, 27> Sxi;
+    ChMatrixNM<double, 3, 24> Sxi;
     Calc_Sxi(Sxi, U, 0, 0);
     Qi = Sxi.transpose() * F.segment(0, 3);
 
     // Compute the generalized force vector for the applied moment
-    ChMatrixNM<double, 3, 27> Sxi_xi;
-    ChMatrixNM<double, 3, 27> Sxi_eta;
-    ChMatrixNM<double, 3, 27> Sxi_zeta;
+    ChMatrixNM<double, 3, 24> Sxi_xi;
+    ChMatrixNM<double, 3, 24> Sxi_eta;
+    ChMatrixNM<double, 3, 24> Sxi_zeta;
     ChMatrix33<double> J_Cxi;
     ChMatrix33<double> J_Cxi_Inv;
-    ChMatrixNM<double, 3, 27> G;
-    ChVectorN<double, 27> e;
+    ChMatrixNM<double, 3, 24> G;
+    ChVectorN<double, 24> e;
 
     CalcCoordVector(e);
 
@@ -957,7 +1019,7 @@ void ChElementBeamANCF_TR05::ComputeNF(
 }
 
 // Evaluate N'*F , where N is the shape function evaluated at (U,V,W) coordinates of the surface.
-void ChElementBeamANCF_TR05::ComputeNF(
+void ChElementBeamANCF_3243_TR04::ComputeNF(
     const double U,              // parametric coordinate in volume
     const double V,              // parametric coordinate in volume
     const double W,              // parametric coordinate in volume
@@ -968,18 +1030,18 @@ void ChElementBeamANCF_TR05::ComputeNF(
     ChVectorDynamic<>* state_w   // if != 0, update state (speed part) to this, then evaluate Q
 ) {
     // Compute the generalized force vector for the applied force
-    ChMatrixNM<double, 3, 27> Sxi;
+    ChMatrixNM<double, 3, 24> Sxi;
     Calc_Sxi(Sxi, U, V, W);
     Qi = Sxi.transpose() * F.segment(0, 3);
 
     // Compute the generalized force vector for the applied moment
-    ChMatrixNM<double, 3, 27> Sxi_xi;
-    ChMatrixNM<double, 3, 27> Sxi_eta;
-    ChMatrixNM<double, 3, 27> Sxi_zeta;
+    ChMatrixNM<double, 3, 24> Sxi_xi;
+    ChMatrixNM<double, 3, 24> Sxi_eta;
+    ChMatrixNM<double, 3, 24> Sxi_zeta;
     ChMatrix33<double> J_Cxi;
     ChMatrix33<double> J_Cxi_Inv;
-    ChMatrixNM<double, 3, 27> G;
-    ChVectorN<double, 27> e;
+    ChMatrixNM<double, 3, 24> G;
+    ChVectorN<double, 24> e;
 
     CalcCoordVector(e);
 
@@ -1016,14 +1078,14 @@ void ChElementBeamANCF_TR05::ComputeNF(
 // -----------------------------------------------------------------------------
 
 // Calculate average element density (needed for ChLoaderVolumeGravity).
-double ChElementBeamANCF_TR05::GetDensity() {
+double ChElementBeamANCF_3243_TR04::GetDensity() {
     return GetMaterial()->Get_rho();
 }
 
 // Calculate tangent to the centerline at (U) coordinates.
-ChVector<> ChElementBeamANCF_TR05::ComputeTangent(const double U) {
-    ChMatrixNM<double, 3, 27> Sxi_xi;
-    ChVectorN<double, 27> e;
+ChVector<> ChElementBeamANCF_3243_TR04::ComputeTangent(const double U) {
+    ChMatrixNM<double, 3, 24> Sxi_xi;
+    ChVectorN<double, 24> e;
     ChVector<> r_xi;
 
     Calc_Sxi_xi(Sxi_xi, U, 0, 0);
@@ -1037,50 +1099,52 @@ ChVector<> ChElementBeamANCF_TR05::ComputeTangent(const double U) {
 
 //#ifndef CH_QUADRATURE_STATIC_TABLES
 #define CH_QUADRATURE_STATIC_TABLES 10
-ChQuadratureTables static_tables_TR05(1, CH_QUADRATURE_STATIC_TABLES);
+ChQuadratureTables static_tables_2_TR04(1, CH_QUADRATURE_STATIC_TABLES);
 //#endif // !CH_QUADRATURE_STATIC_TABLES
 
-ChQuadratureTables* ChElementBeamANCF_TR05::GetStaticGQTables() {
-    return &static_tables_TR05;
+ChQuadratureTables* ChElementBeamANCF_3243_TR04::GetStaticGQTables() {
+    return &static_tables_2_TR04;
 }
 
 ////////////////////////////////////////////////////////////////
 
 // ============================================================================
-// Implementation of ChMaterialBeamANCF_TR05 methods
+// Implementation of ChMaterialBeamANCF_3243_TR04 methods
 // ============================================================================
 
 // Construct an isotropic material.
-ChMaterialBeamANCF_TR05::ChMaterialBeamANCF_TR05(double rho,        // material density
-                                                 double E,          // Young's modulus
-                                                 double nu,         // Poisson ratio
-                                                 const double& k1,  // Shear correction factor along beam local y axis
-                                                 const double& k2   // Shear correction factor along beam local z axis
-                                                 )
+ChMaterialBeamANCF_3243_TR04::ChMaterialBeamANCF_3243_TR04(
+    double rho,        // material density
+    double E,          // Young's modulus
+    double nu,         // Poisson ratio
+    const double& k1,  // Shear correction factor along beam local y axis
+    const double& k2   // Shear correction factor along beam local z axis
+    )
     : m_rho(rho) {
     double G = 0.5 * E / (1 + nu);
     Calc_D0_Dv(ChVector<>(E), ChVector<>(nu), ChVector<>(G), k1, k2);
 }
 
 // Construct a (possibly) orthotropic material.
-ChMaterialBeamANCF_TR05::ChMaterialBeamANCF_TR05(double rho,            // material density
-                                                 const ChVector<>& E,   // elasticity moduli (E_x, E_y, E_z)
-                                                 const ChVector<>& nu,  // Poisson ratios (nu_xy, nu_xz, nu_yz)
-                                                 const ChVector<>& G,   // shear moduli (G_xy, G_xz, G_yz)
-                                                 const double& k1,  // Shear correction factor along beam local y axis
-                                                 const double& k2   // Shear correction factor along beam local z axis
-                                                 )
+ChMaterialBeamANCF_3243_TR04::ChMaterialBeamANCF_3243_TR04(
+    double rho,            // material density
+    const ChVector<>& E,   // elasticity moduli (E_x, E_y, E_z)
+    const ChVector<>& nu,  // Poisson ratios (nu_xy, nu_xz, nu_yz)
+    const ChVector<>& G,   // shear moduli (G_xy, G_xz, G_yz)
+    const double& k1,      // Shear correction factor along beam local y axis
+    const double& k2       // Shear correction factor along beam local z axis
+    )
     : m_rho(rho) {
     Calc_D0_Dv(E, nu, G, k1, k2);
 }
 
 // Calculate the matrix form of two stiffness tensors used by the ANCF beam for selective reduced integration of the
 // Poisson effect
-void ChMaterialBeamANCF_TR05::Calc_D0_Dv(const ChVector<>& E,
-                                         const ChVector<>& nu,
-                                         const ChVector<>& G,
-                                         double k1,
-                                         double k2) {
+void ChMaterialBeamANCF_3243_TR04::Calc_D0_Dv(const ChVector<>& E,
+                                              const ChVector<>& nu,
+                                              const ChVector<>& G,
+                                              double k1,
+                                              double k2) {
     // orthotropic material ref: http://homes.civil.aau.dk/lda/Continuum/material.pdf
     // except position of the shear terms is different to match the original ANCF reference paper
 

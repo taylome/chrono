@@ -36,18 +36,17 @@
 //#include "chrono_postprocess/ChGnuPlot.h"
 //#include "chrono_thirdparty/filesystem/path.h"
 
-#include "chrono/fea/ChElementBeamANCF.h"
-#include "chrono/fea/ChElementBeamANCF_TR01.h"
-#include "chrono/fea/ChElementBeamANCF_TR02.h"
-#include "chrono/fea/ChElementBeamANCF_TR03.h"
-#include "chrono/fea/ChElementBeamANCF_TR04.h"
-#include "chrono/fea/ChElementBeamANCF_TR05.h"
-#include "chrono/fea/ChElementBeamANCF_TR06.h"
-#include "chrono/fea/ChElementBeamANCF_TR07.h"
-#include "chrono/fea/ChElementBeamANCF_TR08.h"
-#include "chrono/fea/ChElementBeamANCF_TR08b.h"
-#include "chrono/fea/ChElementBeamANCF_TR09.h"
-#include "chrono/fea/ChElementBeamANCF_TR10.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR01.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR02.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR03.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR04.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR05.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR06.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR07.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR08.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR08b.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR09.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR10.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -100,8 +99,7 @@ class ANCFBeamTest {
 
   protected:
     ChSystemSMC* m_system;
-    std::shared_ptr<ChNodeFEAxyzDD> m_nodeEndPoint;
-    std::shared_ptr<ChNodeFEAxyzDD> m_nodeMidPoint;
+    std::shared_ptr<ChNodeFEAxyzDDD> m_nodeEndPoint;
     SolverType m_SolverType;
     int m_NumElements;
     int m_NumThreads;
@@ -245,12 +243,13 @@ ANCFBeamTest<ElementVersion, MaterialVersion>::ANCFBeamTest(int num_elements,
     mesh->AddAsset(mvisualizebeamC);
 
     // Populate the mesh container with a the nodes and elements for the meshed beam
-    int num_nodes = (2 * num_elements) + 1;
+    int num_nodes = num_elements + 1;
     double dx = length / (num_nodes - 1);
 
     // Setup beam cross section gradients to initially align with the global y and z directions
-    ChVector<> dir1(0, 1, 0);
-    ChVector<> dir2(0, 0, 1);
+    ChVector<> dir1(1, 0, 0);
+    ChVector<> dir2(0, 1, 0);
+    ChVector<> dir3(0, 0, 1);
 
     // Create a grounded body to connect the 3D pendulum to
     auto grounded = chrono_types::make_shared<ChBody>();
@@ -258,7 +257,7 @@ ANCFBeamTest<ElementVersion, MaterialVersion>::ANCFBeamTest(int num_elements,
     m_system->Add(grounded);
 
     // Create the first node and fix only its position to ground (Spherical Joint constraint)
-    auto nodeA = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(0, 0, 0.0), dir1, dir2);
+    auto nodeA = chrono_types::make_shared<ChNodeFEAxyzDDD>(ChVector<>(0, 0, 0.0), dir1, dir2, dir3);
     mesh->AddNode(nodeA);
     auto pos_constraint = chrono_types::make_shared<ChLinkPointFrame>();
     pos_constraint->Initialize(nodeA, grounded);  // body to be connected to
@@ -266,24 +265,13 @@ ANCFBeamTest<ElementVersion, MaterialVersion>::ANCFBeamTest(int num_elements,
 
     int counter_nodes = 0;
     for (int i = 1; i <= num_elements; i++) {
-        auto nodeC = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(dx * (2 * i - 1), 0, 0), dir1, dir2);
-        nodeC->SetPos_dt(ChVector<>(0, omega_z * (dx * (2 * i - 1)), 0));
-        counter_nodes++;
-        if (counter_nodes == num_elements)
-            m_nodeMidPoint = nodeC;
-
-        auto nodeB = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(dx * (2 * i), 0, 0), dir1, dir2);
+        auto nodeB = chrono_types::make_shared<ChNodeFEAxyzDDD>(ChVector<>(dx * i, 0, 0), dir1, dir2, dir3);
         nodeB->SetPos_dt(ChVector<>(0, omega_z * (dx * (2 * i)), 0));
-        counter_nodes++;
-        if (counter_nodes == num_elements)
-            m_nodeMidPoint = nodeB;
-
         mesh->AddNode(nodeB);
-        mesh->AddNode(nodeC);
 
         auto element = chrono_types::make_shared<ElementVersion>();
-        element->SetNodes(nodeA, nodeB, nodeC);
-        element->SetDimensions(2 * dx, thickness, width);
+        element->SetNodes(nodeA, nodeB);
+        element->SetDimensions(dx, thickness, width);
         element->SetMaterial(material);
         element->SetAlphaDamp(0.01);
         element->SetGravityOn(
@@ -526,7 +514,7 @@ int main(int argc, char* argv[]) {
     ChVectorN<int, 8> num_els;
     num_els << 8, 16, 32, 64, 128, 256, 512, 1024;
     // ChVectorN<int, 1> num_els;
-    // num_els << 1024;
+    // num_els << 128;
 
     // std::vector<SolverType> Solver = {SolverType::MINRES, SolverType::MKL, SolverType::MUMPS, SolverType::SparseLU,
     //                                  SolverType::SparseQR};
@@ -553,53 +541,50 @@ int main(int argc, char* argv[]) {
             bool run = true;
             while (run) {
                 {
-                    ANCFBeamTest<ChElementBeamANCF, ChMaterialBeamANCF> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF");
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR01, ChMaterialBeamANCF_3243_TR01> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR01");
                 }
                 {
-                    ANCFBeamTest<ChElementBeamANCF_TR01, ChMaterialBeamANCF_TR01> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR01");
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR02, ChMaterialBeamANCF_3243_TR02> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR02");
                 }
                 {
-                    ANCFBeamTest<ChElementBeamANCF_TR02, ChMaterialBeamANCF_TR02> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR02");
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR03, ChMaterialBeamANCF_3243_TR03> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR03");
                 }
                 {
-                    ANCFBeamTest<ChElementBeamANCF_TR03, ChMaterialBeamANCF_TR03> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR03");
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR04, ChMaterialBeamANCF_3243_TR04> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR04");
                 }
                 {
-                    ANCFBeamTest<ChElementBeamANCF_TR04, ChMaterialBeamANCF_TR04> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR04");
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR05, ChMaterialBeamANCF_3243_TR05> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR05");
                 }
                 {
-                    ANCFBeamTest<ChElementBeamANCF_TR05, ChMaterialBeamANCF_TR05> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR05");
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR06, ChMaterialBeamANCF_3243_TR06> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR06");
                 }
                 {
-                    ANCFBeamTest<ChElementBeamANCF_TR06, ChMaterialBeamANCF_TR06> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR06");
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR07, ChMaterialBeamANCF_3243_TR07> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR07");
                 }
                 {
-                    ANCFBeamTest<ChElementBeamANCF_TR07, ChMaterialBeamANCF_TR07> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR07");
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR08, ChMaterialBeamANCF_3243_TR08> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08");
                 }
                 {
-                    ANCFBeamTest<ChElementBeamANCF_TR08, ChMaterialBeamANCF_TR08> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR08");
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR08b, ChMaterialBeamANCF_3243_TR08b> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08b");
                 }
                 {
-                    ANCFBeamTest<ChElementBeamANCF_TR08b, ChMaterialBeamANCF_TR08b> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR08b");
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR09, ChMaterialBeamANCF_3243_TR09> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR09");
                 }
                 {
-                    ANCFBeamTest<ChElementBeamANCF_TR09, ChMaterialBeamANCF_TR09> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR09");
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR10, ChMaterialBeamANCF_3243_TR10> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR10");
                 }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_TR10, ChMaterialBeamANCF_TR10> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR10");
-                }
+
 
                 if (NumThreads == MaxThreads)
                     run = false;

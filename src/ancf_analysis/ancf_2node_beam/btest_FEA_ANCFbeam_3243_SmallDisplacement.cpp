@@ -12,54 +12,50 @@
 // Authors: Mike Taylor and Radu Serban
 // =============================================================================
 //
-// Large Displacement, Large Deformation, Linear Isotropic Benchmark test for
-// ANCF beam elements - Spinning 3D Pendulum with Initial Conditions and a
-// Square cross section
+// Small Displacement, Small Deformation, Linear Isotropic Benchmark test for
+// ANCF beam elements - Square cantilevered beam with a time-dependent tip load
 //
-// With Modifications from:
-// J. Gerstmayr and A.A. Shabana. Analysis of thin beams and cables using the
-// absolute nodal co-ordinate formulation.Nonlinear Dynamics, 45(1) : 109{130,
-// 2006.
+// García-Vallejo, D., Mayo, J., Escalona, J. L., & Dominguez, J. (2004).
+// Efficient evaluation of the elastic forces and the Jacobian in the absolute
+// nodal coordinate formulation. Nonlinear Dynamics, 35(4), 313-329.
 //
 // =============================================================================
 
+//#include "mkl.h"
+
 #include <string>
+//#include "unsupported/Eigen/FFT"
 
 #include "chrono/ChConfig.h"
-
-#include "chrono/parallel/ChOpenMP.h"
+//#include "chrono/utils/ChBenchmark.h"
 
 #include "chrono/physics/ChSystemSMC.h"
 #include "chrono/solver/ChIterativeSolverLS.h"
 #include "chrono/solver/ChDirectSolverLS.h"
 
-//#include "chrono_postprocess/ChGnuPlot.h"
-//#include "chrono_thirdparty/filesystem/path.h"
+#include "chrono_postprocess/ChGnuPlot.h"
+#include "chrono_thirdparty/filesystem/path.h"
 
-#include "chrono/fea/ChElementBeamANCF.h"
-#include "chrono/fea/ChElementBeamANCF_TR01.h"
-#include "chrono/fea/ChElementBeamANCF_TR02.h"
-#include "chrono/fea/ChElementBeamANCF_TR03.h"
-#include "chrono/fea/ChElementBeamANCF_TR04.h"
-#include "chrono/fea/ChElementBeamANCF_TR05.h"
-#include "chrono/fea/ChElementBeamANCF_TR06.h"
-#include "chrono/fea/ChElementBeamANCF_TR07.h"
-#include "chrono/fea/ChElementBeamANCF_TR08.h"
-#include "chrono/fea/ChElementBeamANCF_TR08b.h"
-#include "chrono/fea/ChElementBeamANCF_TR09.h"
-#include "chrono/fea/ChElementBeamANCF_TR10.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR01.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR02.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR03.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR04.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR05.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR06.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR07.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR08.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR09.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR10.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
 #include "chrono/physics/ChLoadContainer.h"
 #include "chrono/fea/ChLoadsBeam.h"
-#include "chrono/fea/ChLinkPointFrame.h"
 
 #ifdef CHRONO_IRRLICHT
 #include "chrono_irrlicht/ChIrrApp.h"
 #endif
 
-//#undef CHRONO_PARDISO_MKL
 #ifdef CHRONO_PARDISO_MKL
 #include "chrono_pardisomkl/ChSolverPardisoMKL.h"
 #endif
@@ -70,14 +66,14 @@
 
 using namespace chrono;
 using namespace chrono::fea;
-// using namespace postprocess;
+using namespace postprocess;
 
 enum class SolverType { MINRES, MKL, MUMPS, SparseLU, SparseQR };
 
 // =============================================================================
 
-#define NUM_SKIP_STEPS 0  // number of steps for hot start
-#define NUM_SIM_STEPS 100  // number of simulation steps for each benchmark
+#define NUM_SKIP_STEPS 10  // number of steps for hot start
+#define NUM_SIM_STEPS 2000  // number of simulation steps for each benchmark
 #define REPEATS 10
 
 // =============================================================================
@@ -85,39 +81,32 @@ enum class SolverType { MINRES, MKL, MUMPS, SparseLU, SparseQR };
 template <typename ElementVersion, typename MaterialVersion>
 class ANCFBeamTest {
   public:
-    ANCFBeamTest(int num_elements, SolverType solver_type, int NumThreads, double f);
+    ANCFBeamTest(int num_elements, SolverType solver_type);
 
     ~ANCFBeamTest() { delete m_system; }
 
     ChSystem* GetSystem() { return m_system; }
-    void ExecuteStep() { m_system->DoStepDynamics(1e-3); }
+    void ExecuteStep() { m_system->DoStepDynamics(1e-2); }
 
     void SimulateVis();
     void NonlinearStatics() { m_system->DoStaticNonlinear(50); }
     ChVector<> GetBeamEndPointPos() { return m_nodeEndPoint->GetPos(); }
 
-    void RunTimingTest(ChMatrixNM<double, 4, 19>& timing_stats, const std::string& test_name);
+    void RunTimingTest(ChMatrixNM<double, 4, 17>& timing_stats, const std::string& test_name);
 
   protected:
     ChSystemSMC* m_system;
-    std::shared_ptr<ChNodeFEAxyzDD> m_nodeEndPoint;
-    std::shared_ptr<ChNodeFEAxyzDD> m_nodeMidPoint;
+    std::shared_ptr<ChNodeFEAxyzDDD> m_nodeEndPoint;
     SolverType m_SolverType;
     int m_NumElements;
-    int m_NumThreads;
 };
 
 template <typename ElementVersion, typename MaterialVersion>
-ANCFBeamTest<ElementVersion, MaterialVersion>::ANCFBeamTest(int num_elements,
-                                                            SolverType solver_type,
-                                                            int NumThreads,
-                                                            double f) {
+ANCFBeamTest<ElementVersion, MaterialVersion>::ANCFBeamTest(int num_elements, SolverType solver_type) {
     m_SolverType = solver_type;
     m_NumElements = num_elements;
-    m_NumThreads = NumThreads;
     m_system = new ChSystemSMC();
     m_system->Set_G_acc(ChVector<>(0, 0, -9.80665));
-    m_system->SetNumThreads(NumThreads, 1, NumThreads);
 
     // Set solver parameters
 #ifndef CHRONO_PARDISO_MKL
@@ -148,7 +137,7 @@ ANCFBeamTest<ElementVersion, MaterialVersion>::ANCFBeamTest(int num_elements,
         }
         case SolverType::MKL: {
 #ifdef CHRONO_PARDISO_MKL
-            auto solver = chrono_types::make_shared<ChSolverPardisoMKL>(NumThreads);
+            auto solver = chrono_types::make_shared<ChSolverPardisoMKL>();
             solver->UseSparsityPatternLearner(false);
             solver->LockSparsityPattern(true);
             solver->SetVerbose(false);
@@ -158,7 +147,7 @@ ANCFBeamTest<ElementVersion, MaterialVersion>::ANCFBeamTest(int num_elements,
         }
         case SolverType::MUMPS: {
 #ifdef CHRONO_MUMPS
-            auto solver = chrono_types::make_shared<ChSolverMumps>(NumThreads);
+            auto solver = chrono_types::make_shared<ChSolverMumps>();
             solver->UseSparsityPatternLearner(true);
             solver->LockSparsityPattern(true);
             solver->SetVerbose(false);
@@ -191,24 +180,23 @@ ANCFBeamTest<ElementVersion, MaterialVersion>::ANCFBeamTest(int num_elements,
     integrator->SetAlpha(-0.2);
     integrator->SetMaxiters(100);
     integrator->SetAbsTolerances(1e-5);
+    // integrator->SetAbsTolerances(1e-3);
     integrator->SetMode(ChTimestepperHHT::POSITION);
     integrator->SetScaling(true);
     integrator->SetVerbose(false);
     integrator->SetModifiedNewton(true);
 
     // Mesh properties
-    double length = 1;                   // m
-    double area = 10e-6 * (f * f);       // m^2
-    double width = std::sqrt(area);      // m
-    double thickness = std::sqrt(area);  // m
-    double rho = 8000 / (f * f);         // kg/m^3
-    double E = 10e7 / (std::pow(f, 4));  // Pa
-    double nu = 0;                       // Poisson effect neglected for this model
+    double length = 5;       // m
+    double width = 0.1;      // m
+    double thickness = 0.1;  // m
+    double rho = 8245.2;     // kg/m^3
+    double E = 132e9;        // Pa
+    double nu = 0;           // Poisson effect neglected for this model
+    double G = E / (2 * (1 + nu));
     double k1 =
         10 * (1 + nu) / (12 + 11 * nu);  // Timoshenko shear correction coefficient for a rectangular cross-section
     double k2 = k1;                      // Timoshenko shear correction coefficient for a rectangular cross-section
-
-    double omega_z = -4.0;  // rad/s initial angular velocity about the Z axis
 
     auto material = chrono_types::make_shared<MaterialVersion>(rho, E, nu, k1, k2);
 
@@ -245,60 +233,90 @@ ANCFBeamTest<ElementVersion, MaterialVersion>::ANCFBeamTest(int num_elements,
     mesh->AddAsset(mvisualizebeamC);
 
     // Populate the mesh container with a the nodes and elements for the meshed beam
-    int num_nodes = (2 * num_elements) + 1;
+    int num_nodes = num_elements + 1;
     double dx = length / (num_nodes - 1);
 
     // Setup beam cross section gradients to initially align with the global y and z directions
-    ChVector<> dir1(0, 1, 0);
-    ChVector<> dir2(0, 0, 1);
+    ChVector<> dir1(1, 0, 0); 
+    ChVector<> dir2(0, 1, 0);
+    ChVector<> dir3(0, 0, 1);
 
-    // Create a grounded body to connect the 3D pendulum to
-    auto grounded = chrono_types::make_shared<ChBody>();
-    grounded->SetBodyFixed(true);
-    m_system->Add(grounded);
-
-    // Create the first node and fix only its position to ground (Spherical Joint constraint)
-    auto nodeA = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(0, 0, 0.0), dir1, dir2);
+    // Create the first node and fix it completely to ground (Cantilever constraint)
+    auto nodeA = chrono_types::make_shared<ChNodeFEAxyzDDD>(ChVector<>(0, 0, 0.0), dir1, dir2, dir3);
+    nodeA->SetFixed(true);
     mesh->AddNode(nodeA);
-    auto pos_constraint = chrono_types::make_shared<ChLinkPointFrame>();
-    pos_constraint->Initialize(nodeA, grounded);  // body to be connected to
-    m_system->Add(pos_constraint);
 
-    int counter_nodes = 0;
+    auto elementlast = chrono_types::make_shared<ElementVersion>();
+
     for (int i = 1; i <= num_elements; i++) {
-        auto nodeC = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(dx * (2 * i - 1), 0, 0), dir1, dir2);
-        nodeC->SetPos_dt(ChVector<>(0, omega_z * (dx * (2 * i - 1)), 0));
-        counter_nodes++;
-        if (counter_nodes == num_elements)
-            m_nodeMidPoint = nodeC;
-
-        auto nodeB = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(dx * (2 * i), 0, 0), dir1, dir2);
-        nodeB->SetPos_dt(ChVector<>(0, omega_z * (dx * (2 * i)), 0));
-        counter_nodes++;
-        if (counter_nodes == num_elements)
-            m_nodeMidPoint = nodeB;
-
+        auto nodeB = chrono_types::make_shared<ChNodeFEAxyzDDD>(ChVector<>(dx * i, 0, 0), dir1, dir2, dir3);
         mesh->AddNode(nodeB);
-        mesh->AddNode(nodeC);
 
         auto element = chrono_types::make_shared<ElementVersion>();
-        element->SetNodes(nodeA, nodeB, nodeC);
-        element->SetDimensions(2 * dx, thickness, width);
+        element->SetNodes(nodeA, nodeB);
+        element->SetDimensions(dx, thickness, width);
         element->SetMaterial(material);
-        element->SetAlphaDamp(0.01);
+        element->SetAlphaDamp(0.0);
         element->SetGravityOn(
-            true);  // Enable the efficient ANCF method for calculating the application of gravity to the element
+            false);  // Enable the efficient ANCF method for calculating the application of gravity to the element
         element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
         // element->SetStrainFormulation(ElementVersion::StrainFormulation::CMNoPoisson);
         mesh->AddElement(element);
 
         nodeA = nodeB;
+        elementlast = element;
     }
 
     m_nodeEndPoint = nodeA;
 
     mesh->SetAutomaticGravity(false);  // Turn off the default method for applying gravity to the mesh since it is less
                                        // efficient for ANCF elements
+
+    // Create a custom atomic (point) load
+
+    class MyLoaderTimeDependentTipLoad : public ChLoaderUatomic {
+      public:
+        // Useful: a constructor that also sets ChLoadable
+        MyLoaderTimeDependentTipLoad(std::shared_ptr<ChLoadableU> mloadable) : ChLoaderUatomic(mloadable) {}
+
+        // Compute F=F(u), the load at U. The load is a 6-row vector, i.e.
+        // a wrench: forceX, forceY, forceZ, torqueX, torqueY, torqueZ.
+        virtual void ComputeF(
+            const double U,              ///< normalized position along the beam axis [-1...1]
+            ChVectorDynamic<>& F,        ///< Load at U
+            ChVectorDynamic<>* state_x,  ///< if != 0, update state (pos. part) to this, then evaluate F
+            ChVectorDynamic<>* state_w   ///< if != 0, update state (speed part) to this, then evaluate F
+            ) override {
+            assert(auxsystem);
+            double T = auxsystem->GetChTime();
+            double Fmax = -300;
+            double tc = 3.5;
+            double Fz = Fmax;
+            if (T < tc) {
+                Fz = 0.5 * Fmax * (1 - cos(CH_C_PI * T / tc));
+            }
+
+            F.setZero();
+            F(2) = Fz;  // Apply the force along the global Z axis
+        }
+
+      public:
+        // add auxiliary data to the class, if you need to access it during ComputeF().
+        ChSystem* auxsystem;
+    };
+
+    // Create the load container and to the current system
+    auto loadcontainer = chrono_types::make_shared<ChLoadContainer>();
+    m_system->Add(loadcontainer);
+
+    // Create a custom load that uses the custom loader above.
+    // The ChLoad is a 'manager' for your ChLoader.
+    // It is created using templates, that is instancing a ChLoad<my_loader_class>()
+
+    std::shared_ptr<ChLoad<MyLoaderTimeDependentTipLoad> > mload(new ChLoad<MyLoaderTimeDependentTipLoad>(elementlast));
+    mload->loader.auxsystem = m_system;  // initialize auxiliary data of the loader, if needed
+    mload->loader.SetApplication(1.0);   // specify application point
+    loadcontainer->Add(mload);           // add the load to the load container.
 }
 
 template <typename ElementVersion, typename MaterialVersion>
@@ -331,7 +349,7 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::SimulateVis() {
 }
 
 template <typename ElementVersion, typename MaterialVersion>
-void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<double, 4, 19>& timing_stats,
+void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<double, 4, 17>& timing_stats,
                                                                   const std::string& test_name) {
     // Timing Results entries (in seconds)
     //  - "Step_Total"
@@ -353,7 +371,7 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
     //  - "FEA_Jacobian_Calls"
 
     // Reset timing results since the results will be accumulated into this vector
-    ChMatrixNM<double, REPEATS, 19> timing_results;
+    ChMatrixNM<double, REPEATS, 17> timing_results;
     timing_results.setZero();
 
     // Run the requested number of steps to warm start the system, but do not collect any timing information
@@ -361,12 +379,8 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
         ExecuteStep();
     }
 
-    ChMatrixDynamic<double> tip_displacement_z;
-    tip_displacement_z.resize(NUM_SIM_STEPS * REPEATS, 2);
-    // ip_displacement_z.resize(NUM_SIM_STEPS, 2);
-
-    ChMatrixDynamic<double> midpoint_displacement;
-    midpoint_displacement.resize(NUM_SIM_STEPS * REPEATS, 4);
+    // ChMatrixNM<double, NUM_SIM_STEPS*REPEATS, 2> tip_displacement_z;
+    ChMatrixNM<double, NUM_SIM_STEPS, 2> tip_displacement_z;
 
     // Time the requested number of steps, collecting timing information (systems is not restarted between collections)
     auto LS = std::dynamic_pointer_cast<ChDirectSolverLS>(GetSystem()->GetSolver());
@@ -411,19 +425,13 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
                 timing_results(r, 16) += Mesh->GetNumCallsJacobianLoad();
             }
 
-            // if (r == (REPEATS - 1)) {
-            //    tip_displacement_z(i, 0) = GetSystem()->GetChTime();
-            //    tip_displacement_z(i, 1) = GetBeamEndPointPos().z();
-            //}
-            tip_displacement_z(i + (r * NUM_SIM_STEPS), 0) = GetSystem()->GetChTime();
-            tip_displacement_z(i + (r * NUM_SIM_STEPS), 1) = GetBeamEndPointPos().z();
-            midpoint_displacement(i + (r * NUM_SIM_STEPS), 0) = GetSystem()->GetChTime();
-            midpoint_displacement(i + (r * NUM_SIM_STEPS), 1) = GetBeamEndPointPos().x();
-            midpoint_displacement(i + (r * NUM_SIM_STEPS), 2) = GetBeamEndPointPos().y();
-            midpoint_displacement(i + (r * NUM_SIM_STEPS), 3) = GetBeamEndPointPos().z();
+            if (r == (REPEATS - 1)) {
+                tip_displacement_z(i, 0) = GetSystem()->GetChTime();
+                tip_displacement_z(i, 1) = GetBeamEndPointPos().z();
+            }
+            // tip_displacement_z(i + (r * NUM_SIM_STEPS), 0) = GetSystem()->GetChTime();
+            // tip_displacement_z(i + (r * NUM_SIM_STEPS), 1) = GetBeamEndPointPos().z();
         }
-        timing_results(r, 17) = (timing_results(r, 13) * 1e6) / (timing_results(r, 15) * double(m_NumElements));
-        timing_results(r, 18) = (timing_results(r, 14) * 1e6) / (timing_results(r, 16) * double(m_NumElements));
     }
 
     // Scale times from s to ms
@@ -439,6 +447,24 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
     }
 
     double tip_displacement_offset = (tip_displacement_z.col(1).maxCoeff() + tip_displacement_z.col(1).minCoeff()) / 2;
+
+    // Eigen::VectorXcd f_values(NUM_SIM_STEPS);
+    // ChVectorN<double, NUM_SIM_STEPS> freq;
+    // double Fs = 1.0 / (tip_displacement_z(1, 0) - tip_displacement_z(0, 0));
+    // for (auto i = 0; i < NUM_SIM_STEPS; i++) {
+    //    freq(i) = Fs * i / double(NUM_SIM_STEPS);
+    //}
+
+    // Eigen::FFT<double> fft;
+    // Eigen::VectorXcd f_freq(NUM_SIM_STEPS);
+    // fft.fwd(f_freq, tip_displacement_z.col(1));
+
+    // ChMatrixNM<double, NUM_SIM_STEPS, 2> fft_results;
+    // fft_results.col(0) = freq;
+    // for (auto i = 0; i < NUM_SIM_STEPS; i++) {
+    //    fft_results(i, 0) = Fs * i / double(tip_displacement_z.rows());
+    //    fft_results(i, 1) = abs(f_freq(i));
+    //}
 
     std::cout << "-------------------------------------" << std::endl;
     std::cout << test_name << " - Num_Elements: " << m_NumElements << " - Linear_Solver: ";
@@ -464,11 +490,9 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
             ;
             break;
     }
-
-    // std::cout << " - Num_Procs: " << ChOMP::GetNumProcs();
-
-    std::cout << " - Requested_Threads: " << m_NumThreads;
-
+#ifdef _OPENMP
+    std::cout << " - Max_OMP_Threads: " << omp_get_max_threads();
+#endif
     std::cout << " - Tip_Displacement_Mean = " << tip_displacement_offset << std::endl;
 
     std::cout << "Step_Total "
@@ -487,9 +511,7 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
               << "FEA_InternalFrc "
               << "FEA_Jacobian "
               << "FEA_InternalFrc_Calls "
-              << "FEA_Jacobian_Calls "
-              << "FEA_InternalFrc_AvgFunctionCall_us "
-              << "FEA_Jacobian_AvgFunctionCall_us" << std::endl;
+              << "FEA_Jacobian_Calls" << std::endl;
     for (int r = 0; r < REPEATS; r++) {
         std::cout << "Run_" << r << ":\t" << timing_results.row(r) << std::endl;
     }
@@ -497,6 +519,8 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
     std::cout << "Max:\t" << timing_stats.row(1) << std::endl;
     std::cout << "Mean:\t" << timing_stats.row(2) << std::endl;
     std::cout << "StdDev:\t" << timing_stats.row(3) << std::endl;
+
+    // std::cout << fft_results << std::endl;
 
     //// Create (if needed) output directory
     // const std::string out_dir = GetChronoOutputPath() + "DEMO_GNUPLOT";
@@ -509,109 +533,91 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
     // std::string filename = out_dir + "/temp_plot.gpl";
     // ChGnuPlot mplot(filename.c_str());
     // mplot.SetGrid();
-    // mplot.Plot(midpoint_displacement, 0, 3, "from ChMatrix", " with lines lt 5");
-
-    // std::string filename2 = out_dir + "/temp_plot2.gpl";
-    // ChGnuPlot mplot2(filename2.c_str());
-    // mplot2.SetGrid();
-    // mplot2.Plot(midpoint_displacement, 1, 2, "from ChMatrix", " with lines lt 5");
-
-    // std::string filename3 = out_dir + "/temp_plot3.gpl";
-    // ChGnuPlot mplot3(filename3.c_str());
-    // mplot3.SetGrid();
-    // mplot3.Plot(midpoint_displacement, 1, 3, "from ChMatrix", " with lines lt 5");
+    // mplot.Plot(tip_displacement_z, 0, 1, "from ChMatrix", " with lines lt 5");
 }
 
 int main(int argc, char* argv[]) {
-    ChVectorN<int, 8> num_els;
-    num_els << 8, 16, 32, 64, 128, 256, 512, 1024;
-    // ChVectorN<int, 1> num_els;
-    // num_els << 1024;
+    // ChVectorN<int, 6> num_els;
+    // num_els << 8, 16, 32, 64, 128, 256;
 
     // std::vector<SolverType> Solver = {SolverType::MINRES, SolverType::MKL, SolverType::MUMPS, SolverType::SparseLU,
     //                                  SolverType::SparseQR};
     // std::vector<SolverType> Solver = {SolverType::MKL, SolverType::MUMPS, SolverType::SparseLU,
     // SolverType::SparseQR};
-    std::vector<SolverType> Solver = {SolverType::SparseLU};
-    // std::vector<SolverType> Solver = { SolverType::MKL };
 
-    int MaxThreads = 1;
-    MaxThreads = ChOMP::GetMaxThreads();
-    std::cout << "GetNumProcs:\t" << ChOMP::GetNumProcs() << " Max Threads = " << MaxThreads << std::endl;
+    ChVectorN<int, 1> num_els;
+    num_els << 128;
+    std::vector<SolverType> Solver = {SolverType::MUMPS};
 
-    double f = 5.0;
-
-    ChMatrixNM<double, 4, 19> timing_stats;
-
-    // ANCFBeamTest<ChElementBeamANCF, ChMaterialBeamANCF> test(8, SolverType::SparseLU, 1, f);
-    // test.SimulateVis();
+    ChMatrixNM<double, 4, 17> timing_stats;
 
     for (const auto& ls : Solver) {
         for (auto i = 0; i < num_els.size(); i++) {
-            int NumThreads = 1;
-            // int NumThreads = MaxThreads;
-            bool run = true;
-            while (run) {
-                {
-                    ANCFBeamTest<ChElementBeamANCF, ChMaterialBeamANCF> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF");
-                }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_TR01, ChMaterialBeamANCF_TR01> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR01");
-                }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_TR02, ChMaterialBeamANCF_TR02> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR02");
-                }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_TR03, ChMaterialBeamANCF_TR03> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR03");
-                }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_TR04, ChMaterialBeamANCF_TR04> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR04");
-                }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_TR05, ChMaterialBeamANCF_TR05> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR05");
-                }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_TR06, ChMaterialBeamANCF_TR06> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR06");
-                }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_TR07, ChMaterialBeamANCF_TR07> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR07");
-                }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_TR08, ChMaterialBeamANCF_TR08> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR08");
-                }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_TR08b, ChMaterialBeamANCF_TR08b> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR08b");
-                }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_TR09, ChMaterialBeamANCF_TR09> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR09");
-                }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_TR10, ChMaterialBeamANCF_TR10> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_TR10");
-                }
+            ANCFBeamTest<ChElementBeamANCF_3243_TR01, ChMaterialBeamANCF_3243_TR01> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR01");
+        }
+    }
 
-                if (NumThreads == MaxThreads)
-                    run = false;
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR02, ChMaterialBeamANCF_3243_TR02> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR02");
+        }
+    }
 
-                if (NumThreads <= 4)
-                    NumThreads *= 2;
-                else  // Since computers this will be run on have a number of cores that is a multiple of 4
-                    NumThreads += 4;
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR03, ChMaterialBeamANCF_3243_TR03> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR03");
+        }
+    }
 
-                if (NumThreads > MaxThreads)
-                    NumThreads = MaxThreads;
-            }
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR04, ChMaterialBeamANCF_3243_TR04> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR04");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR05, ChMaterialBeamANCF_3243_TR05> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR05");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR06, ChMaterialBeamANCF_3243_TR06> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR06");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR07, ChMaterialBeamANCF_3243_TR07> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR07");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR08, ChMaterialBeamANCF_3243_TR08> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR09, ChMaterialBeamANCF_3243_TR09> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR09");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR10, ChMaterialBeamANCF_3243_TR10> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR10");
         }
     }
 

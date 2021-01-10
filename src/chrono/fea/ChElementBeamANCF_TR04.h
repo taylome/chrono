@@ -240,18 +240,18 @@ class ChApi ChElementBeamANCF_TR04 : public ChElementBeam, public ChLoadableU, p
                                             chrono::ChVector<double>&) override {}
 
     /// Gets the xyz displacement of a point on the beam line,
-    /// and the rotation RxRyRz of section plane, at abscissa 'eta'.
-    /// Note, eta=-1 at node1, eta=+1 at node2.
+    /// and the rotation RxRyRz of section plane, at abscissa 'xi'.
+    /// Note, xi=-1 at node1, xi=+1 at node2.
     /// Note, 'displ' is the displ.state of 2 nodes, ex. get it as GetStateBlock()
     /// Results are not corotated.
-    virtual void EvaluateSectionDisplacement(const double eta, ChVector<>& u_displ, ChVector<>& u_rotaz) override {}
+    virtual void EvaluateSectionDisplacement(const double xi, ChVector<>& u_displ, ChVector<>& u_rotaz) override {}
 
     /// Gets the absolute xyz position of a point on the beam line,
-    /// and the absolute rotation of section plane, at abscissa 'eta'.
+    /// and the absolute rotation of section plane, at abscissa 'xi'.
     /// Note, eta=-1 at node1, eta=+1 at node2.
     /// Note, 'displ' is the displ.state of 2 nodes, ex. get it as GetStateBlock()
     /// Results are corotated (expressed in world reference)
-    virtual void EvaluateSectionFrame(const double eta, ChVector<>& point, ChQuaternion<>& rot) override {}
+    virtual void EvaluateSectionFrame(const double eta, ChVector<>& point, ChQuaternion<>& rot) override;
 
     // Functions for ChLoadable interface
     // ----------------------------------
@@ -355,9 +355,9 @@ class ChApi ChElementBeamANCF_TR04 : public ChElementBeam, public ChLoadableU, p
                                           double xi,
                                           double eta,
                                           double zeta,
-                                          ChVectorN<double, 6>& D0,
-                                          ChMatrixNM<double, 3, 9>& ebar,
-                                          ChMatrixNM<double, 3, 9>& ebardot);
+                                          const ChVectorN<double, 6>& D0,
+                                          const ChMatrixNM<double, 3, 9>& ebar,
+                                          const ChMatrixNM<double, 3, 9>& ebardot);
 
     // Calculate the calculate the generalized internal force integrand at a single point (called for Gauss-Quadrature
     // integration) - Stiffness Matrix with only upper 3x3 terms
@@ -365,9 +365,9 @@ class ChApi ChElementBeamANCF_TR04 : public ChElementBeam, public ChLoadableU, p
                                           double xi,
                                           double eta,
                                           double zeta,
-                                          ChMatrix33<double>& Dv,
-                                          ChMatrixNM<double, 3, 9>& ebar,
-                                          ChMatrixNM<double, 3, 9>& ebardot);
+                                          const ChMatrix33<double>& Dv,
+                                          const ChMatrixNM<double, 3, 9>& ebar,
+                                          const ChMatrixNM<double, 3, 9>& ebardot);
 
     // Calculate the calculate the generalized internal force integrand at a single point (called for Gauss-Quadrature
     // integration) - General Stiffness Matrix
@@ -375,14 +375,14 @@ class ChApi ChElementBeamANCF_TR04 : public ChElementBeam, public ChLoadableU, p
                                           double xi,
                                           double eta,
                                           double zeta,
-                                          ChMatrixNM<double, 6, 6>& D,
-                                          ChMatrixNM<double, 3, 9>& ebar,
-                                          ChMatrixNM<double, 3, 9>& ebardot);
+                                          const ChMatrixNM<double, 6, 6>& D,
+                                          const ChMatrixNM<double, 3, 9>& ebar,
+                                          const ChMatrixNM<double, 3, 9>& ebardot);
 
     // Calculate the generalized internal force for the element given the provided current state coordinates
     void ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
-                                      ChMatrixNM<double, 3, 9>& ebar,
-                                      ChMatrixNM<double, 3, 9>& ebardot);
+                                      const ChMatrixNM<double, 3, 9>& ebar,
+                                      const ChMatrixNM<double, 3, 9>& ebardot);
 
     // Return the pre-computed generalized force due to gravity
     void Get_GravityFrc(ChVectorN<double, 27>& Gi) { Gi = m_GravForce; }

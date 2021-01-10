@@ -246,10 +246,10 @@ void ChElementBeamANCF_TR10::PrecomputeInternalForceMatricesWeights() {
     m_K3Compact.setZero();
     m_O1.setZero();
 
+    ChVectorN<double, 6> D0 = GetMaterial()->Get_D0();
     ChMatrixNM<double, 6, 6> D;
     D.setZero();
-    D.diagonal() = GetMaterial()->Get_D0();
-    ChVectorN<double, 6> D0 = GetMaterial()->Get_D0();
+    D.diagonal() = D0;
 
     ChMatrixNM<double, 9, 9> D_block;
     D_block << D(0, 0), D(0, 5), D(0, 4), D(0, 5), D(0, 1), D(0, 3), D(0, 4), D(0, 3), D(0, 2), D(5, 0), D(5, 5),
@@ -423,8 +423,8 @@ void ChElementBeamANCF_TR10::ComputeInternalForces(ChVectorDynamic<>& Fi) {
 }
 
 void ChElementBeamANCF_TR10::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
-                                                          ChMatrixNMc<double, 9, 3>& e_bar,
-                                                          ChMatrixNMc<double, 9, 3>& e_bar_dot) {
+                                                          const ChMatrixNMc<double, 9, 3>& e_bar,
+                                                          const ChMatrixNMc<double, 9, 3>& e_bar_dot) {
     ChMatrixNM<double, 9, 9> PI1_matrix = 0.5 * e_bar * e_bar.transpose();
     if (m_damping_enabled) {
         PI1_matrix += m_Alpha * e_bar_dot * e_bar.transpose();
@@ -771,14 +771,14 @@ double ChElementBeamANCF_TR10::Calc_det_J_0xi(double xi, double eta, double zeta
 //    u_rotaz = VNULL;  // no angles.. this is ANCF (or maybe return here the slope derivatives?)
 //}
 
-void ChElementBeamANCF_TR10::EvaluateSectionFrame(const double eta, ChVector<>& point, ChQuaternion<>& rot) {
+void ChElementBeamANCF_TR10::EvaluateSectionFrame(const double xi, ChVector<>& point, ChQuaternion<>& rot) {
     ChMatrixNMc<double, 9, 3> e_bar;
     ChVectorN<double, 9> Sxi_compact;
     ChMatrixNMc<double, 9, 3> Sxi_D;
 
     CalcCoordMatrix(e_bar);
-    Calc_Sxi_compact(Sxi_compact, eta, 0, 0);
-    Calc_Sxi_D(Sxi_D, eta, 0, 0);
+    Calc_Sxi_compact(Sxi_compact, xi, 0, 0);
+    Calc_Sxi_D(Sxi_D, xi, 0, 0);
 
     // r = Se
     point = e_bar.transpose() * Sxi_compact;
@@ -909,7 +909,7 @@ void ChElementBeamANCF_TR10::ComputeNF(
 ) {
     // Compute the generalized force vector for the applied force
     ChMatrixNM<double, 3, 27> Sxi;
-    Calc_Sxi(Sxi, U, 0, 0);
+    Calc_Sxi(Sxi, U, V, W);
     Qi = Sxi.transpose() * F.segment(0, 3);
 
     // Compute the generalized force vector for the applied moment

@@ -239,11 +239,11 @@ class ChApi ChElementBeamANCF_TR02 : public ChElementBeam, public ChLoadableU, p
     virtual void EvaluateSectionDisplacement(const double eta, ChVector<>& u_displ, ChVector<>& u_rotaz) override {}
 
     /// Gets the absolute xyz position of a point on the beam line,
-    /// and the absolute rotation of section plane, at abscissa 'eta'.
-    /// Note, eta=-1 at node1, eta=+1 at node2.
+    /// and the absolute rotation of section plane, at abscissa 'xi'.
+    /// Note, xi=-1 at node1, xi=+1 at node2.
     /// Note, 'displ' is the displ.state of 2 nodes, ex. get it as GetStateBlock()
     /// Results are corotated (expressed in world reference)
-    virtual void EvaluateSectionFrame(const double eta, ChVector<>& point, ChQuaternion<>& rot) override {}
+    virtual void EvaluateSectionFrame(const double xi, ChVector<>& point, ChQuaternion<>& rot) override;
 
     // Functions for ChLoadable interface
     // ----------------------------------
@@ -347,12 +347,12 @@ class ChApi ChElementBeamANCF_TR02 : public ChElementBeam, public ChLoadableU, p
                                           double xi,
                                           double eta,
                                           double zeta,
-                                          ChMatrixNM<double, 6, 6>& D,
-                                          Vector3N& e,
-                                          Vector3N& edot);
+                                          const ChMatrixNM<double, 6, 6>& D,
+                                          const Vector3N& e,
+                                          const Vector3N& edot);
 
     // Calculate the generalized internal force for the element given the provided current state coordinates
-    void ComputeInternalForcesAtState(ChVectorDynamic<>& Fi, Vector3N& e, Vector3N& edot);
+    void ComputeInternalForcesAtState(ChVectorDynamic<>& Fi, const Vector3N& e, const Vector3N& edot);
 
     // Return the pre-computed generalized force due to gravity
     void Get_GravityFrc(Vector3N& Gi) { Gi = m_GravForce; }
