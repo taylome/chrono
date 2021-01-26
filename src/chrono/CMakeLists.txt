@@ -498,11 +498,43 @@ set(ChronoEngine_fea_elements_SOURCES
     fea/ChElementHexa_8.cpp
     fea/ChElementHexa_20.cpp
     fea/ChElementShellANCF.cpp
+	fea/ChElementShellANCF_3443_TR01.cpp
+	fea/ChElementShellANCF_3443_TR02.cpp
+	fea/ChElementShellANCF_3443_TR03.cpp
+	fea/ChElementShellANCF_3443_TR04.cpp
+	fea/ChElementShellANCF_3443_TR05.cpp
+	fea/ChElementShellANCF_3443_TR06.cpp
+	fea/ChElementShellANCF_3443_TR07.cpp
+	fea/ChElementShellANCF_3443_TR08.cpp
+	fea/ChElementShellANCF_3443_TR08b.cpp
+	fea/ChElementShellANCF_3443_TR09.cpp
+	fea/ChElementShellANCF_3443_TR10.cpp
     fea/ChElementShellANCF_8.cpp
+	fea/ChElementShellANCF_3833_TR01.cpp
+	fea/ChElementShellANCF_3833_TR02.cpp
+	fea/ChElementShellANCF_3833_TR03.cpp
+	fea/ChElementShellANCF_3833_TR04.cpp
+	fea/ChElementShellANCF_3833_TR05.cpp
+	fea/ChElementShellANCF_3833_TR06.cpp
+	fea/ChElementShellANCF_3833_TR07.cpp
+	fea/ChElementShellANCF_3833_TR08.cpp
+	fea/ChElementShellANCF_3833_TR08b.cpp
+	fea/ChElementShellANCF_3833_TR09.cpp
+	fea/ChElementShellANCF_3833_TR10.cpp
     fea/ChElementShellReissner4.cpp
 	fea/ChElementShellBST.cpp
     fea/ChElementBrick.cpp
     fea/ChElementBrick_9.cpp
+	fea/ChElementBrickANCF_3843_TR01.cpp
+	fea/ChElementBrickANCF_3843_TR02.cpp
+	fea/ChElementBrickANCF_3843_TR03.cpp
+	fea/ChElementBrickANCF_3843_TR04.cpp
+	fea/ChElementBrickANCF_3843_TR05.cpp
+	fea/ChElementBrickANCF_3843_TR06.cpp
+	fea/ChElementBrickANCF_3843_TR07.cpp
+	fea/ChElementBrickANCF_3843_TR08.cpp
+	fea/ChElementBrickANCF_3843_TR09.cpp
+	fea/ChElementBrickANCF_3843_TR10.cpp
 )
 
 set(ChronoEngine_fea_elements_HEADERS
@@ -548,9 +580,41 @@ set(ChronoEngine_fea_elements_HEADERS
     fea/ChElementHexa_20.h
     fea/ChElementShell.h
     fea/ChElementShellANCF.h
+	fea/ChElementShellANCF_3443_TR01.h
+	fea/ChElementShellANCF_3443_TR02.h
+	fea/ChElementShellANCF_3443_TR03.h
+	fea/ChElementShellANCF_3443_TR04.h
+	fea/ChElementShellANCF_3443_TR05.h
+	fea/ChElementShellANCF_3443_TR06.h
+	fea/ChElementShellANCF_3443_TR07.h
+	fea/ChElementShellANCF_3443_TR08.h
+	fea/ChElementShellANCF_3443_TR08b.h
+	fea/ChElementShellANCF_3443_TR09.h
+	fea/ChElementShellANCF_3443_TR10.h
     fea/ChElementShellANCF_8.h
+	fea/ChElementShellANCF_3833_TR01.h
+	fea/ChElementShellANCF_3833_TR02.h
+	fea/ChElementShellANCF_3833_TR03.h
+	fea/ChElementShellANCF_3833_TR04.h
+	fea/ChElementShellANCF_3833_TR05.h
+	fea/ChElementShellANCF_3833_TR06.h
+	fea/ChElementShellANCF_3833_TR07.h
+	fea/ChElementShellANCF_3833_TR08.h
+	fea/ChElementShellANCF_3833_TR08b.h
+	fea/ChElementShellANCF_3833_TR09.h
+	fea/ChElementShellANCF_3833_TR10.h
     fea/ChElementShellReissner4.h
 	fea/ChElementShellBST.h
+	fea/ChElementBrickANCF_3843_TR01.h
+	fea/ChElementBrickANCF_3843_TR02.h
+	fea/ChElementBrickANCF_3843_TR03.h
+	fea/ChElementBrickANCF_3843_TR04.h
+	fea/ChElementBrickANCF_3843_TR05.h
+	fea/ChElementBrickANCF_3843_TR06.h
+	fea/ChElementBrickANCF_3843_TR07.h
+	fea/ChElementBrickANCF_3843_TR08.h
+	fea/ChElementBrickANCF_3843_TR09.h
+	fea/ChElementBrickANCF_3843_TR10.h
 )
 
 source_group(fea\\elements FILES

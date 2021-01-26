@@ -11,22 +11,25 @@
 // =============================================================================
 // Authors: Michael Taylor, Antonio Recuero, Radu Serban
 // =============================================================================
-// Fully Parameterized ANCF beam element with 2 nodes. Description of this element
-// and its internal forces may be found in
+// Higher oreder ANCF shell element with 8 nodes. Description of this element (3833)
+// and its internal forces may be found in: Henrik Ebel, Marko K Matikainen, 
+// Vesa-Ville Hurskainen, and Aki Mikkola. Analysis of high-order quadrilateral
+// plate elements based on the absolute nodal coordinate formulation for three -
+// dimensional elasticity.Advances in Mechanical Engineering, 9(6) : 1687814017705069, 2017.
 // =============================================================================
 // TR02 = a simple textbook style implementation of the element with a reduced
 //     number of Gauss-Quadrature Points:
 //
-//  Mass Matrix = Constant, pre-calculated 24x24 matrix
+//  Mass Matrix = Constant, pre-calculated 72x72 matrix
 //
-//  Generalized Force due to gravity = Constant 24x1 Vector
+//  Generalized Force due to gravity = Constant 72x1 Vector
 //     (assumption that gravity is constant too)
 //
 //  Generalized Internal Force Vector = Calculated in the typical paper way:
-//     e = 24x1 and S = 3x24
+//     e = 72x1 and S = 3x72
 //     Inverse of the Element Jacobian (J_0xi) is generated from e0 every time
 //     Math direct translation from papers
-//     1 less than "Full Integration" Number of GQ Integration Points (4x2x2)
+//     1 less than "Full Integration" Number of GQ Integration Points (4x4x4)
 //     GQ integration is performed one GQ point at a time
 //
 //  Jacobian of the Generalized Internal Force Vector = Calculated by numeric
@@ -34,14 +37,14 @@
 //
 // =============================================================================
 
-#ifndef CHELEMENTBEAMANCF3243TR02_H
-#define CHELEMENTBEAMANCF3243TR02_H
+#ifndef CHELEMENTSHELLANCF3833TR02_H
+#define CHELEMENTSHELLANCF3833TR02_H
 
 #include <vector>
 
 #include "chrono/core/ChQuadrature.h"
-#include "chrono/fea/ChElementBeam.h"
-#include "chrono/fea/ChNodeFEAxyzDDD.h"
+#include "chrono/fea/ChElementShell.h"
+#include "chrono/fea/ChNodeFEAxyzDD.h"
 
 namespace chrono {
 namespace fea {
@@ -50,107 +53,132 @@ namespace fea {
 /// @{
 
 /// Material definition.
-/// This class implements material properties for an ANCF Beam.
-class ChApi ChMaterialBeamANCF_3243_TR02 {
+/// This class implements material properties for an ANCF Shell.
+class ChApi ChMaterialShellANCF_3833_TR02 {
   public:
     /// Construct an isotropic material.
-    ChMaterialBeamANCF_3243_TR02(double rho,        ///< material density
+    ChMaterialShellANCF_3833_TR02(double rho,        ///< material density
                                  double E,          ///< Young's modulus
-                                 double nu,         ///< Poisson ratio
-                                 const double& k1,  ///< Shear correction factor along beam local y axis
-                                 const double& k2   ///< Shear correction factor along beam local z axis
+                                 double nu          ///< Poisson ratio
     );
 
     /// Construct a (possibly) orthotropic material.
-    ChMaterialBeamANCF_3243_TR02(double rho,            ///< material density
+    ChMaterialShellANCF_3833_TR02(double rho,            ///< material density
                                  const ChVector<>& E,   ///< elasticity moduli (E_x, E_y, E_z)
                                  const ChVector<>& nu,  ///< Poisson ratios (nu_xy, nu_xz, nu_yz)
-                                 const ChVector<>& G,   ///< shear moduli (G_xy, G_xz, G_yz)
-                                 const double& k1,      ///< Shear correction factor along beam local y axis
-                                 const double& k2       ///< Shear correction factor along beam local z axis
+                                 const ChVector<>& G    ///< shear moduli (G_xy, G_xz, G_yz)
     );
 
     /// Return the material density.
     double Get_rho() const { return m_rho; }
 
+    const ChMatrixNM<double, 6, 6>& Get_D() const { return m_D; }
     const ChMatrixNM<double, 6, 6>& Get_D0() const { return m_D0; }
     const ChMatrixNM<double, 6, 6>& Get_Dv() const { return m_Dv; }
 
   private:
-    /// Calculate the matrix form of two stiffness tensors used by the ANCF beam for selective reduced integration of
-    /// the Poisson effect k1 and k2 are Timoshenko shear correction factors.
-    void Calc_D0_Dv(const ChVector<>& E, const ChVector<>& nu, const ChVector<>& G, double k1, double k2);
+    /// Calculate the matrix form of two stiffness tensors used by the ANCF shell for selective reduced integration of
+    /// the Poisson effect as well as the composite stiffness tensors.
+    void Calc_D0_Dv(const ChVector<>& E, const ChVector<>& nu, const ChVector<>& G);
 
     double m_rho;  ///< density
     ChMatrixNM<double, 6, 6>
+        m_D;  ///< matrix of elastic coefficients
+    ChMatrixNM<double, 6, 6>
         m_D0;  ///< matrix of elastic coefficients (split of diagonal terms for integration across the entire element)
     ChMatrixNM<double, 6, 6> m_Dv;  ///< matrix of elastic coefficients (remainder of split, upper 3x3 terms for
-                                    ///< integration only on the beam axis)
+                                    ///< integration only on the midsurface)
 
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
-// ----------------------------------------------------------------------------
-/// ANCF beam element with 3 nodes.
-/// This class implements a continuum-based elastic force formulation.
+/// @addtogroup fea_elements
+/// @{
+
+/// ANCF shell element with four nodes.
 ///
-/// The node numbering, as follows:
+/// The node numbering is in ccw fashion as in the following scheme:
 /// <pre>
-///               v
-///               ^
-///               |
-/// A o-----+-----o-----+-----o B -> u
-///              /C
-///             w
+///         v
+///         ^
+///         |
+/// D o-----G-----o C
+///   |     |     |
+/// --H-----+-----F----> u
+///   |     |     |
+/// A o-----E-----o B
 /// </pre>
-/// where C is the third and central node.
 
-class ChApi ChElementBeamANCF_3243_TR02 : public ChElementBeam, public ChLoadableU, public ChLoadableUVW {
+class ChApi ChElementShellANCF_3833_TR02 : public ChElementShell, public ChLoadableUV, public ChLoadableUVW {
   public:
-    using VectorN = ChVectorN<double, 8>;
-    using Vector3N = ChVectorN<double, 24>;
-    using Matrix3x3N = ChMatrixNM<double, 3, 24>;
-    using Matrix6x3N = ChMatrixNM<double, 6, 24>;
-    using Matrix3Nx3N = ChMatrixNM<double, 24, 24>;
+    using VectorN = ChVectorN<double, 24>;
+    using Vector3N = ChVectorN<double, 72>;
+    using Matrix3x3N = ChMatrixNM<double, 3, 72>;
+    using Matrix6x3N = ChMatrixNM<double, 6, 72>;
+    using Matrix3Nx3N = ChMatrixNM<double, 72, 72>;
 
-    ChElementBeamANCF_3243_TR02();
-    ~ChElementBeamANCF_3243_TR02() {}
+    ChElementShellANCF_3833_TR02();
+    ~ChElementShellANCF_3833_TR02() {}
 
     /// Get the number of nodes used by this element.
-    virtual int GetNnodes() override { return 2; }
+    virtual int GetNnodes() override { return 8; }
 
     /// Get the number of coordinates in the field used by the referenced nodes.
-    virtual int GetNdofs() override { return 2 * 12; }
+    virtual int GetNdofs() override { return 8 * 9; }
 
     /// Get the number of coordinates from the n-th node used by this element.
-    virtual int GetNodeNdofs(int n) override { return 12; }
+    virtual int GetNodeNdofs(int n) override { return 9; }
 
     /// Specify the nodes of this element.
-    void SetNodes(std::shared_ptr<ChNodeFEAxyzDDD> nodeA,   //
-                  std::shared_ptr<ChNodeFEAxyzDDD> nodeB);  //
+    void SetNodes(std::shared_ptr<ChNodeFEAxyzDD> nodeA,
+                  std::shared_ptr<ChNodeFEAxyzDD> nodeB,
+                  std::shared_ptr<ChNodeFEAxyzDD> nodeC,
+                  std::shared_ptr<ChNodeFEAxyzDD> nodeD,
+                  std::shared_ptr<ChNodeFEAxyzDD> nodeE,
+                  std::shared_ptr<ChNodeFEAxyzDD> nodeF,
+                  std::shared_ptr<ChNodeFEAxyzDD> nodeG,
+                  std::shared_ptr<ChNodeFEAxyzDD> nodeH);
 
     /// Specify the element dimensions.
-    void SetDimensions(double lenX, double thicknessY, double thicknessZ) {
+    void SetDimensions(double lenX, double lenY, double thicknessZ) {
         m_lenX = lenX;
-        m_thicknessY = thicknessY;
+        m_lenY = lenY;
         m_thicknessZ = thicknessZ;
     }
 
     /// Specify the element material.
-    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF_3243_TR02> beam_mat) { m_material = beam_mat; }
+    void SetMaterial(std::shared_ptr<ChMaterialShellANCF_3833_TR02> shell_mat) { m_material = shell_mat; }
 
     /// Access the n-th node of this element.
     virtual std::shared_ptr<ChNodeFEAbase> GetNodeN(int n) override { return m_nodes[n]; }
 
     /// Get a handle to the first node of this element.
-    std::shared_ptr<ChNodeFEAxyzDDD> GetNodeA() const { return m_nodes[0]; }
+    std::shared_ptr<ChNodeFEAxyzDD> GetNodeA() const { return m_nodes[0]; }
 
     /// Get a handle to the second node of this element.
-    std::shared_ptr<ChNodeFEAxyzDDD> GetNodeB() const { return m_nodes[1]; }
+    std::shared_ptr<ChNodeFEAxyzDD> GetNodeB() const { return m_nodes[1]; }
 
+    /// Get a handle to the second node of this element.
+    std::shared_ptr<ChNodeFEAxyzDD> GetNodeC() const { return m_nodes[2]; }
+
+    /// Get a handle to the second node of this element.
+    std::shared_ptr<ChNodeFEAxyzDD> GetNodeD() const { return m_nodes[3]; }
+
+    /// Get a handle to the first node of this element.
+    std::shared_ptr<ChNodeFEAxyzDD> GetNodeE() const { return m_nodes[4]; }
+
+    /// Get a handle to the second node of this element.
+    std::shared_ptr<ChNodeFEAxyzDD> GetNodeF() const { return m_nodes[5]; }
+
+    /// Get a handle to the third node of this element.
+    std::shared_ptr<ChNodeFEAxyzDD> GetNodeG() const { return m_nodes[6]; }
+
+    /// Get a handle to the fourth node of this element.
+    std::shared_ptr<ChNodeFEAxyzDD> GetNodeH() const { return m_nodes[7]; }
+	
     /// Return the material.
-    std::shared_ptr<ChMaterialBeamANCF_3243_TR02> GetMaterial() const { return m_material; }
+    std::shared_ptr<ChMaterialShellANCF_3833_TR02> GetMaterial() const { return m_material; }
 
     /// Turn gravity on/off.
     void SetGravityOn(bool val) { m_gravity_on = val; }
@@ -161,13 +189,13 @@ class ChApi ChElementBeamANCF_3243_TR02 : public ChElementBeam, public ChLoadabl
     /// Get the element length in the X direction.
     double GetLengthX() const { return m_lenX; }
 
-    /// Get the total thickness of the beam element.
-    double GetThicknessY() { return m_thicknessY; }
+    /// Get the element length in the Y direction.
+    double GetLengthY() { return m_lenY; }
 
-    /// Get the total thickness of the beam element.
+    /// Get the total thickness of the shell element.
     double GetThicknessZ() { return m_thicknessZ; }
 
-    /// Poisson effect selection.
+    /// Poisson effect selection. - Not currently used
     enum StrainFormulation {
         CMPoisson,   ///< Continuum-Mechanics formulation, including Poisson effects
         CMNoPoisson  ///< Continuum-Mechanics formulation, disregarding Poisson effects
@@ -206,46 +234,48 @@ class ChApi ChElementBeamANCF_3243_TR02 : public ChElementBeam, public ChLoadabl
     // Strain Formulation methods
     // --------------------------
 
-    /// Set the strain formulation.
+    /// Set the strain formulation. - Not currently used
     void SetStrainFormulation(StrainFormulation model) { m_strain_form = model; }
 
-    /// Get the strain formulation.
+    /// Get the strain formulation. - Not currently used
     StrainFormulation GetStrainFormulation() const { return m_strain_form; }
 
-    // Interface to ChElementBeam base class
+    // Interface to ChElementShell base class
     // --------------------------------------
 
-    // void EvaluateSectionPoint(const double u, const ChMatrix<>& displ, ChVector<>& point); // Not needed?
+    //// Dummy method definitions.
+    //virtual void EvaluateSectionStrain(const double, chrono::ChVector<double>&) override {}
 
-    // Dummy method definitions.
-    virtual void EvaluateSectionStrain(const double, chrono::ChVector<double>&) override {}
+    //virtual void EvaluateSectionForceTorque(const double,
+    //                                        chrono::ChVector<double>&,
+    //                                        chrono::ChVector<double>&) override {}
 
-    virtual void EvaluateSectionForceTorque(const double,
-                                            chrono::ChVector<double>&,
-                                            chrono::ChVector<double>&) override {}
+    /// Gets the xyz displacement of a point on the shell midsurface,
+    /// and the rotation RxRyRz of section plane, at abscissa '(xi,eta,0)'.
+    virtual void EvaluateSectionDisplacement(const double xi, const double eta, ChVector<>& u_displ, ChVector<>& u_rotaz) override {}
 
-    /// Gets the xyz displacement of a point on the beam line,
-    /// and the rotation RxRyRz of section plane, at abscissa 'eta'.
-    /// Note, eta=-1 at node1, eta=+1 at node2.
-    /// Note, 'displ' is the displ.state of 2 nodes, ex. get it as GetStateBlock()
-    /// Results are not corotated.
-    virtual void EvaluateSectionDisplacement(const double eta, ChVector<>& u_displ, ChVector<>& u_rotaz) override {}
-
-    /// Gets the absolute xyz position of a point on the beam line,
-    /// and the absolute rotation of section plane, at abscissa 'xi'.
-    /// Note, xi=-1 at node1, xi=+1 at node2.
+    /// Gets the absolute xyz position of a point on the shell midsurface,
+    /// and the absolute rotation of section plane, at abscissa '(xi,eta,0)'.
+    /// Note, nodeA = (xi=-1, eta=-1)
+    /// Note, nodeB = (xi=1, eta=-1)
+    /// Note, nodeC = (xi=1, eta=1)
+    /// Note, nodeD = (xi=-1, eta=1)
     /// Note, 'displ' is the displ.state of 2 nodes, ex. get it as GetStateBlock()
     /// Results are expressed in world reference
-    virtual void EvaluateSectionFrame(const double xi, ChVector<>& point, ChQuaternion<>& rot) override;
+    virtual void EvaluateSectionFrame(const double xi, const double eta, ChVector<>& point, ChQuaternion<>& rot) override;
+
+    virtual void EvaluateSectionPoint(const double u, const double v, ChVector<>& point) override;
+
+    virtual void EvaluateSectionVelNorm(double U, double V, ChVector<>& Result) override;
 
     // Functions for ChLoadable interface
     // ----------------------------------
 
     /// Gets the number of DOFs affected by this element (position part).
-    virtual int LoadableGet_ndof_x() override { return 2 * 12; }
+    virtual int LoadableGet_ndof_x() override { return 8 * 9; }
 
     /// Gets the number of DOFs affected by this element (velocity part).
-    virtual int LoadableGet_ndof_w() override { return 2 * 12; }
+    virtual int LoadableGet_ndof_w() override { return 8 * 9; }
 
     /// Gets all the DOFs packed in a single vector (position part).
     virtual void LoadableGetStateBlock_x(int block_offset, ChState& mD) override;
@@ -262,16 +292,16 @@ class ChApi ChElementBeamANCF_3243_TR02 : public ChElementBeam, public ChLoadabl
 
     /// Number of coordinates in the interpolated field, ex=3 for a
     /// tetrahedron finite element or a cable, = 1 for a thermal problem, etc.
-    virtual int Get_field_ncoords() override { return 12; }
+    virtual int Get_field_ncoords() override { return 9; }
 
     /// Tell the number of DOFs blocks (ex. =1 for a body, =4 for a tetrahedron, etc.)
-    virtual int GetSubBlocks() override { return 2; }
+    virtual int GetSubBlocks() override { return 8; }
 
     /// Get the offset of the i-th sub-block of DOFs in global vector.
     virtual unsigned int GetSubBlockOffset(int nblock) override { return m_nodes[nblock]->NodeGetOffset_w(); }
 
     /// Get the size of the i-th sub-block of DOFs in global vector.
-    virtual unsigned int GetSubBlockSize(int nblock) override { return 12; }
+    virtual unsigned int GetSubBlockSize(int nblock) override { return 9; }
 
     // What is this used for?  What is the definition?
     // void EvaluateSectionVelNorm(double U, ChVector<>& Result);
@@ -284,6 +314,7 @@ class ChApi ChElementBeamANCF_3243_TR02 : public ChElementBeam, public ChLoadabl
     /// F is a load, N'*F is the resulting generalized load
     /// Returns also det[J] with J=[dx/du,..], that might be useful in gauss quadrature.
     virtual void ComputeNF(const double U,              ///< parametric coordinate in surface
+                           const double V,              ///< parametric coordinate in surface
                            ChVectorDynamic<>& Qi,       ///< Return result of Q = N'*F  here
                            double& detJ,                ///< Return det[J] here
                            const ChVectorDynamic<>& F,  ///< Input F vector, size is =n. field coords.
@@ -309,9 +340,9 @@ class ChApi ChElementBeamANCF_3243_TR02 : public ChElementBeam, public ChLoadabl
     /// Density is mass per unit surface.
     virtual double GetDensity() override;
 
-    /// Gets the tangent to the centerline at the parametric coordinate U.
+    /// Gets the normal to the surface at the parametric coordinate U,V.
     /// Each coordinate ranging in -1..+1.
-    ChVector<> ComputeTangent(const double U);
+    virtual ChVector<> ComputeNormal(const double U, const double V) override;
 
   private:
     /// Initial setup. This is used to precompute matrices that do not change during the simulation, such as the local
@@ -350,34 +381,34 @@ class ChApi ChElementBeamANCF_3243_TR02 : public ChElementBeam, public ChLoadabl
     // Return the pre-computed generalized force due to gravity
     void Get_GravityFrc(Vector3N& Gi) { Gi = m_GravForce; }
 
-    // Calculate the current 27x1 vector of nodal coordinates.
+    // Calculate the current 72x1 vector of nodal coordinates.
     void CalcCoordVector(Vector3N& e);
 
-    // Calculate the current 27x1 vector of nodal coordinate time derivatives.
+    // Calculate the current 72x1 vector of nodal coordinate time derivatives.
     void CalcCoordDerivVector(Vector3N& edot);
 
-    // Calculate the 3x27 Sparse & Repetitive Normalized Shape Function Matrix
+    // Calculate the 3x72 Sparse & Repetitive Normalized Shape Function Matrix
     void Calc_Sxi(Matrix3x3N& Sxi, double xi, double eta, double zeta);
 
-    // Calculate the 9x1 Compact Vector of the Normalized Shape Functions
+    // Calculate the 24x1 Compact Vector of the Normalized Shape Functions
     void Calc_Sxi_compact(VectorN& Sxi_compact, double xi, double eta, double zeta);
 
-    // Calculate the 3x27 Sparse & Repetitive Derivative of the Normalized Shape Function Matrix with respect to xi
+    // Calculate the 3x72 Sparse & Repetitive Derivative of the Normalized Shape Function Matrix with respect to xi
     void Calc_Sxi_xi(Matrix3x3N& Sxi_xi, double xi, double eta, double zeta);
 
-    // Calculate the 9x1 Compact Vector of the Derivative of the Normalized Shape Functions with respect to xi
+    // Calculate the 24x1 Compact Vector of the Derivative of the Normalized Shape Functions with respect to xi
     void Calc_Sxi_xi_compact(VectorN& Sxi_xi_compact, double xi, double eta, double zeta);
 
-    // Calculate the 3x27 Sparse & Repetitive Derivative of the Normalized Shape Function Matrix with respect to eta
+    // Calculate the 3x72 Sparse & Repetitive Derivative of the Normalized Shape Function Matrix with respect to eta
     void Calc_Sxi_eta(Matrix3x3N& Sxi_eta, double xi, double eta, double zeta);
 
-    // Calculate the 9x1 Compact Vector of the Derivative of the Normalized Shape Functions with respect to eta
+    // Calculate the 24x1 Compact Vector of the Derivative of the Normalized Shape Functions with respect to eta
     void Calc_Sxi_eta_compact(VectorN& Sxi_eta_compact, double xi, double eta, double zeta);
 
-    // Calculate the 3x27 Sparse & Repetitive Derivative of the Normalized Shape Function Matrix with respect to zeta
+    // Calculate the 3x72 Sparse & Repetitive Derivative of the Normalized Shape Function Matrix with respect to zeta
     void Calc_Sxi_zeta(Matrix3x3N& Sxi_zeta, double xi, double eta, double zeta);
 
-    // Calculate the 9x1 Compact Vector of the Derivative of the Normalized Shape Functions with respect to zeta
+    // Calculate the 24x1 Compact Vector of the Derivative of the Normalized Shape Functions with respect to zeta
     void Calc_Sxi_zeta_compact(VectorN& Sxi_zeta_compact, double xi, double eta, double zeta);
 
     // Calculate the element Jacobian of the reference configuration with respect to the normalized configuration
@@ -391,16 +422,16 @@ class ChApi ChElementBeamANCF_3243_TR02 : public ChElementBeam, public ChLoadabl
     /// with precomputed tables.
     static ChQuadratureTables* GetStaticGQTables();
 
-    std::vector<std::shared_ptr<ChNodeFEAxyzDDD> > m_nodes;    ///< element nodes
-    double m_lenX;                                             ///< total element length
-    double m_thicknessY;                                       ///< total element thickness along Y
+    std::vector<std::shared_ptr<ChNodeFEAxyzDD> > m_nodes;    ///< element nodes
+    double m_lenX;                                             ///< total element length along X
+    double m_lenY;                                             ///< total element length along Y
     double m_thicknessZ;                                       ///< total element thickness along Z
     double m_Alpha;                                            ///< structural damping
     bool m_damping_enabled;                                    ///< Flag to run internal force damping calculations
     bool m_gravity_on;                                         ///< enable/disable gravity calculation
     Vector3N m_GravForce;                                      ///< Gravity Force
     Matrix3Nx3N m_MassMatrix;                                  ///< mass matrix
-    std::shared_ptr<ChMaterialBeamANCF_3243_TR02> m_material;  ///< beam material
+    std::shared_ptr<ChMaterialShellANCF_3833_TR02> m_material;  ///< shell material
     StrainFormulation m_strain_form;                           ///< Strain formulation
     Vector3N m_e0;  ///< Element Position Coordinate Vector for the Reference Configuration
 
