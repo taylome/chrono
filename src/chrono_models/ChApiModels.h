@@ -45,6 +45,12 @@
          @defgroup vehicle_models_generic Generic wheeled vehicle
          @defgroup vehicle_models_m113 M113 tracked vehicle model
        @}
+       @defgroup robot_models Robot models
+       @brief Collection of robotic system models
+       @{
+         @defgroup robot_models_robosimian RoboSimian legged robot model
+         @defgroup robot_models_viper Viper moon rover model
+       @}
     @}
 */
 
