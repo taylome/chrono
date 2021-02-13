@@ -32,6 +32,7 @@
 //#include "chrono/fea/ChElementBrickANCF_3843_TR08b.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR09.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR10.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR11.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -2970,6 +2971,13 @@ int main(int argc, char* argv[]) {
         print_green("ChElementBrickANCF_3843_TR10 Element Checks = PASSED\n");
     else
         print_red("ChElementBrickANCF_3843_TR10 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementBrickANCF_3843_TR11, ChMaterialBrickANCF_3843_TR11> ChElementBrickANCF_3843_TR11_test;
+    if (ChElementBrickANCF_3843_TR11_test.RunElementChecks(0))
+        print_green("ChElementBrickANCF_3843_TR11 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBrickANCF_3843_TR11 Element Checks = FAILED\n"); 
 
     return 0;
 }

@@ -32,6 +32,7 @@
 #include "chrono/fea/ChElementBeamANCF_3243_TR08b.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR09.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR10.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR11.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -183,7 +184,6 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::RunElementChecks(int msglvl)
     tests_passed = (tests_passed & JacobianSmallDispNoVelNoDampingCheck(msglvl));
     tests_passed = (tests_passed & JacobianNoDispNoVelWithDampingCheck(msglvl));
     tests_passed = (tests_passed & JacobianSmallDispNoVelWithDampingCheck(msglvl));
-    tests_passed = (tests_passed & JacobianNoDispSmallVelWithDampingCheck(msglvl));
     tests_passed = (tests_passed & JacobianNoDispSmallVelWithDampingCheck(msglvl));
 
     tests_passed = (tests_passed & AxialDisplacementCheck(msglvl));
@@ -2032,6 +2032,13 @@ int main(int argc, char* argv[]) {
         print_green("ChElementBeamANCF_3243_TR10 Element Checks = PASSED\n");
     else
         print_red("ChElementBeamANCF_3243_TR10 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR11, ChMaterialBeamANCF_3243_TR11> ChElementBeamANCF_3243_TR11_test;
+    if (ChElementBeamANCF_3243_TR11_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR11 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR11 Element Checks = FAILED\n");
 
     return 0;
 }

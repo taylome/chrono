@@ -35,6 +35,7 @@
 #include "chrono/fea/ChElementBeamANCF_TR08b.h"
 #include "chrono/fea/ChElementBeamANCF_TR09.h"
 #include "chrono/fea/ChElementBeamANCF_TR10.h"
+#include "chrono/fea/ChElementBeamANCF_TR11.h"
 
 #include "chrono/fea/ChMesh.h"
 
@@ -285,6 +286,10 @@ int main(int argc, char* argv[]) {
     ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_TR10, ChMaterialBeamANCF_TR10> BeamTest_TR10;
     std::cout << "ChElementBeamANCF_TR10, ";
     BeamTest_TR10.PrintTimingResults(num_steps);
+
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_TR11, ChMaterialBeamANCF_TR11> BeamTest_TR11;
+    std::cout << "ChElementBeamANCF_TR11, ";
+    BeamTest_TR11.PrintTimingResults(num_steps);
 
     return (0);
 }

@@ -47,6 +47,7 @@
 #include "chrono/fea/ChElementBeamANCF_3243_TR08b.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR09.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR10.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR11.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -583,6 +584,10 @@ int main(int argc, char* argv[]) {
                 {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR10, ChMaterialBeamANCF_3243_TR10> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR10");
+                }
+                {
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR11, ChMaterialBeamANCF_3243_TR11> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR11");
                 }
 
 

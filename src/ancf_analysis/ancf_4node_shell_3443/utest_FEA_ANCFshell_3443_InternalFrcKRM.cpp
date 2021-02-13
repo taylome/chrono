@@ -32,6 +32,7 @@
 #include "chrono/fea/ChElementShellANCF_3443_TR08b.h"
 #include "chrono/fea/ChElementShellANCF_3443_TR09.h"
 #include "chrono/fea/ChElementShellANCF_3443_TR10.h"
+#include "chrono/fea/ChElementShellANCF_3443_TR11.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -2338,6 +2339,13 @@ int main(int argc, char* argv[]) {
         print_green("ChElementShellANCF_3443_TR10 Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3443_TR10 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFShellTest<ChElementShellANCF_3443_TR11, ChMaterialShellANCF_3443_TR11> ChElementShellANCF_3443_TR11_test;
+    if (ChElementShellANCF_3443_TR11_test.RunElementChecks(0))
+        print_green("ChElementShellANCF_3443_TR11 Element Checks = PASSED\n");
+    else
+        print_red("ChElementShellANCF_3443_TR11 Element Checks = FAILED\n");
 
     return 0;
 }

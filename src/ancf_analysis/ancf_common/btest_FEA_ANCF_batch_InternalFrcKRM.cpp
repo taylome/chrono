@@ -33,6 +33,7 @@
 #include "chrono/fea/ChElementBeamANCF_3243_TR08.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR09.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR10.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR11.h"
 
 #include "chrono/fea/ChElementBeamANCF.h"
 #include "chrono/fea/ChElementBeamANCF_TR01.h"
@@ -45,6 +46,7 @@
 #include "chrono/fea/ChElementBeamANCF_TR08.h"
 #include "chrono/fea/ChElementBeamANCF_TR09.h"
 #include "chrono/fea/ChElementBeamANCF_TR10.h"
+#include "chrono/fea/ChElementBeamANCF_TR11.h"
 
 #include "chrono/fea/ChElementShellANCF_3443_TR01.h"
 #include "chrono/fea/ChElementShellANCF_3443_TR02.h"
@@ -56,6 +58,7 @@
 #include "chrono/fea/ChElementShellANCF_3443_TR08.h"
 #include "chrono/fea/ChElementShellANCF_3443_TR09.h"
 #include "chrono/fea/ChElementShellANCF_3443_TR10.h"
+#include "chrono/fea/ChElementShellANCF_3443_TR11.h"
 
 #include "chrono/fea/ChElementShellANCF_8.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR01.h"
@@ -68,6 +71,7 @@
 #include "chrono/fea/ChElementShellANCF_3833_TR08.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR09.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR10.h"
+#include "chrono/fea/ChElementShellANCF_3833_TR11.h"
 
 #include "chrono/fea/ChElementBrickANCF_3843_TR01.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR02.h"
@@ -79,6 +83,7 @@
 #include "chrono/fea/ChElementBrickANCF_3843_TR08.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR09.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR10.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR11.h"
 
 #include "chrono/fea/ChMesh.h"
 
@@ -410,6 +415,10 @@ void Run_ANCFBeam_3243_Tests() {
         ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR10, ChMaterialBeamANCF_3243_TR10> Beam3243Test_TR10;
         Beam3243Test_TR10.PrintTimingResults("ChElementBeamANCF_3243_TR10", num_steps);
     }
+    {
+        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR11, ChMaterialBeamANCF_3243_TR11> Beam3243Test_TR11;
+        Beam3243Test_TR11.PrintTimingResults("ChElementBeamANCF_3243_TR11", num_steps);
+    }
 }
 
 // =============================================================================
@@ -739,6 +748,10 @@ void Run_ANCFBeam_3333_Tests() {
     {
         ANCFBeam3333Test<num_elements, ChElementBeamANCF_TR10, ChMaterialBeamANCF_TR10> Beam3333Test_TR10;
         Beam3333Test_TR10.PrintTimingResults("ChElementBeamANCF_TR10", num_steps);
+    }
+    {
+        ANCFBeam3333Test<num_elements, ChElementBeamANCF_TR11, ChMaterialBeamANCF_TR11> Beam3333Test_TR11;
+        Beam3333Test_TR11.PrintTimingResults("ChElementBeamANCF_TR11", num_steps);
     }
 }
 
@@ -1070,6 +1083,10 @@ void Run_ANCFShell_3443_Tests() {
     {
         ANCFShell3443Test<num_elements, ChElementShellANCF_3443_TR10, ChMaterialShellANCF_3443_TR10> Shell3443Test_TR10;
         Shell3443Test_TR10.PrintTimingResults("ChElementShellANCF_3443_TR10", num_steps);
+    }
+    {
+        ANCFShell3443Test<num_elements, ChElementShellANCF_3443_TR11, ChMaterialShellANCF_3443_TR11> Shell3443Test_TR11;
+        Shell3443Test_TR11.PrintTimingResults("ChElementShellANCF_3443_TR11", num_steps);
     }
 }
 
@@ -1702,6 +1719,10 @@ void Run_ANCFShell_3833_Tests() {
         ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR10, ChMaterialShellANCF_3833_TR10> Shell3833Test_TR10;
         Shell3833Test_TR10.PrintTimingResults("ChElementShellANCF_3833_TR10", num_steps);
     }
+    {
+        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR11, ChMaterialShellANCF_3833_TR11> Shell3833Test_TR11;
+        Shell3833Test_TR11.PrintTimingResults("ChElementShellANCF_3833_TR11", num_steps);
+    }
 }
 
 // =============================================================================
@@ -2041,6 +2062,10 @@ void Run_ANCFBrick_3843_Tests() {
     {
         ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR10, ChMaterialBrickANCF_3843_TR10> Brick3843Test_TR10;
         Brick3843Test_TR10.PrintTimingResults("ChElementBrickANCF_3843_TR10", num_steps);
+    }
+    {
+        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR11, ChMaterialBrickANCF_3843_TR11> Brick3843Test_TR11;
+        Brick3843Test_TR11.PrintTimingResults("ChElementBrickANCF_3843_TR11", num_steps);
     }
 }
 

@@ -34,6 +34,7 @@
 //#include "chrono/fea/ChElementShellANCF_3833_TR08b.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR09.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR10.h"
+#include "chrono/fea/ChElementShellANCF_3833_TR11.h"
 
 #include "chrono/fea/ChMesh.h"
 
@@ -251,59 +252,65 @@ int main(int argc, char* argv[]) {
               << std::endl;
 
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR01, ChMaterialShellANCF_3833_TR01> BeamTest_TR01;
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR01, ChMaterialShellANCF_3833_TR01> ShellTest_TR01;
         std::cout << "ChElementShellANCF_3833_TR01, ";
-        BeamTest_TR01.PrintTimingResults(num_steps);
+        ShellTest_TR01.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR02, ChMaterialShellANCF_3833_TR02> BeamTest_TR02;
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR02, ChMaterialShellANCF_3833_TR02> ShellTest_TR02;
         std::cout << "ChElementShellANCF_3833_TR02, ";
-        BeamTest_TR02.PrintTimingResults(num_steps);
+        ShellTest_TR02.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR03, ChMaterialShellANCF_3833_TR03> BeamTest_TR03;
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR03, ChMaterialShellANCF_3833_TR03> ShellTest_TR03;
         std::cout << "ChElementShellANCF_3833_TR03, ";
-        BeamTest_TR03.PrintTimingResults(num_steps);
+        ShellTest_TR03.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR04, ChMaterialShellANCF_3833_TR04> BeamTest_TR04;
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR04, ChMaterialShellANCF_3833_TR04> ShellTest_TR04;
         std::cout << "ChElementShellANCF_3833_TR04, ";
-        BeamTest_TR04.PrintTimingResults(num_steps);
+        ShellTest_TR04.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR05, ChMaterialShellANCF_3833_TR05> BeamTest_TR05;
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR05, ChMaterialShellANCF_3833_TR05> ShellTest_TR05;
         std::cout << "ChElementShellANCF_3833_TR05, ";
-        BeamTest_TR05.PrintTimingResults(num_steps);
+        ShellTest_TR05.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR06, ChMaterialShellANCF_3833_TR06> BeamTest_TR06;
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR06, ChMaterialShellANCF_3833_TR06> ShellTest_TR06;
         std::cout << "ChElementShellANCF_3833_TR06, ";
-        BeamTest_TR06.PrintTimingResults(num_steps);
+        ShellTest_TR06.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR07, ChMaterialShellANCF_3833_TR07> BeamTest_TR07;
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR07, ChMaterialShellANCF_3833_TR07> ShellTest_TR07;
         std::cout << "ChElementShellANCF_3833_TR07, ";
-        BeamTest_TR07.PrintTimingResults(num_steps);
+        ShellTest_TR07.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR08, ChMaterialShellANCF_3833_TR08> BeamTest_TR08;
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR08, ChMaterialShellANCF_3833_TR08> ShellTest_TR08;
         std::cout << "ChElementShellANCF_3833_TR08, ";
-        BeamTest_TR08.PrintTimingResults(num_steps);
+        ShellTest_TR08.PrintTimingResults(num_steps);
     }
     {
-        // ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR08b, ChMaterialShellANCF_3833_TR08b> BeamTest_TR08b;
+        // ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR08b, ChMaterialShellANCF_3833_TR08b> ShellTest_TR08b;
         // std::cout << "ChElementShellANCF_3833_TR08b, ";
-        // BeamTest_TR08b.PrintTimingResults(num_steps);
+        // ShellTest_TR08b.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR09, ChMaterialShellANCF_3833_TR09> BeamTest_TR09;
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR09, ChMaterialShellANCF_3833_TR09> ShellTest_TR09;
         std::cout << "ChElementShellANCF_3833_TR09, ";
-        BeamTest_TR09.PrintTimingResults(num_steps);
+        ShellTest_TR09.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR10, ChMaterialShellANCF_3833_TR10> BeamTest_TR10;
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR10, ChMaterialShellANCF_3833_TR10> ShellTest_TR10;
         std::cout << "ChElementShellANCF_3833_TR10, ";
-        BeamTest_TR10.PrintTimingResults(num_steps);
+        ShellTest_TR10.PrintTimingResults(num_steps);
     }
+    {
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR11, ChMaterialShellANCF_3833_TR11> ShellTest_TR11;
+        std::cout << "ChElementShellANCF_3833_TR11, ";
+        ShellTest_TR11.PrintTimingResults(num_steps);
+    }
+
     return (0);
 }

@@ -34,6 +34,7 @@
 //#include "chrono/fea/ChElementBrickANCF_3843_TR08b.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR09.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR10.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR11.h"
 
 #include "chrono/fea/ChMesh.h"
 
@@ -41,11 +42,11 @@ using namespace chrono;
 using namespace chrono::fea;
 
 template <int num_elements, typename ElementVersion, typename MaterialVersion>
-class ANCFShellTest {
+class ANCFBrickTest {
   public:
-    ANCFShellTest();
+    ANCFBrickTest();
 
-    ~ANCFShellTest() { delete m_system; }
+    ~ANCFBrickTest() { delete m_system; }
 
     ChSystem* GetSystem() { return m_system; }
 
@@ -60,7 +61,7 @@ class ANCFShellTest {
 };
 
 template <int num_elements, typename ElementVersion, typename MaterialVersion>
-ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::ANCFShellTest() {
+ANCFBrickTest<num_elements, ElementVersion, MaterialVersion>::ANCFBrickTest() {
     m_system = new ChSystemSMC();
     m_system->Set_G_acc(ChVector<>(0, 0, -9.80665));
 
@@ -151,7 +152,7 @@ ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::ANCFShellTest() {
 }
 
 template <int num_elements, typename ElementVersion, typename MaterialVersion>
-void ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::PerturbNodes() {
+void ANCFBrickTest<num_elements, ElementVersion, MaterialVersion>::PerturbNodes() {
     auto MeshList = m_system->Get_meshlist();
     for (auto& Mesh : MeshList) {
         auto NodeList = Mesh->GetNodes();
@@ -170,7 +171,7 @@ void ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::PerturbNodes(
 }
 
 template <int num_elements, typename ElementVersion, typename MaterialVersion>
-double ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::GetInternalFrc() {
+double ANCFBrickTest<num_elements, ElementVersion, MaterialVersion>::GetInternalFrc() {
     ChTimer<> timer_internal_forces;
     timer_internal_forces.reset();
 
@@ -191,7 +192,7 @@ double ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::GetInternal
 }
 
 template <int num_elements, typename ElementVersion, typename MaterialVersion>
-double ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::GetJacobian() {
+double ANCFBrickTest<num_elements, ElementVersion, MaterialVersion>::GetJacobian() {
     ChTimer<> timer_KRM;
     timer_KRM.reset();
 
@@ -212,7 +213,7 @@ double ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::GetJacobian
 }
 
 template <int num_elements, typename ElementVersion, typename MaterialVersion>
-void ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::PrintTimingResults(int steps) {
+void ANCFBrickTest<num_elements, ElementVersion, MaterialVersion>::PrintTimingResults(int steps) {
     double TimeInternalFrc = GetInternalFrc();
     double TimeKRM = GetJacobian();
 
@@ -250,57 +251,62 @@ int main(int argc, char* argv[]) {
                  "Calc Time (ms)"
               << std::endl;
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR01, ChMaterialBrickANCF_3843_TR01> BeamTest_TR01;
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR01, ChMaterialBrickANCF_3843_TR01> BrickTest_TR01;
         std::cout << "ChElementBrickANCF_3843_TR01, ";
-        BeamTest_TR01.PrintTimingResults(num_steps);
+        BrickTest_TR01.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR02, ChMaterialBrickANCF_3843_TR02> BeamTest_TR02;
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR02, ChMaterialBrickANCF_3843_TR02> BrickTest_TR02;
         std::cout << "ChElementBrickANCF_3843_TR02, ";
-        BeamTest_TR02.PrintTimingResults(num_steps);
+        BrickTest_TR02.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR03, ChMaterialBrickANCF_3843_TR03> BeamTest_TR03;
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR03, ChMaterialBrickANCF_3843_TR03> BrickTest_TR03;
         std::cout << "ChElementBrickANCF_3843_TR03, ";
-        BeamTest_TR03.PrintTimingResults(num_steps);
+        BrickTest_TR03.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR04, ChMaterialBrickANCF_3843_TR04> BeamTest_TR04;
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR04, ChMaterialBrickANCF_3843_TR04> BrickTest_TR04;
         std::cout << "ChElementBrickANCF_3843_TR04, ";
-        BeamTest_TR04.PrintTimingResults(num_steps);
+        BrickTest_TR04.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR05, ChMaterialBrickANCF_3843_TR05> BeamTest_TR05;
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR05, ChMaterialBrickANCF_3843_TR05> BrickTest_TR05;
         std::cout << "ChElementBrickANCF_3843_TR05, ";
-        BeamTest_TR05.PrintTimingResults(num_steps);
+        BrickTest_TR05.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR06, ChMaterialBrickANCF_3843_TR06> BeamTest_TR06;
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR06, ChMaterialBrickANCF_3843_TR06> BrickTest_TR06;
         std::cout << "ChElementBrickANCF_3843_TR06, ";
-        BeamTest_TR06.PrintTimingResults(num_steps);
+        BrickTest_TR06.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR07, ChMaterialBrickANCF_3843_TR07> BeamTest_TR07;
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR07, ChMaterialBrickANCF_3843_TR07> BrickTest_TR07;
         std::cout << "ChElementBrickANCF_3843_TR07, ";
-        BeamTest_TR07.PrintTimingResults(num_steps);
+        BrickTest_TR07.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR08, ChMaterialBrickANCF_3843_TR08> BeamTest_TR08;
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR08, ChMaterialBrickANCF_3843_TR08> BrickTest_TR08;
         std::cout << "ChElementBrickANCF_3843_TR08, ";
-        BeamTest_TR08.PrintTimingResults(num_steps);
+        BrickTest_TR08.PrintTimingResults(num_steps);
     }
-    //ANCFShellTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR08b, ChMaterialBrickANCF_3843_TR08b> BeamTest_TR08b;
+    //ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR08b, ChMaterialBrickANCF_3843_TR08b> BrickTest_TR08b;
     //std::cout << "ChElementBrickANCF_3843_TR08b, ";
-    //BeamTest_TR08b.PrintTimingResults(num_steps);
+    //BrickTest_TR08b.PrintTimingResults(num_steps);
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR09, ChMaterialBrickANCF_3843_TR09> BeamTest_TR09;
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR09, ChMaterialBrickANCF_3843_TR09> BrickTest_TR09;
         std::cout << "ChElementBrickANCF_3843_TR09, ";
-        BeamTest_TR09.PrintTimingResults(num_steps);
+        BrickTest_TR09.PrintTimingResults(num_steps);
     }
     {
-        ANCFShellTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR10, ChMaterialBrickANCF_3843_TR10> BeamTest_TR10;
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR10, ChMaterialBrickANCF_3843_TR10> BrickTest_TR10;
         std::cout << "ChElementBrickANCF_3843_TR10, ";
-        BeamTest_TR10.PrintTimingResults(num_steps);
+        BrickTest_TR10.PrintTimingResults(num_steps);
+    }
+    {
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR11, ChMaterialBrickANCF_3843_TR11> BrickTest_TR11;
+        std::cout << "ChElementBrickANCF_3843_TR11, ";
+        BrickTest_TR11.PrintTimingResults(num_steps);
     }
 
     return (0);
