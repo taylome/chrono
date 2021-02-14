@@ -404,7 +404,7 @@ class ChApi ChElementBeamANCF_TR11 : public ChElementBeam, public ChLoadableU, p
     StrainFormulation m_strain_form;                      ///< Strain formulation
     ChMatrixNMc<double, 9, 3> m_e0_bar;  ///< Element Position Coordinate Matrix for the Reference Configuration
 
-    ChMatrixNM<double, 81, 81> m_Ccompact;
+    ChMatrixNM<double, 729, 9> m_Ccompact;
     ChMatrixNM<double, 27, 27> m_K1;
     ChMatrixNM<double, 27, 27> m_K2;
 

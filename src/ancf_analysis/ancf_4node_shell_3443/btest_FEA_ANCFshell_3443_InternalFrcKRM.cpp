@@ -218,8 +218,8 @@ void ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::PrintTimingRe
 
     for (auto i = 0; i < steps; i++) {
         PerturbNodes();
-        //TimeInternalFrc += GetInternalFrc();
-        TimeKRM += GetJacobian();
+        TimeInternalFrc += GetInternalFrc();
+        //TimeKRM += GetJacobian();
     }
 
     Timer_Total.stop();

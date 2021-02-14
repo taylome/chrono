@@ -143,21 +143,25 @@ void ChElementBeamANCF_TR11::ComputeKRMmatricesGlobal(ChMatrixRef H, double Kfac
 
     H = Kfactor * (m_K1 + m_K2) + Rfactor * m_2Alpha * m_K2;
 
+    ChMatrixNM<double, 3, 3> Block;
     for (unsigned int i = 0; i < 9; i++) {
         for (unsigned int k = 0; k < 9; k++) {
             double d = 0;
+            Block.setZero();
             for (unsigned int s = 0; s < 9; s++) {
                 d += e_bar_plus_e_bar_dot.row(s) * e_bar.transpose() *
-                     m_Ccompact.block<1, 9>(k + 9 * i, 9 * s).transpose();
+                     m_Ccompact.block<1, 9>(k + 9 * s + 81 * i, 0).transpose();
 
-                H.block<3, 3>(3 * i, 3 * k) -= Kfactor * e_bar.transpose() * m_Ccompact.block<9, 1>(9 * i, k + 9 * s) *
-                                               e_bar_plus_e_bar_dot.row(s);
+                Block -= Kfactor * e_bar.transpose() * m_Ccompact.block<9, 1>(9 * s + 81 * i, k) *
+                         e_bar_plus_e_bar_dot.row(s);
             }
 
             d *= Kfactor;
-            H(3 * i, 3 * k) -= d;
-            H(1 + 3 * i, 1 + 3 * k) -= d;
-            H(2 + 3 * i, 2 + 3 * k) -= d;
+            Block(0, 0) -= d;
+            Block(1, 1) -= d;
+            Block(2, 2) -= d;
+
+            H.block<3, 3>(3 * i, 3 * k) += Block;
         }
     }
 
@@ -294,7 +298,7 @@ void ChElementBeamANCF_TR11::PrecomputeInternalForceMatricesWeights() {
                     for (unsigned int j = 0; j < 9; j++) {
                         for (unsigned int k = 0; k < 6; k++) {
                             for (unsigned int l = 0; l < 6; l++) {
-                                m_Ccompact.block<9, 9>(9 * i, 9 * j) +=
+                                m_Ccompact.block<9, 9>(9 * j + 81 * i, 0) +=
                                     J_0xi.determinant() * GQ_weight * 2 *
                                     epsilion_matrices.block<1, 9>(i + 9 * k, 0).transpose() * D(k, l) *
                                     epsilion_matrices.block<9, 1>(9 * l, j).transpose();
@@ -344,7 +348,7 @@ void ChElementBeamANCF_TR11::PrecomputeInternalForceMatricesWeights() {
             for (unsigned int j = 0; j < 9; j++) {
                 for (unsigned int k = 0; k < 6; k++) {
                     for (unsigned int l = 0; l < 6; l++) {
-                        m_Ccompact.block<9, 9>(9 * i, 9 * j) +=
+                        m_Ccompact.block<9, 9>(9 * j + 81 * i, 0) +=
                             J_0xi.determinant() * GQ_weight * 2 *
                             epsilion_matrices.block<1, 9>(i + 9 * k, 0).transpose() * D(k, l) *
                             epsilion_matrices.block<9, 1>(9 * l, j).transpose();
@@ -406,15 +410,13 @@ void ChElementBeamANCF_TR11::ComputeInternalForces(ChVectorDynamic<>& Fi) {
 void ChElementBeamANCF_TR11::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
                                                           const ChMatrixNMc<double, 9, 3>& e_bar,
                                                           const ChVectorN<double, 27>& e_dot) {
-    for (unsigned int i = 0; i < 27; i++) {
-        for (unsigned int j = 0; j < 27; j++) {
-            if (i > j) {
-                m_K2(i, j) = m_K2(j, i);
-            } else {
-                m_K2(i, j) =
-                    -e_bar.col(i % 3).transpose() *
-                    m_Ccompact.block<9, 9>(9 * (std::ceil((i + 1.0) / 3.0) - 1), 9 * (std::ceil((j + 1.0) / 3.0) - 1)) *
-                    e_bar.col(j % 3);
+    ChMatrixNM<double, 3, 3> Block;
+    for (unsigned int i = 0; i < 9; i++) {
+        for (unsigned int j = 0; j < 9; j++) {
+            Block = -e_bar.transpose() * m_Ccompact.block<9, 9>(9 * j + 81 * i, 0) * e_bar;
+            m_K2.block<3, 3>(3 * i, 3 * j) = Block;
+            if (i != j) {
+                m_K2.block<3, 3>(3 * j, 3 * i) = Block.transpose();
             }
         }
     }

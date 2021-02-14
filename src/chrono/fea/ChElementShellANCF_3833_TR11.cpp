@@ -57,9 +57,9 @@ ChElementShellANCF_3833_TR11::ChElementShellANCF_3833_TR11()
     : m_gravity_on(false), m_lenX(0), m_lenY(0), m_thicknessZ(0), m_Alpha(0), m_damping_enabled(false) {
     m_nodes.resize(8);
 
-    m_Ccompact.resize(576, 576);  // N^2xN^2
-    m_K1.resize(72, 72);          // 3Nx3N
-    m_K2.resize(72, 72);          // 3Nx3N
+    m_Ccompact.resize(13824, 24);  // N^3xN
+    m_K1.resize(72, 72);           // 3Nx3N
+    m_K2.resize(72, 72);           // 3Nx3N
 
     m_Ccompact.setZero();
     m_K1.setZero();
@@ -197,22 +197,25 @@ void ChElementShellANCF_3833_TR11::ComputeKRMmatricesGlobal(ChMatrixRef H,
 
     H = Kfactor * (m_K1 + m_K2) + Rfactor * m_2Alpha * m_K2;
 
+    ChMatrixNM<double, 3, 3> Block;
     for (unsigned int i = 0; i < 24; i++) {
         for (unsigned int k = 0; k < 24; k++) {
             double d = 0;
+            Block.setZero();
             for (unsigned int s = 0; s < 24; s++) {
                 d += e_bar_plus_e_bar_dot.row(s) * e_bar.transpose() *
-                     m_Ccompact.block<1, 24>(k + 24 * i, 24 * s).transpose();
+                     m_Ccompact.block<1, 24>(k + 24 * s + 576 * i, 0).transpose();
 
-                H.block<3, 3>(3 * i, 3 * k) -= Kfactor * e_bar.transpose() *
-                                               m_Ccompact.block<24, 1>(24 * i, k + 24 * s) *
-                                               e_bar_plus_e_bar_dot.row(s);
+                Block -= Kfactor * e_bar.transpose() * m_Ccompact.block<24, 1>(24 * s + 576 * i, k) *
+                         e_bar_plus_e_bar_dot.row(s);
             }
 
             d *= Kfactor;
-            H(3 * i, 3 * k) -= d;
-            H(1 + 3 * i, 1 + 3 * k) -= d;
-            H(2 + 3 * i, 2 + 3 * k) -= d;
+            Block(0, 0) -= d;
+            Block(1, 1) -= d;
+            Block(2, 2) -= d;
+
+            H.block<3, 3>(3 * i, 3 * k) += Block;
         }
     }
 
@@ -372,7 +375,7 @@ void ChElementShellANCF_3833_TR11::PrecomputeInternalForceMatricesWeights() {
                     for (unsigned int j = 0; j < 24; j++) {
                         for (unsigned int k = 0; k < 6; k++) {
                             for (unsigned int l = 0; l < 6; l++) {
-                                m_Ccompact.block<24, 24>(24 * i, 24 * j) +=
+                                m_Ccompact.block<24, 24>(24 * j + 576 * i, 0) +=
                                     J_0xi.determinant() * GQ_weight * 2 *
                                     epsilion_matrices.block<1, 24>(i + 24 * k, 0).transpose() * D(k, l) *
                                     epsilion_matrices.block<24, 1>(24 * l, j).transpose();
@@ -431,15 +434,15 @@ void ChElementShellANCF_3833_TR11::ComputeInternalForces(ChVectorDynamic<>& Fi) 
 void ChElementShellANCF_3833_TR11::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
                                                                 const MatrixNx3c& ebar,
                                                                 const Vector3N& edot) {
-    for (unsigned int i = 0; i < 72; i++) {
-        for (unsigned int j = 0; j < 72; j++) {
-            if (i > j) {
-                m_K2(i, j) = m_K2(j, i);
-            } else {
-                m_K2(i, j) = -ebar.col(i % 3).transpose() *
-                             m_Ccompact.block<24, 24>(24 * (std::ceil((i + 1.0) / 3.0) - 1),
-                                                      24 * (std::ceil((j + 1.0) / 3.0) - 1)) *
-                             ebar.col(j % 3);
+    ChMatrixNM<double, 3, 3> Block;
+    for (unsigned int i = 0; i < 24; i++) {
+        for (unsigned int j = 0; j < 24; j++) {
+            if (i <= j) {
+                Block = -ebar.transpose() * m_Ccompact.block<24, 24>(24 * j + 576 * i, 0) * ebar;
+                m_K2.block<3, 3>(3 * i, 3 * j) = Block;
+                if (i != j) {
+                    m_K2.block<3, 3>(3 * j, 3 * i) = Block.transpose();
+                }
             }
         }
     }
