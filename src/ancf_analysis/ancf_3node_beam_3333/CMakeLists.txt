@@ -1,8 +1,8 @@
 set(TESTS
-	btest_FEA_ANCFbeam3_SmallDisplacement
-	btest_FEA_ANCFbeam3_InternalFrcKRM
-	btest_FEA_ANCFbeam3_LargeDisplacement_3DPendulum
-	utest_FEA_ANCFbeam3_InternalFrcKRM
+	btest_FEA_ANCFbeam_3333_SmallDisplacement
+	btest_FEA_ANCFbeam_3333_InternalFrcKRM
+	btest_FEA_ANCFbeam_3333_LargeDisplacement_3DPendulum
+	utest_FEA_ANCFbeam_3333_InternalFrcKRM
     )
 
 # ------------------------------------------------------------------------------
