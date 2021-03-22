@@ -694,7 +694,7 @@ void ChElementShellANCF_3443_TR07::ComputeInternalJacobians(Matrix3Nx3N& Jacobia
         CalcCombinedCoordMatrix(ebar_ebardot);
 
         ComputeInternalForcesAtState(FiOrignal, ebar_ebardot);
-        for (unsigned int i = 0; i < 24; i++) {
+        for (unsigned int i = 0; i < 48; i++) {
             ebar_ebardot(i / 3, i % 3) = ebar_ebardot(i / 3, i % 3) + delta;
             ComputeInternalForcesAtState(FiDelta, ebar_ebardot);
             JacobianMatrix.col(i) = -Kfactor / delta * (FiDelta - FiOrignal);
@@ -711,7 +711,7 @@ void ChElementShellANCF_3443_TR07::ComputeInternalJacobians(Matrix3Nx3N& Jacobia
         CalcCoordMatrix(e_bar);
 
         ComputeInternalForcesAtStateNoDamping(FiOrignal, e_bar);
-        for (unsigned int i = 0; i < 24; i++) {
+        for (unsigned int i = 0; i < 48; i++) {
             e_bar(i / 3, i % 3) = e_bar(i / 3, i % 3) + delta;
             ComputeInternalForcesAtStateNoDamping(FiDelta, e_bar);
             JacobianMatrix.col(i) = -Kfactor / delta * (FiDelta - FiOrignal);
