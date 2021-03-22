@@ -22,6 +22,7 @@
 #include "chrono/solver/ChDirectSolverLS.h"
 
 #include "chrono/fea/ChElementShellANCF_8.h"
+#include "chrono/fea/ChElementShellANCF_3833_TR00.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR01.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR02.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR03.h"
@@ -4372,6 +4373,13 @@ int main(int argc, char* argv[]) {
         print_green("ChElementShellANCF_8 Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_8 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFOrgShellTest<ChElementShellANCF_3833_TR00, ChMaterialShellANCF> ChElementShellANCF_3833_TR00_test;
+    if (ChElementShellANCF_3833_TR00_test.RunElementChecks(1))
+        print_green("ChElementShellANCF_3833_TR00 Element Checks = PASSED\n");
+    else
+        print_red("ChElementShellANCF_3833_TR00 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellTest<ChElementShellANCF_3833_TR01, ChMaterialShellANCF_3833_TR01> ChElementShellANCF_3833_TR01_test;
