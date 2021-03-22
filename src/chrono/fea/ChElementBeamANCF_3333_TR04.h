@@ -22,29 +22,29 @@
 // elements in the absolute nodal coordinate formulation.In: Proceedings of the
 // Multibody Dynamics Eccomas thematic Conference, Madrid(2005)
 // =============================================================================
-// TR06 = a Gerstmayr style implementation of the element with pre-calculation
-//     of the terms needed for the generalized internal force calculation with
-//     an analytical Jacobian that is integrated across GQ points one at a time
+// TR04 = a Gerstmayr style implementation of the element with no pre-calculation
+//     of the terms needed for the generalized internal force calculation
 //
-//  Mass Matrix = Constant, pre-calculated 9x9 matrix
+//  Mass Matrix = Constant, pre-calculated 27x27 matrix
 //
 //  Generalized Force due to gravity = Constant 27x1 Vector
 //     (assumption that gravity is constant too)
 //
 //  Generalized Internal Force Vector = Calculated using the Gerstmayr method:
 //     Dense Math: e_bar = 3x9 and S_bar = 9x1
+//     Inverse of the Element Jacobian (J_0xi) is generated from e0 every time
 //     Math is a translation from the method presented by Gerstmayr and Shabana
 //     1 less than "Full Integration" Number of GQ Integration Points (4x2x2)
 //     GQ integration is performed one GQ point at a time
-//     Pre-calculation of terms for the generalized internal force calculation
+//     No pre-calculation of terms for the generalized internal force calculation
 //
-//  Jacobian of the Generalized Internal Force Vector = Analytical Jacobian that
-//     is integrated across GQ points one at a time
+//  Jacobian of the Generalized Internal Force Vector = Calculated by numeric
+//     differentiation
 //
 // =============================================================================
 
-#ifndef CHELEMENTBEAMANCFTR06_H
-#define CHELEMENTBEAMANCFTR06_H
+#ifndef CHELEMENTBEAMANCF3333TR04_H
+#define CHELEMENTBEAMANCF3333TR04_H
 
 #include <vector>
 
@@ -60,10 +60,10 @@ namespace fea {
 
 /// Material definition.
 /// This class implements material properties for an ANCF Beam.
-class ChApi ChMaterialBeamANCF_TR06 {
+class ChApi ChMaterialBeamANCF_3333_TR04 {
   public:
     /// Construct an isotropic material.
-    ChMaterialBeamANCF_TR06(double rho,        ///< material density
+    ChMaterialBeamANCF_3333_TR04(double rho,        ///< material density
                             double E,          ///< Young's modulus
                             double nu,         ///< Poisson ratio
                             const double& k1,  ///< Shear correction factor along beam local y axis
@@ -71,7 +71,7 @@ class ChApi ChMaterialBeamANCF_TR06 {
     );
 
     /// Construct a (possibly) orthotropic material.
-    ChMaterialBeamANCF_TR06(double rho,            ///< material density
+    ChMaterialBeamANCF_3333_TR04(double rho,            ///< material density
                             const ChVector<>& E,   ///< elasticity moduli (E_x, E_y, E_z)
                             const ChVector<>& nu,  ///< Poisson ratios (nu_xy, nu_xz, nu_yz)
                             const ChVector<>& G,   ///< shear moduli (G_xy, G_xz, G_yz)
@@ -115,7 +115,7 @@ class ChApi ChMaterialBeamANCF_TR06 {
 /// </pre>
 /// where C is the third and central node.
 
-class ChApi ChElementBeamANCF_TR06 : public ChElementBeam, public ChLoadableU, public ChLoadableUVW {
+class ChApi ChElementBeamANCF_3333_TR04 : public ChElementBeam, public ChLoadableU, public ChLoadableUVW {
   public:
     using ShapeVector = ChMatrixNM<double, 1, 9>;
 
@@ -125,8 +125,8 @@ class ChApi ChElementBeamANCF_TR06 : public ChElementBeam, public ChLoadableU, p
     template <typename T, int M, int N>
     using ChMatrixNMc = Eigen::Matrix<T, M, N, Eigen::ColMajor>;
 
-    ChElementBeamANCF_TR06();
-    ~ChElementBeamANCF_TR06() {}
+    ChElementBeamANCF_3333_TR04();
+    ~ChElementBeamANCF_3333_TR04() {}
 
     /// Get the number of nodes used by this element.
     virtual int GetNnodes() override { return 3; }
@@ -150,7 +150,7 @@ class ChApi ChElementBeamANCF_TR06 : public ChElementBeam, public ChLoadableU, p
     }
 
     /// Specify the element material.
-    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF_TR06> beam_mat) { m_material = beam_mat; }
+    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF_3333_TR04> beam_mat) { m_material = beam_mat; }
 
     /// Access the n-th node of this element.
     virtual std::shared_ptr<ChNodeFEAbase> GetNodeN(int n) override { return m_nodes[n]; }
@@ -165,7 +165,7 @@ class ChApi ChElementBeamANCF_TR06 : public ChElementBeam, public ChLoadableU, p
     std::shared_ptr<ChNodeFEAxyzDD> GetNodeC() const { return m_nodes[2]; }
 
     /// Return the material.
-    std::shared_ptr<ChMaterialBeamANCF_TR06> GetMaterial() const { return m_material; }
+    std::shared_ptr<ChMaterialBeamANCF_3333_TR04> GetMaterial() const { return m_material; }
 
     /// Turn gravity on/off.
     void SetGravityOn(bool val) { m_gravity_on = val; }
@@ -240,18 +240,18 @@ class ChApi ChElementBeamANCF_TR06 : public ChElementBeam, public ChLoadableU, p
                                             chrono::ChVector<double>&) override {}
 
     /// Gets the xyz displacement of a point on the beam line,
-    /// and the rotation RxRyRz of section plane, at abscissa 'eta'.
-    /// Note, eta=-1 at node1, eta=+1 at node2.
+    /// and the rotation RxRyRz of section plane, at abscissa 'xi'.
+    /// Note, xi=-1 at node1, xi=+1 at node2.
     /// Note, 'displ' is the displ.state of 2 nodes, ex. get it as GetStateBlock()
     /// Results are not corotated.
-    virtual void EvaluateSectionDisplacement(const double eta, ChVector<>& u_displ, ChVector<>& u_rotaz) override {}
+    virtual void EvaluateSectionDisplacement(const double xi, ChVector<>& u_displ, ChVector<>& u_rotaz) override {}
 
     /// Gets the absolute xyz position of a point on the beam line,
     /// and the absolute rotation of section plane, at abscissa 'xi'.
-    /// Note, xi=-1 at node1, xi=+1 at node2.
+    /// Note, eta=-1 at node1, eta=+1 at node2.
     /// Note, 'displ' is the displ.state of 2 nodes, ex. get it as GetStateBlock()
     /// Results are corotated (expressed in world reference)
-    virtual void EvaluateSectionFrame(const double xi, ChVector<>& point, ChQuaternion<>& rot) override;
+    virtual void EvaluateSectionFrame(const double eta, ChVector<>& point, ChQuaternion<>& rot) override;
 
     // Functions for ChLoadable interface
     // ----------------------------------
@@ -338,8 +338,6 @@ class ChApi ChElementBeamANCF_TR06 : public ChElementBeam, public ChLoadableU, p
     /// a constant density material are assumed
     void ComputeMassMatrixAndGravityForce(const ChVector<>& g_acc);
 
-    void PrecomputeInternalForceMatricesWeights();
-
     // Internal computations
     // ---------------------
 
@@ -351,11 +349,35 @@ class ChApi ChElementBeamANCF_TR06 : public ChElementBeam, public ChLoadableU, p
     /// stiffness matrix H in the function ComputeKRMmatricesGlobal().
     void ComputeInternalJacobians(ChMatrixNM<double, 27, 27>& JacobianMatrix, double Kfactor, double Rfactor);
 
-    // Calculate the calculate the Jacobian of the internal force integrand with damping included
-    void ComputeInternalJacobianDamping(ChMatrixRef& H, double Kfactor, double Rfactor, double Mfactor);
+    // Calculate the calculate the generalized internal force integrand at a single point (called for Gauss-Quadrature
+    // integration) - Diagonal Stiffness Matrix
+    void ComputeInternalForcesSingleGQPnt(ChVectorN<double, 27>& Qi,
+                                          double xi,
+                                          double eta,
+                                          double zeta,
+                                          const ChVectorN<double, 6>& D0,
+                                          const ChMatrixNM<double, 3, 9>& ebar,
+                                          const ChMatrixNM<double, 3, 9>& ebardot);
 
-    // Calculate the calculate the Jacobian of the internal force integrand without damping included
-    void ComputeInternalJacobianNoDamping(ChMatrixRef& H, double Kfactor, double Mfactor);
+    // Calculate the calculate the generalized internal force integrand at a single point (called for Gauss-Quadrature
+    // integration) - Stiffness Matrix with only upper 3x3 terms
+    void ComputeInternalForcesSingleGQPnt(ChVectorN<double, 27>& Qi,
+                                          double xi,
+                                          double eta,
+                                          double zeta,
+                                          const ChMatrix33<double>& Dv,
+                                          const ChMatrixNM<double, 3, 9>& ebar,
+                                          const ChMatrixNM<double, 3, 9>& ebardot);
+
+    // Calculate the calculate the generalized internal force integrand at a single point (called for Gauss-Quadrature
+    // integration) - General Stiffness Matrix
+    void ComputeInternalForcesSingleGQPnt(ChVectorN<double, 27>& Qi,
+                                          double xi,
+                                          double eta,
+                                          double zeta,
+                                          const ChMatrixNM<double, 6, 6>& D,
+                                          const ChMatrixNM<double, 3, 9>& ebar,
+                                          const ChMatrixNM<double, 3, 9>& ebardot);
 
     // Calculate the generalized internal force for the element given the provided current state coordinates
     void ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
@@ -424,18 +446,10 @@ class ChApi ChElementBeamANCF_TR06 : public ChElementBeam, public ChLoadableU, p
     bool m_damping_enabled;                                 ///< Flag to run internal force damping calculations
     bool m_gravity_on;                                      ///< enable/disable gravity calculation
     ChVectorN<double, 27> m_GravForce;                      ///< Gravity Force
-    ChMatrixNM<double, 9, 9> m_MassMatrix;                  ///< mass matrix
-    std::shared_ptr<ChMaterialBeamANCF_TR06> m_material;    ///< beam material
+    ChMatrixNM<double, 27, 27> m_MassMatrix;                ///< mass matrix
+    std::shared_ptr<ChMaterialBeamANCF_3333_TR04> m_material;    ///< beam material
     StrainFormulation m_strain_form;                        ///< Strain formulation
     ChMatrixNM<double, 3, 9> m_ebar0;  ///< Element Position Coordinate Vector for the Reference Configuration
-    ChMatrixNMc<double, 9, 48> m_SD_precompute_D0;  ///< Precomputed corrected normalized shape function derivative
-                                                    ///< matrices for no Poisson Effect
-    ChVectorN<double, 16> m_GQWeight_det_J_0xi_D0;  ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale
-                                                    ///< factors for no Poisson Effect
-    ChMatrixNMc<double, 9, 12> m_SD_precompute_Dv;  ///< Precomputed corrected normalized shape function derivative
-                                                    ///< matrices for Poisson Effect on the beam axis only
-    ChVectorN<double, 4> m_GQWeight_det_J_0xi_Dv;   ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale
-                                                    ///< factor for Poisson Effect on the beam axis only
 
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

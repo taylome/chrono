@@ -22,7 +22,7 @@
 
 #include "chrono/core/ChQuadrature.h"
 #include "chrono/physics/ChSystem.h"
-#include "chrono/fea/ChElementBeamANCF_TR00.h"
+#include "chrono/fea/ChElementBeamANCF_3333_TR00.h"
 #include <cmath>
 
 namespace chrono {
@@ -32,7 +32,7 @@ namespace fea {
 // Constructor
 // ------------------------------------------------------------------------------
 
-ChElementBeamANCF_TR00::ChElementBeamANCF_TR00() : m_gravity_on(false), m_thicknessY(0), m_thicknessZ(0), m_lenX(0), m_Alpha(0) {
+ChElementBeamANCF_3333_TR00::ChElementBeamANCF_3333_TR00() : m_gravity_on(false), m_thicknessY(0), m_thicknessZ(0), m_lenX(0), m_Alpha(0) {
     m_nodes.resize(3);
 }
 
@@ -40,7 +40,7 @@ ChElementBeamANCF_TR00::ChElementBeamANCF_TR00() : m_gravity_on(false), m_thickn
 // Set element nodes
 // ------------------------------------------------------------------------------
 
-void ChElementBeamANCF_TR00::SetNodes(std::shared_ptr<ChNodeFEAxyzDD> nodeA,
+void ChElementBeamANCF_3333_TR00::SetNodes(std::shared_ptr<ChNodeFEAxyzDD> nodeA,
                                  std::shared_ptr<ChNodeFEAxyzDD> nodeB,
                                  std::shared_ptr<ChNodeFEAxyzDD> nodeC) {
     assert(nodeA);
@@ -74,7 +74,7 @@ void ChElementBeamANCF_TR00::SetNodes(std::shared_ptr<ChNodeFEAxyzDD> nodeA,
 // -----------------------------------------------------------------------------
 
 // Initial element setup.
-void ChElementBeamANCF_TR00::SetupInitial(ChSystem* system) {
+void ChElementBeamANCF_3333_TR00::SetupInitial(ChSystem* system) {
     // Compute mass matrix and gravitational forces (constant)
     m_GaussScaling = (m_lenX * m_thicknessY * m_thicknessZ) / 8;
     ComputeMassMatrix();
@@ -83,12 +83,12 @@ void ChElementBeamANCF_TR00::SetupInitial(ChSystem* system) {
 }
 
 // State update.
-void ChElementBeamANCF_TR00::Update() {
+void ChElementBeamANCF_3333_TR00::Update() {
     ChElementGeneric::Update();
 }
 
 // Fill the D vector with the current field values at the element nodes.
-void ChElementBeamANCF_TR00::GetStateBlock(ChVectorDynamic<>& mD) {
+void ChElementBeamANCF_3333_TR00::GetStateBlock(ChVectorDynamic<>& mD) {
     mD.segment(0, 3) = m_nodes[0]->GetPos().eigen();
     mD.segment(3, 3) = m_nodes[0]->GetD().eigen();
     mD.segment(6, 3) = m_nodes[0]->GetDD().eigen();
@@ -102,7 +102,7 @@ void ChElementBeamANCF_TR00::GetStateBlock(ChVectorDynamic<>& mD) {
 
 // Calculate the global matrix H as a linear combination of K, R, and M:
 //   H = Mfactor * [M] + Kfactor * [K] + Rfactor * [R]
-void ChElementBeamANCF_TR00::ComputeKRMmatricesGlobal(ChMatrixRef H, double Kfactor, double Rfactor, double Mfactor) {
+void ChElementBeamANCF_3333_TR00::ComputeKRMmatricesGlobal(ChMatrixRef H, double Kfactor, double Rfactor, double Mfactor) {
     assert((H.rows() == 27) && (H.cols() == 27));
 
     // Calculate the linear combination Kfactor*[K] + Rfactor*[R]
@@ -115,7 +115,7 @@ void ChElementBeamANCF_TR00::ComputeKRMmatricesGlobal(ChMatrixRef H, double Kfac
 }
 
 // Return the mass matrix.
-void ChElementBeamANCF_TR00::ComputeMmatrixGlobal(ChMatrixRef M) {
+void ChElementBeamANCF_3333_TR00::ComputeMmatrixGlobal(ChMatrixRef M) {
     M = m_MassMatrix;
 }
 
@@ -124,19 +124,19 @@ void ChElementBeamANCF_TR00::ComputeMmatrixGlobal(ChMatrixRef M) {
 // -----------------------------------------------------------------------------
 
 /// This class defines the calculations for the integrand of the inertia matrix.
-class BeamANCF_TR00_Mass : public ChIntegrable3D<ChMatrixNM<double, 27, 27>> {
+class BeamANCF_3333_TR00_Mass : public ChIntegrable3D<ChMatrixNM<double, 27, 27>> {
   public:
-    BeamANCF_TR00_Mass(ChElementBeamANCF_TR00* element) : m_element(element) {}
-    ~BeamANCF_TR00_Mass() {}
+    BeamANCF_3333_TR00_Mass(ChElementBeamANCF_3333_TR00* element) : m_element(element) {}
+    ~BeamANCF_3333_TR00_Mass() {}
 
   private:
-    ChElementBeamANCF_TR00* m_element;
+    ChElementBeamANCF_3333_TR00* m_element;
 
     virtual void Evaluate(ChMatrixNM<double, 27, 27>& result, const double x, const double y, const double z) override;
 };
 
-void BeamANCF_TR00_Mass::Evaluate(ChMatrixNM<double, 27, 27>& result, const double x, const double y, const double z) {
-    ChElementBeamANCF_TR00::ShapeVector N;
+void BeamANCF_3333_TR00_Mass::Evaluate(ChMatrixNM<double, 27, 27>& result, const double x, const double y, const double z) {
+    ChElementBeamANCF_3333_TR00::ShapeVector N;
     m_element->ShapeFunctions(N, x, y, z);
 
     // S=[N1*eye(3) N2*eye(3) N3*eye(3) N4*eye(3) N5*eye(3) N6*eye(3) N7*eye(3) N8*eye(3) N9*eye(3)]
@@ -159,11 +159,11 @@ void BeamANCF_TR00_Mass::Evaluate(ChMatrixNM<double, 27, 27>& result, const doub
     result *= detJ0 * (m_element->m_GaussScaling);
 };
 
-void ChElementBeamANCF_TR00::ComputeMassMatrix() {
+void ChElementBeamANCF_3333_TR00::ComputeMassMatrix() {
     m_MassMatrix.setZero();
 
     double rho = GetMaterial()->Get_rho();
-    BeamANCF_TR00_Mass myformula(this);
+    BeamANCF_3333_TR00_Mass myformula(this);
     ChMatrixNM<double, 27, 27> TempMassMatrix;
     TempMassMatrix.setZero();
     ChQuadrature::Integrate3D<ChMatrixNM<double, 27, 27>>(TempMassMatrix,  // result of integration will go there
@@ -177,7 +177,7 @@ void ChElementBeamANCF_TR00::ComputeMassMatrix() {
     m_MassMatrix += TempMassMatrix;
 }
 /// This class computes and adds corresponding masses to ElementGeneric member m_TotalMass
-void ChElementBeamANCF_TR00::ComputeNodalMass() {
+void ChElementBeamANCF_3333_TR00::ComputeNodalMass() {
     m_nodes[0]->m_TotalMass += m_MassMatrix(0, 0) + m_MassMatrix(0, 9) + m_MassMatrix(0, 18);
     m_nodes[1]->m_TotalMass += m_MassMatrix(9, 9) + m_MassMatrix(9, 0) + m_MassMatrix(9, 18);
     m_nodes[2]->m_TotalMass += m_MassMatrix(18, 18) + m_MassMatrix(18, 0) + m_MassMatrix(18, 9);
@@ -187,20 +187,20 @@ void ChElementBeamANCF_TR00::ComputeNodalMass() {
 // -----------------------------------------------------------------------------
 
 /// This class defines the calculations for the integrand of the element gravity forces
-class BeamANCF_TR00_Gravity : public ChIntegrable3D<ChVectorN<double, 27>> {
+class BeamANCF_3333_TR00_Gravity : public ChIntegrable3D<ChVectorN<double, 27>> {
   public:
-    BeamANCF_TR00_Gravity(ChElementBeamANCF_TR00* element, const ChVector<> gacc) : m_element(element), m_gacc(gacc) {}
-    ~BeamANCF_TR00_Gravity() {}
+    BeamANCF_3333_TR00_Gravity(ChElementBeamANCF_3333_TR00* element, const ChVector<> gacc) : m_element(element), m_gacc(gacc) {}
+    ~BeamANCF_3333_TR00_Gravity() {}
 
   private:
-    ChElementBeamANCF_TR00* m_element;
+    ChElementBeamANCF_3333_TR00* m_element;
     ChVector<> m_gacc;
 
     virtual void Evaluate(ChVectorN<double, 27>& result, const double x, const double y, const double z) override;
 };
 
-void BeamANCF_TR00_Gravity::Evaluate(ChVectorN<double, 27>& result, const double x, const double y, const double z) {
-    ChElementBeamANCF_TR00::ShapeVector N;
+void BeamANCF_3333_TR00_Gravity::Evaluate(ChVectorN<double, 27>& result, const double x, const double y, const double z) {
+    ChElementBeamANCF_3333_TR00::ShapeVector N;
     m_element->ShapeFunctions(N, x, y, z);
 
     double detJ0 = m_element->Calc_detJ0(x, y, z);
@@ -214,7 +214,7 @@ void BeamANCF_TR00_Gravity::Evaluate(ChVectorN<double, 27>& result, const double
     result *= detJ0 * m_element->m_GaussScaling;
 };
 
-void ChElementBeamANCF_TR00::ComputeGravityForce(const ChVector<>& g_acc) {
+void ChElementBeamANCF_3333_TR00::ComputeGravityForce(const ChVector<>& g_acc) {
     //// RADU
     //// why set GravForce to zero when it's overwritten below?!?
     //// why even have Fgravity at all (instead of loading directly GravForce)?
@@ -222,7 +222,7 @@ void ChElementBeamANCF_TR00::ComputeGravityForce(const ChVector<>& g_acc) {
     m_GravForce.setZero();
 
     double rho = GetMaterial()->Get_rho();
-    BeamANCF_TR00_Gravity myformula(this, g_acc);
+    BeamANCF_3333_TR00_Gravity myformula(this, g_acc);
     ChVectorN<double, 27> Fgravity;
     Fgravity.setZero();
     ChQuadrature::Integrate3D<ChVectorN<double, 27>>(Fgravity,   // result of integration will go there
@@ -240,31 +240,31 @@ void ChElementBeamANCF_TR00::ComputeGravityForce(const ChVector<>& g_acc) {
 // Elastic force calculation
 // -----------------------------------------------------------------------------
 
-// The class BeamANCF_TR00_Force provides the integrand for the calculation of the internal forces
+// The class BeamANCF_3333_TR00_Force provides the integrand for the calculation of the internal forces
 // for one layer of an ANCF shell element.
 // The 27 entries in the integrand represent the internal force.
 
-class BeamANCF_TR00_Force : public ChIntegrable3D<ChVectorN<double, 27>> {
+class BeamANCF_3333_TR00_Force : public ChIntegrable3D<ChVectorN<double, 27>> {
   public:
-    BeamANCF_TR00_Force(ChElementBeamANCF_TR00* element) : m_element(element) {}
-    ~BeamANCF_TR00_Force() {}
+    BeamANCF_3333_TR00_Force(ChElementBeamANCF_3333_TR00* element) : m_element(element) {}
+    ~BeamANCF_3333_TR00_Force() {}
 
   private:
-    ChElementBeamANCF_TR00* m_element;
+    ChElementBeamANCF_3333_TR00* m_element;
 
     /// Evaluate (strainD'*strain)  at point x, include ANS and EAS.
     virtual void Evaluate(ChVectorN<double, 27>& result, const double x, const double y, const double z) override;
 };
 
-void BeamANCF_TR00_Force::Evaluate(ChVectorN<double, 27>& result, const double x, const double y, const double z) {
+void BeamANCF_3333_TR00_Force::Evaluate(ChVectorN<double, 27>& result, const double x, const double y, const double z) {
     // Element shape function
-    ChElementBeamANCF_TR00::ShapeVector N;
+    ChElementBeamANCF_3333_TR00::ShapeVector N;
     m_element->ShapeFunctions(N, x, y, z);
 
     // Determinant of position vector gradient matrix: Initial configuration
-    ChElementBeamANCF_TR00::ShapeVector Nx;
-    ChElementBeamANCF_TR00::ShapeVector Ny;
-    ChElementBeamANCF_TR00::ShapeVector Nz;
+    ChElementBeamANCF_3333_TR00::ShapeVector Nx;
+    ChElementBeamANCF_3333_TR00::ShapeVector Ny;
+    ChElementBeamANCF_3333_TR00::ShapeVector Nz;
     ChMatrixNM<double, 1, 3> Nx_d0;
     ChMatrixNM<double, 1, 3> Ny_d0;
     ChMatrixNM<double, 1, 3> Nz_d0;
@@ -500,34 +500,34 @@ void BeamANCF_TR00_Force::Evaluate(ChVectorN<double, 27>& result, const double x
     result = (tempC * strain) * (detJ0 * m_element->m_GaussScaling);
 }
 
-// The class BeamANCF_TR00_ForceNu provides the integrand for the calculation of the internal forces
+// The class BeamANCF_3333_TR00_ForceNu provides the integrand for the calculation of the internal forces
 // for one layer of an ANCF shell element.
 // The 27 entries in the integrand represent the internal force.
 
-class BeamANCF_TR00_ForceNu : public ChIntegrable1D<ChVectorN<double, 27>> {
+class BeamANCF_3333_TR00_ForceNu : public ChIntegrable1D<ChVectorN<double, 27>> {
   public:
-    BeamANCF_TR00_ForceNu(ChElementBeamANCF_TR00* element) : m_element(element) {}
-    ~BeamANCF_TR00_ForceNu() {}
+    BeamANCF_3333_TR00_ForceNu(ChElementBeamANCF_3333_TR00* element) : m_element(element) {}
+    ~BeamANCF_3333_TR00_ForceNu() {}
 
   private:
-    ChElementBeamANCF_TR00* m_element;
+    ChElementBeamANCF_3333_TR00* m_element;
 
     /// Evaluate (strainD'*strain)  at point x
     virtual void Evaluate(ChVectorN<double, 27>& result, const double x) override;
 };
 
-void BeamANCF_TR00_ForceNu::Evaluate(ChVectorN<double, 27>& result, const double x) {
+void BeamANCF_3333_TR00_ForceNu::Evaluate(ChVectorN<double, 27>& result, const double x) {
     // Element shape function
-    ChElementBeamANCF_TR00::ShapeVector N;
+    ChElementBeamANCF_3333_TR00::ShapeVector N;
     double y = 0;
     double z = 0;
 
     m_element->ShapeFunctions(N, x, y, z);
 
     // Determinant of position vector gradient matrix: Initial configuration
-    ChElementBeamANCF_TR00::ShapeVector Nx;
-    ChElementBeamANCF_TR00::ShapeVector Ny;
-    ChElementBeamANCF_TR00::ShapeVector Nz;
+    ChElementBeamANCF_3333_TR00::ShapeVector Nx;
+    ChElementBeamANCF_3333_TR00::ShapeVector Ny;
+    ChElementBeamANCF_3333_TR00::ShapeVector Nz;
     ChMatrixNM<double, 1, 3> Nx_d0;
     ChMatrixNM<double, 1, 3> Ny_d0;
     ChMatrixNM<double, 1, 3> Nz_d0;
@@ -749,7 +749,7 @@ void BeamANCF_TR00_ForceNu::Evaluate(ChVectorN<double, 27>& result, const double
     result = (tempC * strain) * (detJ0 * m_element->GetLengthX() / 2);
 }
 
-void ChElementBeamANCF_TR00::ComputeInternalForces(ChVectorDynamic<>& Fi) {
+void ChElementBeamANCF_3333_TR00::ComputeInternalForces(ChVectorDynamic<>& Fi) {
     // Current nodal coordinates and velocities
     CalcCoordMatrix(m_d);
     CalcCoordDerivMatrix(m_d_dt);
@@ -758,7 +758,7 @@ void ChElementBeamANCF_TR00::ComputeInternalForces(ChVectorDynamic<>& Fi) {
     Fi.setZero();
 
     // Three-dimensional integration of Poisson-less terms
-    BeamANCF_TR00_Force formula(this);
+    BeamANCF_3333_TR00_Force formula(this);
     ChVectorN<double, 27> result;
     result.setZero();
     ChQuadrature::Integrate3D<ChVectorN<double, 27>>(result,   // result of integration
@@ -772,9 +772,9 @@ void ChElementBeamANCF_TR00::ComputeInternalForces(ChVectorDynamic<>& Fi) {
     // Accumulate internal force
     Fi -= result;
 
-    if (GetStrainFormulation() == ChElementBeamANCF_TR00::StrainFormulation::CMPoisson) {
+    if (GetStrainFormulation() == ChElementBeamANCF_3333_TR00::StrainFormulation::CMPoisson) {
         // One-dimensional integration of Poisson terms (over centerline)
-        BeamANCF_TR00_ForceNu formula_Nu(this);
+        BeamANCF_3333_TR00_ForceNu formula_Nu(this);
         result.setZero();
         ChQuadrature::Integrate1D<ChVectorN<double, 27>>(result,      // result of integration
                                                          formula_Nu,  // integrand formula
@@ -795,22 +795,22 @@ void ChElementBeamANCF_TR00::ComputeInternalForces(ChVectorDynamic<>& Fi) {
 // Jacobians of internal forces
 // -----------------------------------------------------------------------------
 
-// The class BeamANCF_TR00_Jacobian provides the integrand for the calculation of the Jacobians
+// The class BeamANCF_3333_TR00_Jacobian provides the integrand for the calculation of the Jacobians
 // (stiffness and damping matrices) of the internal forces for one layer of an ANCF
 // shell element.
 // The integrated quantity represents the 27x27 Jacobian
 //      Kfactor * [K] + Rfactor * [R]
 
-class BeamANCF_TR00_Jacobian : public ChIntegrable3D<ChMatrixNM<double, 27, 27>> {
+class BeamANCF_3333_TR00_Jacobian : public ChIntegrable3D<ChMatrixNM<double, 27, 27>> {
   public:
-    BeamANCF_TR00_Jacobian(ChElementBeamANCF_TR00* element,  // Containing element
+    BeamANCF_3333_TR00_Jacobian(ChElementBeamANCF_3333_TR00* element,  // Containing element
                       double Kfactor,              // Scaling coefficient for stiffness component
                       double Rfactor               // Scaling coefficient for damping component
                       )
         : m_element(element), m_Kfactor(Kfactor), m_Rfactor(Rfactor) {}
 
   private:
-    ChElementBeamANCF_TR00* m_element;
+    ChElementBeamANCF_3333_TR00* m_element;
     double m_Kfactor;
     double m_Rfactor;
 
@@ -818,15 +818,15 @@ class BeamANCF_TR00_Jacobian : public ChIntegrable3D<ChMatrixNM<double, 27, 27>>
     virtual void Evaluate(ChMatrixNM<double, 27, 27>& result, const double x, const double y, const double z) override;
 };
 
-void BeamANCF_TR00_Jacobian::Evaluate(ChMatrixNM<double, 27, 27>& result, const double x, const double y, const double z) {
+void BeamANCF_3333_TR00_Jacobian::Evaluate(ChMatrixNM<double, 27, 27>& result, const double x, const double y, const double z) {
     // Element shape function
-    ChElementBeamANCF_TR00::ShapeVector N;
+    ChElementBeamANCF_3333_TR00::ShapeVector N;
     m_element->ShapeFunctions(N, x, y, z);
 
     // Determinant of position vector gradient matrix: Initial configuration
-    ChElementBeamANCF_TR00::ShapeVector Nx;
-    ChElementBeamANCF_TR00::ShapeVector Ny;
-    ChElementBeamANCF_TR00::ShapeVector Nz;
+    ChElementBeamANCF_3333_TR00::ShapeVector Nx;
+    ChElementBeamANCF_3333_TR00::ShapeVector Ny;
+    ChElementBeamANCF_3333_TR00::ShapeVector Nz;
     ChMatrixNM<double, 1, 3> Nx_d0;
     ChMatrixNM<double, 1, 3> Ny_d0;
     ChMatrixNM<double, 1, 3> Nz_d0;
@@ -1119,16 +1119,16 @@ void BeamANCF_TR00_Jacobian::Evaluate(ChMatrixNM<double, 27, 27>& result, const 
     result *= detJ0 * m_element->m_GaussScaling;
 }
 
-class BeamANCF_TR00_JacobianNu : public ChIntegrable1D<ChMatrixNM<double, 27, 27>> {
+class BeamANCF_3333_TR00_JacobianNu : public ChIntegrable1D<ChMatrixNM<double, 27, 27>> {
   public:
-    BeamANCF_TR00_JacobianNu(ChElementBeamANCF_TR00* element,  // Containing element
+    BeamANCF_3333_TR00_JacobianNu(ChElementBeamANCF_3333_TR00* element,  // Containing element
                         double Kfactor,              // Scaling coefficient for stiffness component
                         double Rfactor               // Scaling coefficient for damping component
                         )
         : m_element(element), m_Kfactor(Kfactor), m_Rfactor(Rfactor) {}
 
   private:
-    ChElementBeamANCF_TR00* m_element;
+    ChElementBeamANCF_3333_TR00* m_element;
     double m_Kfactor;
     double m_Rfactor;
 
@@ -1136,17 +1136,17 @@ class BeamANCF_TR00_JacobianNu : public ChIntegrable1D<ChMatrixNM<double, 27, 27
     virtual void Evaluate(ChMatrixNM<double, 27, 27>& result, const double x) override;
 };
 
-void BeamANCF_TR00_JacobianNu::Evaluate(ChMatrixNM<double, 27, 27>& result, const double x) {
+void BeamANCF_3333_TR00_JacobianNu::Evaluate(ChMatrixNM<double, 27, 27>& result, const double x) {
     // Element shape function
-    ChElementBeamANCF_TR00::ShapeVector N;
+    ChElementBeamANCF_3333_TR00::ShapeVector N;
     double y = 0;
     double z = 0;
     m_element->ShapeFunctions(N, x, y, z);
 
     // Determinant of position vector gradient matrix: Initial configuration
-    ChElementBeamANCF_TR00::ShapeVector Nx;
-    ChElementBeamANCF_TR00::ShapeVector Ny;
-    ChElementBeamANCF_TR00::ShapeVector Nz;
+    ChElementBeamANCF_3333_TR00::ShapeVector Nx;
+    ChElementBeamANCF_3333_TR00::ShapeVector Ny;
+    ChElementBeamANCF_3333_TR00::ShapeVector Nz;
     ChMatrixNM<double, 1, 3> Nx_d0;
     ChMatrixNM<double, 1, 3> Ny_d0;
     ChMatrixNM<double, 1, 3> Nz_d0;
@@ -1435,7 +1435,7 @@ void BeamANCF_TR00_JacobianNu::Evaluate(ChMatrixNM<double, 27, 27>& result, cons
     result *= detJ0 * m_element->GetLengthX() / 2;
 }
 
-void ChElementBeamANCF_TR00::ComputeInternalJacobians(double Kfactor, double Rfactor) {
+void ChElementBeamANCF_3333_TR00::ComputeInternalJacobians(double Kfactor, double Rfactor) {
     // Note that the matrices with current nodal coordinates and velocities are
     // already available in m_d and m_d_dt (as set in ComputeInternalForces).
     // Similarly, the ANS strain and strain derivatives are already available in
@@ -1446,7 +1446,7 @@ void ChElementBeamANCF_TR00::ComputeInternalJacobians(double Kfactor, double Rfa
     m_JacobianMatrix.setZero();
 
     // Jacobian from diagonal terms D0 (three-dimensional)
-    BeamANCF_TR00_Jacobian formula(this, Kfactor, Rfactor);
+    BeamANCF_3333_TR00_Jacobian formula(this, Kfactor, Rfactor);
     ChMatrixNM<double, 27, 27> result;
     result.setZero();
     ChQuadrature::Integrate3D<ChMatrixNM<double, 27, 27>>(result,   // result of integration
@@ -1460,8 +1460,8 @@ void ChElementBeamANCF_TR00::ComputeInternalJacobians(double Kfactor, double Rfa
     m_JacobianMatrix = result;
 
     // Jacobian from diagonal terms Dv (one-dimensional)
-    if (GetStrainFormulation() == ChElementBeamANCF_TR00::StrainFormulation::CMPoisson) {
-        BeamANCF_TR00_JacobianNu formula_Nu(this, Kfactor, Rfactor);
+    if (GetStrainFormulation() == ChElementBeamANCF_3333_TR00::StrainFormulation::CMPoisson) {
+        BeamANCF_3333_TR00_JacobianNu formula_Nu(this, Kfactor, Rfactor);
         result.setZero();
         ChQuadrature::Integrate1D<ChMatrixNM<double, 27, 27>>(result,      // result of integration
                                                               formula_Nu,  // integrand formula
@@ -1480,7 +1480,7 @@ void ChElementBeamANCF_TR00::ComputeInternalJacobians(double Kfactor, double Rfa
 // Shape functions
 // -----------------------------------------------------------------------------
 
-void ChElementBeamANCF_TR00::ShapeFunctions(ShapeVector& N, double x, double y, double z) {
+void ChElementBeamANCF_3333_TR00::ShapeFunctions(ShapeVector& N, double x, double y, double z) {
     double b = GetThicknessY();
     double c = GetThicknessZ();
 
@@ -1495,7 +1495,7 @@ void ChElementBeamANCF_TR00::ShapeFunctions(ShapeVector& N, double x, double y, 
     N(8) = z * c / 2 * N(6);
 }
 
-void ChElementBeamANCF_TR00::ShapeFunctionsDerivativeX(ShapeVector& Nx, double x, double y, double z) {
+void ChElementBeamANCF_3333_TR00::ShapeFunctionsDerivativeX(ShapeVector& Nx, double x, double y, double z) {
     double L = GetLengthX();
     double b = GetThicknessY();
     double c = GetThicknessZ();
@@ -1511,7 +1511,7 @@ void ChElementBeamANCF_TR00::ShapeFunctionsDerivativeX(ShapeVector& Nx, double x
     Nx(8) = -(2 * c * x * z) / L;
 }
 
-void ChElementBeamANCF_TR00::ShapeFunctionsDerivativeY(ShapeVector& Ny, double x, double y, double z) {
+void ChElementBeamANCF_3333_TR00::ShapeFunctionsDerivativeY(ShapeVector& Ny, double x, double y, double z) {
     Ny(0) = 0;
     Ny(1) = (x * (x - 1)) / 2;
     Ny(2) = 0;
@@ -1523,7 +1523,7 @@ void ChElementBeamANCF_TR00::ShapeFunctionsDerivativeY(ShapeVector& Ny, double x
     Ny(8) = 0;
 }
 
-void ChElementBeamANCF_TR00::ShapeFunctionsDerivativeZ(ShapeVector& Nz, double x, double y, double z) {
+void ChElementBeamANCF_3333_TR00::ShapeFunctionsDerivativeZ(ShapeVector& Nz, double x, double y, double z) {
     Nz(0) = 0;
     Nz(1) = 0;
     Nz(2) = (x * (x - 1)) / 2;
@@ -1535,7 +1535,7 @@ void ChElementBeamANCF_TR00::ShapeFunctionsDerivativeZ(ShapeVector& Nz, double x
     Nz(8) = 1 - x * x;
 }
 
-void ChElementBeamANCF_TR00::Calc_Sxi_D(ChMatrixNM<double, 9, 3>& Sxi_D, double xi, double eta, double zeta) {
+void ChElementBeamANCF_3333_TR00::Calc_Sxi_D(ChMatrixNM<double, 9, 3>& Sxi_D, double xi, double eta, double zeta) {
     Sxi_D(0, 0) = xi - 0.5;
     Sxi_D(1, 0) = 0.25*m_thicknessY*eta*(2.0*xi - 1.0);
     Sxi_D(2, 0) = 0.25*m_thicknessZ*zeta*(2.0*xi - 1.0);
@@ -1570,7 +1570,7 @@ void ChElementBeamANCF_TR00::Calc_Sxi_D(ChMatrixNM<double, 9, 3>& Sxi_D, double 
 // -----------------------------------------------------------------------------
 // Helper functions
 // -----------------------------------------------------------------------------
-double ChElementBeamANCF_TR00::Calc_detJ0(double x,
+double ChElementBeamANCF_3333_TR00::Calc_detJ0(double x,
                                      double y,
                                      double z,
                                      ShapeVector& Nx,
@@ -1594,7 +1594,7 @@ double ChElementBeamANCF_TR00::Calc_detJ0(double x,
     return detJ0;
 }
 
-double ChElementBeamANCF_TR00::Calc_detJ0(double x, double y, double z) {
+double ChElementBeamANCF_3333_TR00::Calc_detJ0(double x, double y, double z) {
     ShapeVector Nx;
     ShapeVector Ny;
     ShapeVector Nz;
@@ -1605,7 +1605,7 @@ double ChElementBeamANCF_TR00::Calc_detJ0(double x, double y, double z) {
     return Calc_detJ0(x, y, z, Nx, Ny, Nz, Nx_d0, Ny_d0, Nz_d0);
 }
 
-void ChElementBeamANCF_TR00::CalcCoordMatrix(ChMatrixNM<double, 9, 3>& d) {
+void ChElementBeamANCF_3333_TR00::CalcCoordMatrix(ChMatrixNM<double, 9, 3>& d) {
     const ChVector<>& pA = m_nodes[0]->GetPos();
     const ChVector<>& dA = m_nodes[0]->GetD();
     const ChVector<>& ddA = m_nodes[0]->GetDD();
@@ -1647,7 +1647,7 @@ void ChElementBeamANCF_TR00::CalcCoordMatrix(ChMatrixNM<double, 9, 3>& d) {
     d(8, 2) = ddC.z();
 }
 
-void ChElementBeamANCF_TR00::CalcCoordDerivMatrix(ChVectorN<double, 27>& dt) {
+void ChElementBeamANCF_3333_TR00::CalcCoordDerivMatrix(ChVectorN<double, 27>& dt) {
     const ChVector<>& pA_dt = m_nodes[0]->GetPos_dt();
     const ChVector<>& dA_dt = m_nodes[0]->GetD_dt();
     const ChVector<>& ddA_dt = m_nodes[0]->GetDD_dt();
@@ -1694,7 +1694,7 @@ void ChElementBeamANCF_TR00::CalcCoordDerivMatrix(ChVectorN<double, 27>& dt) {
 // -----------------------------------------------------------------------------
 // Interface to ChElementShell base class
 // -----------------------------------------------------------------------------
-ChVector<> ChElementBeamANCF_TR00::EvaluateBeamSectionStrains() {
+ChVector<> ChElementBeamANCF_3333_TR00::EvaluateBeamSectionStrains() {
     // Element shape function
     ShapeVector N;
     this->ShapeFunctions(N, 0, 0, 0);
@@ -1821,11 +1821,11 @@ ChVector<> ChElementBeamANCF_TR00::EvaluateBeamSectionStrains() {
     return ChVector<>(strain(0), strain(1), strain(2));
 }
 
-void ChElementBeamANCF_TR00::EvaluateSectionDisplacement(const double eta, ChVector<>& u_displ, ChVector<>& u_rotaz) {
+void ChElementBeamANCF_3333_TR00::EvaluateSectionDisplacement(const double eta, ChVector<>& u_displ, ChVector<>& u_rotaz) {
     //// TODO?
 }
 
-void ChElementBeamANCF_TR00::EvaluateSectionFrame(const double eta, ChVector<>& point, ChQuaternion<>& rot) {
+void ChElementBeamANCF_3333_TR00::EvaluateSectionFrame(const double eta, ChVector<>& point, ChQuaternion<>& rot) {
     ChMatrixNM<double, 9, 3> mD;
     ShapeVector N;
     ShapeVector Nx;
@@ -1859,7 +1859,7 @@ void ChElementBeamANCF_TR00::EvaluateSectionFrame(const double eta, ChVector<>& 
 // -----------------------------------------------------------------------------
 
 // Gets all the DOFs packed in a single vector (position part).
-void ChElementBeamANCF_TR00::LoadableGetStateBlock_x(int block_offset, ChState& mD) {
+void ChElementBeamANCF_3333_TR00::LoadableGetStateBlock_x(int block_offset, ChState& mD) {
     mD.segment(block_offset + 0, 3) = m_nodes[0]->GetPos().eigen();
     mD.segment(block_offset + 3, 3) = m_nodes[0]->GetD().eigen();
     mD.segment(block_offset + 6, 3) = m_nodes[0]->GetDD().eigen();
@@ -1874,7 +1874,7 @@ void ChElementBeamANCF_TR00::LoadableGetStateBlock_x(int block_offset, ChState& 
 }
 
 // Gets all the DOFs packed in a single vector (velocity part).
-void ChElementBeamANCF_TR00::LoadableGetStateBlock_w(int block_offset, ChStateDelta& mD) {
+void ChElementBeamANCF_3333_TR00::LoadableGetStateBlock_w(int block_offset, ChStateDelta& mD) {
     mD.segment(block_offset + 0, 3) = m_nodes[0]->GetPos_dt().eigen();
     mD.segment(block_offset + 3, 3) = m_nodes[0]->GetD_dt().eigen();
     mD.segment(block_offset + 6, 3) = m_nodes[0]->GetDD_dt().eigen();
@@ -1889,7 +1889,7 @@ void ChElementBeamANCF_TR00::LoadableGetStateBlock_w(int block_offset, ChStateDe
 }
 
 /// Increment all DOFs using a delta.
-void ChElementBeamANCF_TR00::LoadableStateIncrement(const unsigned int off_x,
+void ChElementBeamANCF_3333_TR00::LoadableStateIncrement(const unsigned int off_x,
                                                ChState& x_new,
                                                const ChState& x,
                                                const unsigned int off_v,
@@ -1899,7 +1899,7 @@ void ChElementBeamANCF_TR00::LoadableStateIncrement(const unsigned int off_x,
     m_nodes[2]->NodeIntStateIncrement(off_x + 18, x_new, x, off_v + 18, Dv);
 }
 
-void ChElementBeamANCF_TR00::EvaluateSectionVelNorm(double U, ChVector<>& Result) {
+void ChElementBeamANCF_3333_TR00::EvaluateSectionVelNorm(double U, ChVector<>& Result) {
     ShapeVector N;
     ShapeFunctions(N, U, 0, 0);
     for (unsigned int ii = 0; ii < 3; ii++) {
@@ -1909,7 +1909,7 @@ void ChElementBeamANCF_TR00::EvaluateSectionVelNorm(double U, ChVector<>& Result
 }
 
 // Get the pointers to the contained ChVariables, appending to the mvars vector.
-void ChElementBeamANCF_TR00::LoadableGetVariables(std::vector<ChVariables*>& mvars) {
+void ChElementBeamANCF_3333_TR00::LoadableGetVariables(std::vector<ChVariables*>& mvars) {
     for (int i = 0; i < m_nodes.size(); ++i) {
         mvars.push_back(&m_nodes[i]->Variables());
         mvars.push_back(&m_nodes[i]->Variables_D());
@@ -1918,7 +1918,7 @@ void ChElementBeamANCF_TR00::LoadableGetVariables(std::vector<ChVariables*>& mva
 }
 
 // Evaluate N'*F , where N is the shape function evaluated at (U) coordinates of the centerline.
-void ChElementBeamANCF_TR00::ComputeNF(
+void ChElementBeamANCF_3333_TR00::ComputeNF(
     const double U,              // parametric coordinate in surface
     ChVectorDynamic<>& Qi,       // Return result of Q = N'*F  here
     double& detJ,                // Return det[J] here
@@ -1981,7 +1981,7 @@ void ChElementBeamANCF_TR00::ComputeNF(
 }
 
 // Evaluate N'*F , where N is the shape function evaluated at (U,V,W) coordinates of the surface.
-void ChElementBeamANCF_TR00::ComputeNF(
+void ChElementBeamANCF_3333_TR00::ComputeNF(
     const double U,              // parametric coordinate in volume
     const double V,              // parametric coordinate in volume
     const double W,              // parametric coordinate in volume
@@ -2050,12 +2050,12 @@ void ChElementBeamANCF_TR00::ComputeNF(
 // -----------------------------------------------------------------------------
 
 // Calculate average element density (needed for ChLoaderVolumeGravity).
-double ChElementBeamANCF_TR00::GetDensity() {
+double ChElementBeamANCF_3333_TR00::GetDensity() {
     return GetMaterial()->Get_rho();
 }
 
 // Calculate tangent to the centerline at (U) coordinates.
-ChVector<> ChElementBeamANCF_TR00::ComputeTangent(const double U) {
+ChVector<> ChElementBeamANCF_3333_TR00::ComputeTangent(const double U) {
     ChMatrixNM<double, 9, 3> mD;
     ShapeVector Nx;
     ShapeVector Ny;
@@ -2078,11 +2078,11 @@ ChVector<> ChElementBeamANCF_TR00::ComputeTangent(const double U) {
 }
 
 // ============================================================================
-// Implementation of ChMaterialBeamANCF_TR00 methods
+// Implementation of ChMaterialBeamANCF_3333_TR00 methods
 // ============================================================================
 
 // Construct an isotropic material.
-ChMaterialBeamANCF_TR00::ChMaterialBeamANCF_TR00(double rho,        // material density
+ChMaterialBeamANCF_3333_TR00::ChMaterialBeamANCF_3333_TR00(double rho,        // material density
                                        double E,          // Young's modulus
                                        double nu,         // Poisson ratio
                                        const double& k1,  // Shear correction factor along beam local y axis
@@ -2095,7 +2095,7 @@ ChMaterialBeamANCF_TR00::ChMaterialBeamANCF_TR00(double rho,        // material 
 }
 
 // Construct a (possibly) orthotropic material.
-ChMaterialBeamANCF_TR00::ChMaterialBeamANCF_TR00(double rho,            // material density
+ChMaterialBeamANCF_3333_TR00::ChMaterialBeamANCF_3333_TR00(double rho,            // material density
                                        const ChVector<>& E,   // elasticity moduli (E_x, E_y, E_z)
                                        const ChVector<>& nu,  // Poisson ratios (nu_xy, nu_xz, nu_yz)
                                        const ChVector<>& G,   // shear moduli (G_xy, G_xz, G_yz)
@@ -2109,7 +2109,7 @@ ChMaterialBeamANCF_TR00::ChMaterialBeamANCF_TR00(double rho,            // mater
 
 // Calculate the matrix of elastic coefficients.
 // Always assume that the material could be orthotropic: E_0
-void ChMaterialBeamANCF_TR00::Calc_E_eps(const ChVector<>& E,
+void ChMaterialBeamANCF_3333_TR00::Calc_E_eps(const ChVector<>& E,
                                     const ChVector<>& nu,
                                     const ChVector<>& G,
                                     double k1,
@@ -2128,7 +2128,7 @@ void ChMaterialBeamANCF_TR00::Calc_E_eps(const ChVector<>& E,
     m_E_eps(4, 4) = G.y() * k2;  // This works for Z axis loading
     m_E_eps(5, 5) = G.z();
 }
-void ChMaterialBeamANCF_TR00::Calc_E_eps_Nu(const ChVector<>& E, const ChVector<>& nu, const ChVector<>& G) {
+void ChMaterialBeamANCF_3333_TR00::Calc_E_eps_Nu(const ChVector<>& E, const ChVector<>& nu, const ChVector<>& G) {
     double delta = 1.0 - (nu.x() * nu.x()) * E.y() / E.x() - (nu.y() * nu.y()) * E.z() / E.x() -
                    (nu.z() * nu.z()) * E.z() / E.y() - 2.0 * nu.x() * nu.y() * nu.z() * E.z() / E.x();
     double nu_yx = nu.x() * E.y() / E.x();

@@ -22,7 +22,7 @@
 // elements in the absolute nodal coordinate formulation.In: Proceedings of the
 // Multibody Dynamics Eccomas thematic Conference, Madrid(2005)
 // =============================================================================
-// TR08b = a Gerstmayr style implementation of the element with pre-calculation
+// TR08 = a Gerstmayr style implementation of the element with pre-calculation
 //     of the terms needed for the generalized internal force calculation with
 //     an analytical Jacobian that is integrated across all GQ points at once
 //
@@ -45,8 +45,8 @@
 //
 // =============================================================================
 
-#ifndef CHELEMENTBEAMANCFTR08B_H
-#define CHELEMENTBEAMANCFTR08B_H
+#ifndef CHELEMENTBEAMANCF3333TR08_H
+#define CHELEMENTBEAMANCF3333TR08_H
 
 #include <vector>
 
@@ -62,10 +62,10 @@ namespace fea {
 
 /// Material definition.
 /// This class implements material properties for an ANCF Beam.
-class ChApi ChMaterialBeamANCF_TR08b {
+class ChApi ChMaterialBeamANCF_3333_TR08 {
   public:
     /// Construct an isotropic material.
-    ChMaterialBeamANCF_TR08b(double rho,        ///< material density
+    ChMaterialBeamANCF_3333_TR08(double rho,        ///< material density
                             double E,          ///< Young's modulus
                             double nu,         ///< Poisson ratio
                             const double& k1,  ///< Shear correction factor along beam local y axis
@@ -73,7 +73,7 @@ class ChApi ChMaterialBeamANCF_TR08b {
     );
 
     /// Construct a (possibly) orthotropic material.
-    ChMaterialBeamANCF_TR08b(double rho,            ///< material density
+    ChMaterialBeamANCF_3333_TR08(double rho,            ///< material density
                             const ChVector<>& E,   ///< elasticity moduli (E_x, E_y, E_z)
                             const ChVector<>& nu,  ///< Poisson ratios (nu_xy, nu_xz, nu_yz)
                             const ChVector<>& G,   ///< shear moduli (G_xy, G_xz, G_yz)
@@ -117,7 +117,7 @@ class ChApi ChMaterialBeamANCF_TR08b {
 /// </pre>
 /// where C is the third and central node.
 
-class ChApi ChElementBeamANCF_TR08b : public ChElementBeam, public ChLoadableU, public ChLoadableUVW {
+class ChApi ChElementBeamANCF_3333_TR08 : public ChElementBeam, public ChLoadableU, public ChLoadableUVW {
   public:
     using ShapeVector = ChMatrixNM<double, 1, 9>;
 
@@ -127,8 +127,8 @@ class ChApi ChElementBeamANCF_TR08b : public ChElementBeam, public ChLoadableU, 
     template <typename T, int M, int N>
     using ChMatrixNMc = Eigen::Matrix<T, M, N, Eigen::ColMajor>;
 
-    ChElementBeamANCF_TR08b();
-    ~ChElementBeamANCF_TR08b() {}
+    ChElementBeamANCF_3333_TR08();
+    ~ChElementBeamANCF_3333_TR08() {}
 
     /// Get the number of nodes used by this element.
     virtual int GetNnodes() override { return 3; }
@@ -152,7 +152,7 @@ class ChApi ChElementBeamANCF_TR08b : public ChElementBeam, public ChLoadableU, 
     }
 
     /// Specify the element material.
-    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF_TR08b> beam_mat) { m_material = beam_mat; }
+    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF_3333_TR08> beam_mat) { m_material = beam_mat; }
 
     /// Access the n-th node of this element.
     virtual std::shared_ptr<ChNodeFEAbase> GetNodeN(int n) override { return m_nodes[n]; }
@@ -167,7 +167,7 @@ class ChApi ChElementBeamANCF_TR08b : public ChElementBeam, public ChLoadableU, 
     std::shared_ptr<ChNodeFEAxyzDD> GetNodeC() const { return m_nodes[2]; }
 
     /// Return the material.
-    std::shared_ptr<ChMaterialBeamANCF_TR08b> GetMaterial() const { return m_material; }
+    std::shared_ptr<ChMaterialBeamANCF_3333_TR08> GetMaterial() const { return m_material; }
 
     /// Turn gravity on/off.
     void SetGravityOn(bool val) { m_gravity_on = val; }
@@ -419,7 +419,7 @@ class ChApi ChElementBeamANCF_TR08b : public ChElementBeam, public ChLoadableU, 
     ChVectorN<double, 27> m_GravForce;                      ///< Gravity Force
     ChMatrixNM<double, 9, 9>
         m_MassMatrix;  ///< mass matrix - in compact form for reduced memory and reduced KRM matrix computations
-    std::shared_ptr<ChMaterialBeamANCF_TR08b> m_material;  ///< beam material
+    std::shared_ptr<ChMaterialBeamANCF_3333_TR08> m_material;  ///< beam material
     StrainFormulation m_strain_form;                      ///< Strain formulation
     ChMatrixNMc<double, 9, 3> m_e0_bar;  ///< Element Position Coordinate Matrix for the Reference Configuration
     ChMatrixNMc<double, 9, 60>

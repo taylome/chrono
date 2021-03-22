@@ -17,28 +17,34 @@
 // Application to Static and Linearized Dynamic Examples", Journal of Computational
 // and Nonlinear Dynamics, 2013, April 2013, Vol. 8, 021004.
 // =============================================================================
-// TR02 = a simple textbook style implementation of the element with a reduced
-//     number of Gauss-Quadrature Points:
+// Internal Force Calculation Method is based on:  Liu, Cheng, Qiang Tian, and
+// Haiyan Hu. "Dynamics of a large scale rigid–flexible multibody system composed
+// of composite laminated plates." Multibody System Dynamics 26, no. 3 (2011): 283-305.
+// =============================================================================
+// TR10 = a Liu style implementation of the element with pre-calculation
+//     of just the matrix needed for the internal force calculations(O1).  The
+//     precomputed matrix (O2) needed for the Jacobian Calculation is calcualted
+//     from O1 when it is needed.
 //
-//  Mass Matrix = Constant, pre-calculated 27x27 matrix
+//  Mass Matrix = Constant, pre-calculated 9x9 matrix
 //
 //  Generalized Force due to gravity = Constant 27x1 Vector
 //     (assumption that gravity is constant too)
 //
-//  Generalized Internal Force Vector = Calculated in the typical paper way:
-//     e = 27x1 and S = 3x27
-//     Inverse of the Element Jacobian (J_0xi) is generated from e0 every time
-//     Math direct translation from papers
-//     1 less than "Full Integration" Number of GQ Integration Points (4x2x2)
-//     GQ integration is performed one GQ point at a time
+//  Generalized Internal Force Vector = Calculated using the Liu method:
+//     Math is based on the method presented by Liu, Tian, and Hu
+//     "Full Integration" Number of GQ Integration Points (5x3x3)
 //
-//  Jacobian of the Generalized Internal Force Vector = Calculated by numeric
-//     differentiation
+//  Jacobian of the Generalized Internal Force Vector = Analytical Jacobian that
+//     is based on the method presented by Liu, Tian, and Hu.
+//     Internal force calculation results are cached for reuse during the Jacobian
+//     calculations
+//     O2 is calculated from O1 rather than precalculated and stored
 //
 // =============================================================================
 
-#ifndef CHELEMENTBEAMANCFTR02_H
-#define CHELEMENTBEAMANCFTR02_H
+#ifndef CHELEMENTBEAMANCF3333TR10_H
+#define CHELEMENTBEAMANCF3333TR10_H
 
 #include <vector>
 
@@ -54,10 +60,10 @@ namespace fea {
 
 /// Material definition.
 /// This class implements material properties for an ANCF Beam.
-class ChApi ChMaterialBeamANCF_TR02 {
+class ChApi ChMaterialBeamANCF_3333_TR10 {
   public:
     /// Construct an isotropic material.
-    ChMaterialBeamANCF_TR02(double rho,        ///< material density
+    ChMaterialBeamANCF_3333_TR10(double rho,        ///< material density
                             double E,          ///< Young's modulus
                             double nu,         ///< Poisson ratio
                             const double& k1,  ///< Shear correction factor along beam local y axis
@@ -65,7 +71,7 @@ class ChApi ChMaterialBeamANCF_TR02 {
     );
 
     /// Construct a (possibly) orthotropic material.
-    ChMaterialBeamANCF_TR02(double rho,            ///< material density
+    ChMaterialBeamANCF_3333_TR10(double rho,            ///< material density
                             const ChVector<>& E,   ///< elasticity moduli (E_x, E_y, E_z)
                             const ChVector<>& nu,  ///< Poisson ratios (nu_xy, nu_xz, nu_yz)
                             const ChVector<>& G,   ///< shear moduli (G_xy, G_xz, G_yz)
@@ -76,8 +82,8 @@ class ChApi ChMaterialBeamANCF_TR02 {
     /// Return the material density.
     double Get_rho() const { return m_rho; }
 
-    const ChMatrixNM<double, 6, 6>& Get_D0() const { return m_D0; }
-    const ChMatrixNM<double, 6, 6>& Get_Dv() const { return m_Dv; }
+    const ChVectorN<double, 6>& Get_D0() const { return m_D0; }
+    const ChMatrixNM<double, 3, 3>& Get_Dv() const { return m_Dv; }
 
   private:
     /// Calculate the matrix form of two stiffness tensors used by the ANCF beam for selective reduced integration of
@@ -85,10 +91,10 @@ class ChApi ChMaterialBeamANCF_TR02 {
     void Calc_D0_Dv(const ChVector<>& E, const ChVector<>& nu, const ChVector<>& G, double k1, double k2);
 
     double m_rho;  ///< density
-    ChMatrixNM<double, 6, 6>
+    ChVectorN<double, 6>
         m_D0;  ///< matrix of elastic coefficients (split of diagonal terms for integration across the entire element)
-    ChMatrixNM<double, 6, 6> m_Dv;  ///< matrix of elastic coefficients (remainder of split, upper 3x3 terms for
-                                    ///< integration only on the beam axis)
+    ChMatrix33<double> m_Dv;  ///< matrix of elastic coefficients (remainder of split, upper 3x3 terms for integration
+                              ///< only on the beam axis)
 
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -109,16 +115,18 @@ class ChApi ChMaterialBeamANCF_TR02 {
 /// </pre>
 /// where C is the third and central node.
 
-class ChApi ChElementBeamANCF_TR02 : public ChElementBeam, public ChLoadableU, public ChLoadableUVW {
+class ChApi ChElementBeamANCF_3333_TR10 : public ChElementBeam, public ChLoadableU, public ChLoadableUVW {
   public:
-    using VectorN = ChVectorN<double, 9>;
-    using Vector3N = ChVectorN<double, 27>;
-    using Matrix3x3N = ChMatrixNM<double, 3, 27>;
-    using Matrix6x3N = ChMatrixNM<double, 6, 27>;
-    using Matrix3Nx3N = ChMatrixNM<double, 27, 27>;
+    using ShapeVector = ChMatrixNM<double, 1, 9>;
 
-    ChElementBeamANCF_TR02();
-    ~ChElementBeamANCF_TR02() {}
+    /// Dense matrix with *fixed size* (known at compile time).
+    /// A ChMatrixNM is templated by the type of its coefficients and by the matrix dimensions (number of rows and
+    /// columns).
+    template <typename T, int M, int N>
+    using ChMatrixNMc = Eigen::Matrix<T, M, N, Eigen::ColMajor>;
+
+    ChElementBeamANCF_3333_TR10();
+    ~ChElementBeamANCF_3333_TR10() {}
 
     /// Get the number of nodes used by this element.
     virtual int GetNnodes() override { return 3; }
@@ -142,7 +150,7 @@ class ChApi ChElementBeamANCF_TR02 : public ChElementBeam, public ChLoadableU, p
     }
 
     /// Specify the element material.
-    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF_TR02> beam_mat) { m_material = beam_mat; }
+    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF_3333_TR10> beam_mat) { m_material = beam_mat; }
 
     /// Access the n-th node of this element.
     virtual std::shared_ptr<ChNodeFEAbase> GetNodeN(int n) override { return m_nodes[n]; }
@@ -157,7 +165,7 @@ class ChApi ChElementBeamANCF_TR02 : public ChElementBeam, public ChLoadableU, p
     std::shared_ptr<ChNodeFEAxyzDD> GetNodeC() const { return m_nodes[2]; }
 
     /// Return the material.
-    std::shared_ptr<ChMaterialBeamANCF_TR02> GetMaterial() const { return m_material; }
+    std::shared_ptr<ChMaterialBeamANCF_3333_TR10> GetMaterial() const { return m_material; }
 
     /// Turn gravity on/off.
     void SetGravityOn(bool val) { m_gravity_on = val; }
@@ -330,6 +338,8 @@ class ChApi ChElementBeamANCF_TR02 : public ChElementBeam, public ChLoadableU, p
     /// a constant density material are assumed
     void ComputeMassMatrixAndGravityForce(const ChVector<>& g_acc);
 
+    void PrecomputeInternalForceMatricesWeights();
+
     // Internal computations
     // ---------------------
 
@@ -339,53 +349,36 @@ class ChApi ChElementBeamANCF_TR02 : public ChElementBeam, public ChLoadableU, p
     /// for given coefficients Kfactor and Rfactor.
     /// This Jacobian will be further combined with the global mass matrix M and included in the global
     /// stiffness matrix H in the function ComputeKRMmatricesGlobal().
-    void ComputeInternalJacobians(Matrix3Nx3N& JacobianMatrix, double Kfactor, double Rfactor);
-
-    // Calculate the calculate the generalized internal force integrand at a single point (called for Gauss-Quadrature
-    // integration)
-    void ComputeInternalForcesSingleGQPnt(Vector3N& Qi,
-                                          double xi,
-                                          double eta,
-                                          double zeta,
-                                          const ChMatrixNM<double, 6, 6>& D,
-                                          const Vector3N& e,
-                                          const Vector3N& edot);
+    void ComputeInternalJacobians(ChMatrixNM<double, 27, 27>& JacobianMatrix, double Kfactor, double Rfactor);
 
     // Calculate the generalized internal force for the element given the provided current state coordinates
-    void ComputeInternalForcesAtState(ChVectorDynamic<>& Fi, const Vector3N& e, const Vector3N& edot);
+    void ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
+                                      const ChMatrixNMc<double, 9, 3>& e_bar,
+                                      const ChMatrixNMc<double, 9, 3>& e_bar_dot);
 
     // Return the pre-computed generalized force due to gravity
-    void Get_GravityFrc(Vector3N& Gi) { Gi = m_GravForce; }
+    void Get_GravityFrc(ChVectorN<double, 27>& Gi) { Gi = m_GravForce; }
+
+    // Calculate the current 9x3 matrix of nodal coordinates.
+    void CalcCoordMatrix(ChMatrixNMc<double, 9, 3>& e);
 
     // Calculate the current 27x1 vector of nodal coordinates.
-    void CalcCoordVector(Vector3N& e);
+    void CalcCoordVector(ChVectorN<double, 27>& e);
 
     // Calculate the current 27x1 vector of nodal coordinate time derivatives.
-    void CalcCoordDerivVector(Vector3N& edot);
+    void CalcCoordDerivMatrix(ChMatrixNMc<double, 9, 3>& edot);
+
+    // Calculate the current 27x1 vector of nodal coordinate time derivatives.
+    void CalcCoordDerivVector(ChVectorN<double, 27>& edot);
 
     // Calculate the 3x27 Sparse & Repetitive Normalized Shape Function Matrix
-    void Calc_Sxi(Matrix3x3N& Sxi, double xi, double eta, double zeta);
+    void Calc_Sxi(ChMatrixNM<double, 3, 27>& Sxi, double xi, double eta, double zeta);
 
     // Calculate the 9x1 Compact Vector of the Normalized Shape Functions
-    void Calc_Sxi_compact(VectorN& Sxi_compact, double xi, double eta, double zeta);
+    void Calc_Sxi_compact(ChVectorN<double, 9>& Sxi_compact, double xi, double eta, double zeta);
 
-    // Calculate the 3x27 Sparse & Repetitive Derivative of the Normalized Shape Function Matrix with respect to xi
-    void Calc_Sxi_xi(Matrix3x3N& Sxi_xi, double xi, double eta, double zeta);
-
-    // Calculate the 9x1 Compact Vector of the Derivative of the Normalized Shape Functions with respect to xi
-    void Calc_Sxi_xi_compact(VectorN& Sxi_xi_compact, double xi, double eta, double zeta);
-
-    // Calculate the 3x27 Sparse & Repetitive Derivative of the Normalized Shape Function Matrix with respect to eta
-    void Calc_Sxi_eta(Matrix3x3N& Sxi_eta, double xi, double eta, double zeta);
-
-    // Calculate the 9x1 Compact Vector of the Derivative of the Normalized Shape Functions with respect to eta
-    void Calc_Sxi_eta_compact(VectorN& Sxi_eta_compact, double xi, double eta, double zeta);
-
-    // Calculate the 3x27 Sparse & Repetitive Derivative of the Normalized Shape Function Matrix with respect to zeta
-    void Calc_Sxi_zeta(Matrix3x3N& Sxi_zeta, double xi, double eta, double zeta);
-
-    // Calculate the 9x1 Compact Vector of the Derivative of the Normalized Shape Functions with respect to zeta
-    void Calc_Sxi_zeta_compact(VectorN& Sxi_zeta_compact, double xi, double eta, double zeta);
+    // Calculate the 27x3 Compact Shape Function Derivative Matrix
+    void Calc_Sxi_D(ChMatrixNMc<double, 9, 3>& Sxi_D, double xi, double eta, double zeta);
 
     // Calculate the element Jacobian of the reference configuration with respect to the normalized configuration
     void Calc_J_0xi(ChMatrix33<double>& J_0xi, double xi, double eta, double zeta);
@@ -405,11 +398,21 @@ class ChApi ChElementBeamANCF_TR02 : public ChElementBeam, public ChLoadableU, p
     double m_Alpha;                                         ///< structural damping
     bool m_damping_enabled;                                 ///< Flag to run internal force damping calculations
     bool m_gravity_on;                                      ///< enable/disable gravity calculation
-    Vector3N m_GravForce;                                   ///< Gravity Force
-    Matrix3Nx3N m_MassMatrix;                               ///< mass matrix
-    std::shared_ptr<ChMaterialBeamANCF_TR02> m_material;    ///< beam material
-    StrainFormulation m_strain_form;                        ///< Strain formulation
-    Vector3N m_e0;  ///< Element Position Coordinate Vector for the Reference Configuration
+    ChVectorN<double, 27> m_GravForce;                      ///< Gravity Force
+    ChMatrixNM<double, 9, 9>
+        m_MassMatrix;  ///< mass matrix - in compact form for reduced memory and reduced KRM matrix computations
+    std::shared_ptr<ChMaterialBeamANCF_3333_TR10> m_material;  ///< beam material
+    StrainFormulation m_strain_form;                      ///< Strain formulation
+    ChMatrixNMc<double, 9, 3> m_e0_bar;  ///< Element Position Coordinate Matrix for the Reference Configuration
+
+    // For Liu Method
+    // Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor, 81, 81> m_O1;
+    // Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor, 81, 81> m_O2;
+    // Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor, 9, 9> m_K3Compact;
+    // Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor, 9, 9> m_K13Compact;
+    ChMatrixNM<double, 81, 81> m_O1;
+    ChMatrixNM<double, 9, 9> m_K3Compact;
+    ChMatrixNM<double, 9, 9> m_K13Compact;
 
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
