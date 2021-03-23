@@ -87,6 +87,18 @@
 #include "chrono/fea/ChElementShellANCF_3833_TR10.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR11.h"
 
+#include "chrono/fea/ChElementShellANCF_3833ML_TR01.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR02.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR03.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR04.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR05.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR06.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR07.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR08.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR09.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR10.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR11.h"
+
 #include "chrono/fea/ChElementBrickANCF_3843_TR01.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR02.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR03.h"
@@ -722,6 +734,10 @@ void Run_ANCFBeam_3333_Tests() {
     {
         ANCFBeam3333Test<num_elements, ChElementBeamANCF, ChMaterialBeamANCF> Beam3333Test_TR01;
         Beam3333Test_TR01.PrintTimingResults("ChElementBeamANCF_Org", num_steps);
+    }
+    {
+        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR00, ChMaterialBeamANCF_3333_TR00> Beam3333Test_TR00;
+        Beam3333Test_TR00.PrintTimingResults("ChElementBeamANCF_3333_TR00", num_steps);
     }
     {
         ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR01, ChMaterialBeamANCF_3333_TR01> Beam3333Test_TR01;
@@ -1731,13 +1747,67 @@ void ANCFShell3833Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
 
 }
 
+void Run_ANCFShell_3833_Tests() {
+    const int num_elements = 1024;
+    int num_steps = 10;
 
-template <int num_elements>
-class ANCFShell3833Test_Org {
+    //const int num_elements = 8;
+    //int num_steps = 1;
+
+    {
+        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR01, ChMaterialShellANCF_3833_TR01> Shell3833Test_TR01;
+        Shell3833Test_TR01.PrintTimingResults("ChElementShellANCF_3833_TR01", num_steps);
+    }
+    {
+        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR02, ChMaterialShellANCF_3833_TR02> Shell3833Test_TR02;
+        Shell3833Test_TR02.PrintTimingResults("ChElementShellANCF_3833_TR02", num_steps);
+    }
+    {
+        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR03, ChMaterialShellANCF_3833_TR03> Shell3833Test_TR03;
+        Shell3833Test_TR03.PrintTimingResults("ChElementShellANCF_3833_TR03", num_steps);
+    }
+    {
+        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR04, ChMaterialShellANCF_3833_TR04> Shell3833Test_TR04;
+        Shell3833Test_TR04.PrintTimingResults("ChElementShellANCF_3833_TR04", num_steps);
+    }
+    {
+        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR05, ChMaterialShellANCF_3833_TR05> Shell3833Test_TR05;
+        Shell3833Test_TR05.PrintTimingResults("ChElementShellANCF_3833_TR05", num_steps);
+    }
+    {
+        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR06, ChMaterialShellANCF_3833_TR06> Shell3833Test_TR06;
+        Shell3833Test_TR06.PrintTimingResults("ChElementShellANCF_3833_TR06", num_steps);
+    }
+    {
+        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR07, ChMaterialShellANCF_3833_TR07> Shell3833Test_TR07;
+        Shell3833Test_TR07.PrintTimingResults("ChElementShellANCF_3833_TR07", num_steps);
+    }
+    {
+        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR08, ChMaterialShellANCF_3833_TR08> Shell3833Test_TR08;
+        Shell3833Test_TR08.PrintTimingResults("ChElementShellANCF_3833_TR08", num_steps);
+    }
+    {
+        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR09, ChMaterialShellANCF_3833_TR09> Shell3833Test_TR09;
+        Shell3833Test_TR09.PrintTimingResults("ChElementShellANCF_3833_TR09", num_steps);
+    }
+    {
+        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR10, ChMaterialShellANCF_3833_TR10> Shell3833Test_TR10;
+        Shell3833Test_TR10.PrintTimingResults("ChElementShellANCF_3833_TR10", num_steps);
+    }
+    {
+        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR11, ChMaterialShellANCF_3833_TR11> Shell3833Test_TR11;
+        Shell3833Test_TR11.PrintTimingResults("ChElementShellANCF_3833_TR11", num_steps);
+    }
+}
+
+// =============================================================================
+
+template <int num_elements, typename ElementVersion, typename MaterialVersion>
+class ANCFShell3833MLTest {
 public:
-    ANCFShell3833Test_Org();
+    ANCFShell3833MLTest(unsigned int num_layers);
 
-    ~ANCFShell3833Test_Org() { delete m_system; }
+    ~ANCFShell3833MLTest() { delete m_system; }
 
     ChSystem* GetSystem() { return m_system; }
 
@@ -1749,10 +1819,12 @@ public:
 
 protected:
     ChSystemSMC* m_system;
+    unsigned int m_num_layers;
 };
 
-template <int num_elements>
-ANCFShell3833Test_Org<num_elements>::ANCFShell3833Test_Org() {
+template <int num_elements, typename ElementVersion, typename MaterialVersion>
+ANCFShell3833MLTest<num_elements, ElementVersion, MaterialVersion>::ANCFShell3833MLTest(unsigned int num_layers) {
+    m_num_layers = num_layers;
     m_system = new ChSystemSMC();
     m_system->Set_G_acc(ChVector<>(0, 0, -9.80665));
 
@@ -1785,7 +1857,7 @@ ANCFShell3833Test_Org<num_elements>::ANCFShell3833Test_Org() {
     double nu = 0.33;
     double G = E / (2 * (1 + nu));
 
-    auto material = chrono_types::make_shared<ChMaterialShellANCF>(rho, E, nu);
+    auto material = chrono_types::make_shared<MaterialVersion>(rho, E, nu);
 
     // Create mesh container
     auto mesh = chrono_types::make_shared<ChMesh>();
@@ -1821,10 +1893,12 @@ ANCFShell3833Test_Org<num_elements>::ANCFShell3833Test_Org() {
 
 
 
-        auto element = chrono_types::make_shared<ChElementShellANCF_8>();
+        auto element = chrono_types::make_shared<ElementVersion>();
         element->SetNodes(nodeA, nodeB, nodeC, nodeD, nodeE, nodeF, nodeG, nodeH);
         element->SetDimensions(dx, width);
-        element->AddLayer(height, 0 * CH_C_DEG_TO_RAD, material);
+        for (int j = 0; j < m_num_layers; j++) {
+            element->AddLayer(height, 0 * CH_C_DEG_TO_RAD, material);
+        }
         element->SetAlphaDamp(0.01);
         element->SetGravityOn(
             false);  // Enable the efficient ANCF method for calculating the application of gravity to the element
@@ -1841,8 +1915,8 @@ ANCFShell3833Test_Org<num_elements>::ANCFShell3833Test_Org() {
     m_system->Update();  // Need to call all the element SetupInital() functions
 }
 
-template <int num_elements>
-void ANCFShell3833Test_Org<num_elements>::PerturbNodes(const bool Use_OMP) {
+template <int num_elements, typename ElementVersion, typename MaterialVersion>
+void ANCFShell3833MLTest<num_elements, ElementVersion, MaterialVersion>::PerturbNodes(const bool Use_OMP) {
     auto MeshList = m_system->Get_meshlist();
     for (auto& Mesh : MeshList) {
         auto NodeList = Mesh->GetNodes();
@@ -1871,8 +1945,8 @@ void ANCFShell3833Test_Org<num_elements>::PerturbNodes(const bool Use_OMP) {
     }
 }
 
-template <int num_elements>
-double ANCFShell3833Test_Org<num_elements>::GetInternalFrc(const bool Use_OMP) {
+template <int num_elements, typename ElementVersion, typename MaterialVersion>
+double ANCFShell3833MLTest<num_elements, ElementVersion, MaterialVersion>::GetInternalFrc(const bool Use_OMP) {
     ChTimer<> timer_internal_forces;
     timer_internal_forces.reset();
 
@@ -1900,8 +1974,8 @@ double ANCFShell3833Test_Org<num_elements>::GetInternalFrc(const bool Use_OMP) {
     return (timer_internal_forces());
 }
 
-template <int num_elements>
-double ANCFShell3833Test_Org<num_elements>::GetJacobian(const bool Use_OMP) {
+template <int num_elements, typename ElementVersion, typename MaterialVersion>
+double ANCFShell3833MLTest<num_elements, ElementVersion, MaterialVersion>::GetJacobian(const bool Use_OMP) {
     ChTimer<> timer_KRM;
     timer_KRM.reset();
 
@@ -1929,8 +2003,8 @@ double ANCFShell3833Test_Org<num_elements>::GetJacobian(const bool Use_OMP) {
     return (timer_KRM());
 }
 
-template <int num_elements>
-void ANCFShell3833Test_Org<num_elements>::PrintTimingResults(const std::string& TestName, int steps) {
+template <int num_elements, typename ElementVersion, typename MaterialVersion>
+void ANCFShell3833MLTest<num_elements, ElementVersion, MaterialVersion>::PrintTimingResults(const std::string& TestName, int steps) {
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> Times;
     Times.resize(steps, 2);
@@ -2018,8 +2092,7 @@ void ANCFShell3833Test_Org<num_elements>::PrintTimingResults(const std::string& 
 
 }
 
-
-void Run_ANCFShell_3833_Tests() {
+void Run_ANCFShell_3833ML_Tests() {
     const int num_elements = 1024;
     int num_steps = 10;
 
@@ -2027,52 +2100,56 @@ void Run_ANCFShell_3833_Tests() {
     //int num_steps = 1;
 
     {
-        ANCFShell3833Test_Org<num_elements> Shell3833Test_Org;
-        Shell3833Test_Org.PrintTimingResults("ChElementShellANCF_8", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_8, ChMaterialShellANCF> Shell3833MLTest_8(1);
+        Shell3833MLTest_8.PrintTimingResults("ChElementShellANCF_8", num_steps);
     }
     {
-        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR01, ChMaterialShellANCF_3833_TR01> Shell3833Test_TR01;
-        Shell3833Test_TR01.PrintTimingResults("ChElementShellANCF_3833_TR01", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833_TR00, ChMaterialShellANCF> Shell3833MLTest_TR00(1);
+        Shell3833MLTest_TR00.PrintTimingResults("ChElementShellANCF_3833_TR00", num_steps);
     }
     {
-        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR02, ChMaterialShellANCF_3833_TR02> Shell3833Test_TR02;
-        Shell3833Test_TR02.PrintTimingResults("ChElementShellANCF_3833_TR02", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR01, ChMaterialShellANCF_3833ML_TR01> Shell3833MLTest_TR01(1);
+        Shell3833MLTest_TR01.PrintTimingResults("ChElementShellANCF_3833ML_TR01", num_steps);
     }
     {
-        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR03, ChMaterialShellANCF_3833_TR03> Shell3833Test_TR03;
-        Shell3833Test_TR03.PrintTimingResults("ChElementShellANCF_3833_TR03", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR02, ChMaterialShellANCF_3833ML_TR02> Shell3833MLTest_TR02(1);
+        Shell3833MLTest_TR02.PrintTimingResults("ChElementShellANCF_3833ML_TR02", num_steps);
     }
     {
-        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR04, ChMaterialShellANCF_3833_TR04> Shell3833Test_TR04;
-        Shell3833Test_TR04.PrintTimingResults("ChElementShellANCF_3833_TR04", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR03, ChMaterialShellANCF_3833ML_TR03> Shell3833MLTest_TR03(1);
+        Shell3833MLTest_TR03.PrintTimingResults("ChElementShellANCF_3833ML_TR03", num_steps);
     }
     {
-        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR05, ChMaterialShellANCF_3833_TR05> Shell3833Test_TR05;
-        Shell3833Test_TR05.PrintTimingResults("ChElementShellANCF_3833_TR05", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR04, ChMaterialShellANCF_3833ML_TR04> Shell3833MLTest_TR04(1);
+        Shell3833MLTest_TR04.PrintTimingResults("ChElementShellANCF_3833ML_TR04", num_steps);
     }
     {
-        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR06, ChMaterialShellANCF_3833_TR06> Shell3833Test_TR06;
-        Shell3833Test_TR06.PrintTimingResults("ChElementShellANCF_3833_TR06", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR05, ChMaterialShellANCF_3833ML_TR05> Shell3833MLTest_TR05(1);
+        Shell3833MLTest_TR05.PrintTimingResults("ChElementShellANCF_3833ML_TR05", num_steps);
     }
     {
-        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR07, ChMaterialShellANCF_3833_TR07> Shell3833Test_TR07;
-        Shell3833Test_TR07.PrintTimingResults("ChElementShellANCF_3833_TR07", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR06, ChMaterialShellANCF_3833ML_TR06> Shell3833MLTest_TR06(1);
+        Shell3833MLTest_TR06.PrintTimingResults("ChElementShellANCF_3833ML_TR06", num_steps);
     }
     {
-        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR08, ChMaterialShellANCF_3833_TR08> Shell3833Test_TR08;
-        Shell3833Test_TR08.PrintTimingResults("ChElementShellANCF_3833_TR08", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR07, ChMaterialShellANCF_3833ML_TR07> Shell3833MLTest_TR07(1);
+        Shell3833MLTest_TR07.PrintTimingResults("ChElementShellANCF_3833ML_TR07", num_steps);
     }
     {
-        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR09, ChMaterialShellANCF_3833_TR09> Shell3833Test_TR09;
-        Shell3833Test_TR09.PrintTimingResults("ChElementShellANCF_3833_TR09", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR08, ChMaterialShellANCF_3833ML_TR08> Shell3833MLTest_TR08(1);
+        Shell3833MLTest_TR08.PrintTimingResults("ChElementShellANCF_3833ML_TR08", num_steps);
     }
     {
-        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR10, ChMaterialShellANCF_3833_TR10> Shell3833Test_TR10;
-        Shell3833Test_TR10.PrintTimingResults("ChElementShellANCF_3833_TR10", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR09, ChMaterialShellANCF_3833ML_TR09> Shell3833MLTest_TR09(1);
+        Shell3833MLTest_TR09.PrintTimingResults("ChElementShellANCF_3833ML_TR09", num_steps);
     }
     {
-        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR11, ChMaterialShellANCF_3833_TR11> Shell3833Test_TR11;
-        Shell3833Test_TR11.PrintTimingResults("ChElementShellANCF_3833_TR11", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR10, ChMaterialShellANCF_3833ML_TR10> Shell3833MLTest_TR10(1);
+        Shell3833MLTest_TR10.PrintTimingResults("ChElementShellANCF_3833ML_TR10", num_steps);
+    }
+    {
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR11, ChMaterialShellANCF_3833ML_TR11> Shell3833MLTest_TR11(1);
+        Shell3833MLTest_TR11.PrintTimingResults("ChElementShellANCF_3833ML_TR11", num_steps);
     }
 }
 
@@ -2429,6 +2506,7 @@ int main(int argc, char* argv[]) {
     Run_ANCFShell_3443_Tests();
     Run_ANCFShell_3443ML_Tests();
     Run_ANCFShell_3833_Tests();
+    Run_ANCFShell_3833ML_Tests();
     Run_ANCFBrick_3843_Tests();
 
     return (0);

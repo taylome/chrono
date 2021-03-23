@@ -23,17 +23,19 @@
 #include "chrono/physics/ChSystemSMC.h"
 #include "chrono/solver/ChDirectSolverLS.h"
 
-#include "chrono/fea/ChElementShellANCF_3443ML_TR01.h"
-#include "chrono/fea/ChElementShellANCF_3443ML_TR02.h"
-#include "chrono/fea/ChElementShellANCF_3443ML_TR03.h"
-#include "chrono/fea/ChElementShellANCF_3443ML_TR04.h"
-#include "chrono/fea/ChElementShellANCF_3443ML_TR05.h"
-#include "chrono/fea/ChElementShellANCF_3443ML_TR06.h"
-#include "chrono/fea/ChElementShellANCF_3443ML_TR07.h"
-#include "chrono/fea/ChElementShellANCF_3443ML_TR08.h"
-#include "chrono/fea/ChElementShellANCF_3443ML_TR09.h"
-#include "chrono/fea/ChElementShellANCF_3443ML_TR10.h"
-#include "chrono/fea/ChElementShellANCF_3443ML_TR11.h"
+#include "chrono/fea/ChElementShellANCF_8.h"
+#include "chrono/fea/ChElementShellANCF_3833_TR00.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR01.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR02.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR03.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR04.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR05.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR06.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR07.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR08.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR09.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR10.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR11.h"
 
 #include "chrono/fea/ChMesh.h"
 
@@ -78,8 +80,8 @@ ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::ANCFShellTest(unsi
     auto integrator = std::static_pointer_cast<ChTimestepperHHT>(m_system->GetTimestepper());
     integrator->SetAlpha(-0.2);
     integrator->SetMaxiters(100);
-    // integrator->SetAbsTolerances(1e-5);
-    integrator->SetAbsTolerances(1e-3);
+    integrator->SetAbsTolerances(1e-5);
+    // integrator->SetAbsTolerances(1e-3);
     integrator->SetMode(ChTimestepperHHT::POSITION);
     integrator->SetScaling(true);
     integrator->SetVerbose(false);
@@ -102,29 +104,38 @@ ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::ANCFShellTest(unsi
     m_system->Add(mesh);
 
     // Populate the mesh container with a the nodes and elements for the meshed beam
-    int num_nodes = 2 * num_elements + 2;
     double dx = length / (num_elements);
 
-    // Setup beam cross section gradients to initially align with the global y and z directions
-    ChVector<> dir1(1, 0, 0);
-    ChVector<> dir2(0, 1, 0);
-    ChVector<> dir3(0, 0, 1);
+    // Setup shell normals to initially align with the global z direction with no curvature
+    ChVector<> dir1(0, 0, 1);
+    ChVector<> Curv1(0, 0, 0);
 
-    // Create the first node and fix it completely to ground (Cantilever constraint)
-    auto nodeA = chrono_types::make_shared<ChNodeFEAxyzDDD>(ChVector<>(0, 0, 0.0), dir1, dir2, dir3);
-    nodeA->SetFixed(true);
+    // Create the first nodes and fix them completely to ground (Cantilever constraint)
+    auto nodeA = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(0, 0, 0.0), dir1, Curv1);
     mesh->AddNode(nodeA);
-    auto nodeD = chrono_types::make_shared<ChNodeFEAxyzDDD>(ChVector<>(0, width, 0.0), dir1, dir2, dir3);
+    nodeA->SetFixed(true);
+    auto nodeD = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(0, width, 0), dir1, Curv1);
     mesh->AddNode(nodeD);
+    auto nodeH = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(0, 0.5*width, 0), dir1, Curv1);
+    mesh->AddNode(nodeH);
+	
 
     for (int i = 1; i <= num_elements; i++) {
-        auto nodeB = chrono_types::make_shared<ChNodeFEAxyzDDD>(ChVector<>(dx * i, 0, 0), dir1, dir2, dir3);
+        auto nodeB = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(i*dx, 0, 0), dir1, Curv1);
         mesh->AddNode(nodeB);
-        auto nodeC = chrono_types::make_shared<ChNodeFEAxyzDDD>(ChVector<>(dx * i, width, 0), dir1, dir2, dir3);
+        auto nodeC = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(i*dx, width, 0), dir1, Curv1);
         mesh->AddNode(nodeC);
+        auto nodeE = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(i*dx - 0.5*dx, 0, 0.0), dir1, Curv1);
+        mesh->AddNode(nodeE);
+        auto nodeF = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(i*dx, 0.5*width, 0), dir1, Curv1);
+        mesh->AddNode(nodeF);
+        auto nodeG = chrono_types::make_shared<ChNodeFEAxyzDD>(ChVector<>(i*dx - 0.5*dx, width, 0), dir1, Curv1);
+        mesh->AddNode(nodeG);
+
+
 
         auto element = chrono_types::make_shared<ElementVersion>();
-        element->SetNodes(nodeA, nodeB, nodeC, nodeD);
+        element->SetNodes(nodeA, nodeB, nodeC, nodeD, nodeE, nodeF, nodeG, nodeH);
         element->SetDimensions(dx, width);
         for (int j = 0; j < m_num_layers; j++) {
             element->AddLayer(height, 0 * CH_C_DEG_TO_RAD, material);
@@ -136,6 +147,7 @@ ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::ANCFShellTest(unsi
 
         nodeA = nodeB;
         nodeD = nodeC;
+        nodeH = nodeF;
     }
 
     mesh->SetAutomaticGravity(false);  // Turn off the default method for applying gravity to the mesh since it is less
@@ -153,12 +165,11 @@ void ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::PerturbNodes(
         //#pragma omp parallel for
         for (unsigned int in = 0; in < NodeList.size(); in++) {
             Perturbation.eigen().Random();
-            //auto Node = std::dynamic_pointer_cast<ChNodeFEAxyzDDD>(NodeList[in]);
-            auto Node = std::static_pointer_cast<ChNodeFEAxyzDDD>(NodeList[in]);
+            //auto Node = std::dynamic_pointer_cast<ChNodeFEAxyzDD>(NodeList[in]);
+            auto Node = std::static_pointer_cast<ChNodeFEAxyzDD>(NodeList[in]);
             Node->SetPos(Node->GetPos() + 1e-6 * Perturbation);
             Node->SetD(Node->GetD() + 1e-6 * Perturbation);
             Node->SetDD(Node->GetDD() + 1e-6 * Perturbation);
-            Node->SetDDD(Node->GetDDD() + 1e-6 * Perturbation);
         }
     }
 }
@@ -168,7 +179,7 @@ double ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::GetInternal
     ChTimer<> timer_internal_forces;
     timer_internal_forces.reset();
 
-    ChVectorDynamic<double> Fi(48);
+    ChVectorDynamic<double> Fi(72);
 
     auto MeshList = m_system->Get_meshlist();
     for (auto& Mesh : MeshList) {
@@ -189,7 +200,7 @@ double ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::GetJacobian
     ChTimer<> timer_KRM;
     timer_KRM.reset();
 
-    ChMatrixNM<double, 48, 48> H;
+    ChMatrixNM<double, 72, 72> H;
 
     auto MeshList = m_system->Get_meshlist();
     for (auto& Mesh : MeshList) {
@@ -236,66 +247,80 @@ int main(int argc, char* argv[]) {
     double TimeInternalFrc = 0;
     double TimeKRM = 0;
     //int num_steps = 1000;
-    int num_steps = 100;
+    int num_steps = 10;
     int max_layers = 8;
 #define NUM_ELEMENTS 1024
 
-    std::cout << "Element, Num Layers, Avg Internal Force Time per Element(micro s), Avg Jacobian Time per Element(micro s), Total "
+    std::cout << "Element, Avg Internal Force Time per Element(micro s), Avg Jacobian Time per Element(micro s), Total "
                  "Calc Time (ms)"
               << std::endl;
+
+    std::cout << "Element, Num Layers, Avg Internal Force Time per Element(micro s), Avg Jacobian Time per Element(micro s), Total "
+        "Calc Time (ms)"
+        << std::endl;
     for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR01, ChMaterialShellANCF_3443ML_TR01> ShellTest_TR01(layers);
-        std::cout << "ChElementShellANCF_3443ML_TR01, " << layers << ", ";
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_8, ChMaterialShellANCF> ShellTest_Org(layers);
+        std::cout << "ChElementShellANCF_8, " << layers << ", ";
+        ShellTest_Org.PrintTimingResults(num_steps);
+    }
+    for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR00, ChMaterialShellANCF> ShellTest_TR00(layers);
+        std::cout << "ChElementShellANCF_3833_TR00, " << layers << ", ";
+        ShellTest_TR00.PrintTimingResults(num_steps);
+    }
+    for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833ML_TR01, ChMaterialShellANCF_3833ML_TR01> ShellTest_TR01(layers);
+        std::cout << "ChElementShellANCF_3833ML_TR01, " << layers << ", ";
         ShellTest_TR01.PrintTimingResults(num_steps);
     }
     for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR02, ChMaterialShellANCF_3443ML_TR02> ShellTest_TR02(layers);
-        std::cout << "ChElementShellANCF_3443ML_TR02, " << layers << ", ";
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833ML_TR02, ChMaterialShellANCF_3833ML_TR02> ShellTest_TR02(layers);
+        std::cout << "ChElementShellANCF_3833ML_TR02, " << layers << ", ";
         ShellTest_TR02.PrintTimingResults(num_steps);
     }
     for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR03, ChMaterialShellANCF_3443ML_TR03> ShellTest_TR03(layers);
-        std::cout << "ChElementShellANCF_3443ML_TR03, " << layers << ", ";
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833ML_TR03, ChMaterialShellANCF_3833ML_TR03> ShellTest_TR03(layers);
+        std::cout << "ChElementShellANCF_3833ML_TR03, " << layers << ", ";
         ShellTest_TR03.PrintTimingResults(num_steps);
     }
     for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR04, ChMaterialShellANCF_3443ML_TR04> ShellTest_TR04(layers);
-        std::cout << "ChElementShellANCF_3443ML_TR04, " << layers << ", ";
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833ML_TR04, ChMaterialShellANCF_3833ML_TR04> ShellTest_TR04(layers);
+        std::cout << "ChElementShellANCF_3833ML_TR04, " << layers << ", ";
         ShellTest_TR04.PrintTimingResults(num_steps);
     }
     for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR05, ChMaterialShellANCF_3443ML_TR05> ShellTest_TR05(layers);
-        std::cout << "ChElementShellANCF_3443ML_TR05, " << layers << ", ";
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833ML_TR05, ChMaterialShellANCF_3833ML_TR05> ShellTest_TR05(layers);
+        std::cout << "ChElementShellANCF_3833ML_TR05, " << layers << ", ";
         ShellTest_TR05.PrintTimingResults(num_steps);
     }
     for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR06, ChMaterialShellANCF_3443ML_TR06> ShellTest_TR06(layers);
-        std::cout << "ChElementShellANCF_3443ML_TR06, " << layers << ", ";
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833ML_TR06, ChMaterialShellANCF_3833ML_TR06> ShellTest_TR06(layers);
+        std::cout << "ChElementShellANCF_3833ML_TR06, " << layers << ", ";
         ShellTest_TR06.PrintTimingResults(num_steps);
     }
     for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR07, ChMaterialShellANCF_3443ML_TR07> ShellTest_TR07(layers);
-        std::cout << "ChElementShellANCF_3443ML_TR07, " << layers << ", ";
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833ML_TR07, ChMaterialShellANCF_3833ML_TR07> ShellTest_TR07(layers);
+        std::cout << "ChElementShellANCF_3833ML_TR07, " << layers << ", ";
         ShellTest_TR07.PrintTimingResults(num_steps);
     }
     for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR08, ChMaterialShellANCF_3443ML_TR08> ShellTest_TR08(layers);
-        std::cout << "ChElementShellANCF_3443ML_TR08, " << layers << ", ";
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833ML_TR08, ChMaterialShellANCF_3833ML_TR08> ShellTest_TR08(layers);
+        std::cout << "ChElementShellANCF_3833ML_TR08, " << layers << ", ";
         ShellTest_TR08.PrintTimingResults(num_steps);
     }
     for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR09, ChMaterialShellANCF_3443ML_TR09> ShellTest_TR09(layers);
-        std::cout << "ChElementShellANCF_3443ML_TR09, " << layers << ", ";
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833ML_TR09, ChMaterialShellANCF_3833ML_TR09> ShellTest_TR09(layers);
+        std::cout << "ChElementShellANCF_3833ML_TR09, " << layers << ", ";
         ShellTest_TR09.PrintTimingResults(num_steps);
     }
     for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR10, ChMaterialShellANCF_3443ML_TR10> ShellTest_TR10(layers);
-        std::cout << "ChElementShellANCF_3443ML_TR10, " << layers << ", ";
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833ML_TR10, ChMaterialShellANCF_3833ML_TR10> ShellTest_TR10(layers);
+        std::cout << "ChElementShellANCF_3833ML_TR10, " << layers << ", ";
         ShellTest_TR10.PrintTimingResults(num_steps);
     }
     for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
-        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR11, ChMaterialShellANCF_3443ML_TR11> ShellTest_TR11(layers);
-        std::cout << "ChElementShellANCF_3443ML_TR11, " << layers << ", ";
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833ML_TR11, ChMaterialShellANCF_3833ML_TR11> ShellTest_TR11(layers);
+        std::cout << "ChElementShellANCF_3833ML_TR11, " << layers << ", ";
         ShellTest_TR11.PrintTimingResults(num_steps);
     }
 
