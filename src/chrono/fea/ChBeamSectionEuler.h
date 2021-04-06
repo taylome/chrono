@@ -587,9 +587,9 @@ class ChApi ChBeamSectionRayleighEasyCircular : public ChBeamSectionRayleighSimp
 /// The Jxx inertia of the Euler base class is automatically computed from Jyy Jzz by the polar theorem.
 class ChApi ChBeamSectionRayleighAdvancedGeneric : public ChBeamSectionEulerAdvancedGeneric {
   private:
-      double Jzz; // sectional inertia per unit length, in center of mass reference, measured along centerline main axes
-      double Jyy; // sectional inertia per unit length, in center of mass reference, measured along centerline main axes
-      double Jyz; // sectional inertia per unit length, in center of mass reference, measured along centerline main axes
+      double Jzz; // sectional inertia per unit length, in centerline reference, measured along centerline main axes
+      double Jyy; // sectional inertia per unit length, in centerline reference, measured along centerline main axes
+      double Jyz; // sectional inertia per unit length, in centerline reference, measured along centerline main axes
   public:
     ChBeamSectionRayleighAdvancedGeneric()
         : Jzz(0.5), Jyy(0.5), Jyz(0) {}
@@ -610,9 +610,23 @@ class ChApi ChBeamSectionRayleighAdvancedGeneric : public ChBeamSectionEulerAdva
         const double mJyz,     ///< inertia Jyz per unit lenght, in centerline reference, measured along centerline main axes
         const double mMy = 0,  ///< mass center y displacement respect to centerline
         const double mMz = 0   ///< mass center z displacement respect to centerline
-    )
-        : ChBeamSectionEulerAdvancedGeneric(mAx, mTxx, mByy, mBzz, malpha, mCy, mCz, mSy, mSz, mmu, (mJyy + mJzz), mMy, mMz), 
-        Jyy(mJyy), Jzz(mJzz), Jyz(mJyz) {}
+        )
+        : ChBeamSectionEulerAdvancedGeneric(mAx,
+                                            mTxx,
+                                            mByy,
+                                            mBzz,
+                                            malpha,
+                                            mCy,
+                                            mCz,
+                                            mSy,
+                                            mSz,
+                                            mmu,
+                                            (mJyy + mJzz),
+                                            mMy,
+                                            mMz),
+          Jzz(mJzz),
+          Jyy(mJyy),
+          Jyz(mJyz) {}
 
     virtual ~ChBeamSectionRayleighAdvancedGeneric() {}
 
