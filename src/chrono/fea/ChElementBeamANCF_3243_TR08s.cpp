@@ -48,7 +48,7 @@
 
 #include "chrono/core/ChQuadrature.h"
 #include "chrono/physics/ChSystem.h"
-#include "chrono/fea/ChElementBeamANCF_3243_TR08S.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR08s.h"
 #include <cmath>
 #include <Eigen/Dense>
 

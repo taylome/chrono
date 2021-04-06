@@ -45,7 +45,7 @@
 
 #include "chrono/core/ChQuadrature.h"
 #include "chrono/physics/ChSystem.h"
-#include "chrono/fea/ChElementShellANCF_3833ML_TR11S.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR11s.h"
 #include <cmath>
 
 namespace chrono {

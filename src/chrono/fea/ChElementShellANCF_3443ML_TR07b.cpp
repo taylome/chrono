@@ -50,7 +50,7 @@
 
 #include "chrono/core/ChQuadrature.h"
 #include "chrono/physics/ChSystem.h"
-#include "chrono/fea/ChElementShellANCF_3443ML_TR07B.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR07b.h"
 #include <cmath>
 
 namespace chrono {
