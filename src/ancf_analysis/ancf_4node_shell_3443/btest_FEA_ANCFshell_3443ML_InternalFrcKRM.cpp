@@ -30,10 +30,14 @@
 #include "chrono/fea/ChElementShellANCF_3443ML_TR05.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR06.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR07.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR07b.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR07s.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR08.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR08s.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR09.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR10.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR11.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR11s.h"
 
 #include "chrono/fea/ChMesh.h"
 
@@ -279,9 +283,24 @@ int main(int argc, char* argv[]) {
         ShellTest_TR07.PrintTimingResults(num_steps);
     }
     for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR07B, ChMaterialShellANCF_3443ML_TR07B> ShellTest_TR07B(layers);
+        std::cout << "ChElementShellANCF_3443ML_TR07B, " << layers << ", ";
+        ShellTest_TR07B.PrintTimingResults(num_steps);
+    }
+    for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR07S, ChMaterialShellANCF_3443ML_TR07S> ShellTest_TR07S(layers);
+        std::cout << "ChElementShellANCF_3443ML_TR07S, " << layers << ", ";
+        ShellTest_TR07S.PrintTimingResults(num_steps);
+    }
+    for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
         ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR08, ChMaterialShellANCF_3443ML_TR08> ShellTest_TR08(layers);
         std::cout << "ChElementShellANCF_3443ML_TR08, " << layers << ", ";
         ShellTest_TR08.PrintTimingResults(num_steps);
+    }
+    for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR08S, ChMaterialShellANCF_3443ML_TR08S> ShellTest_TR08S(layers);
+        std::cout << "ChElementShellANCF_3443ML_TR08S, " << layers << ", ";
+        ShellTest_TR08S.PrintTimingResults(num_steps);
     }
     for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
         ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR09, ChMaterialShellANCF_3443ML_TR09> ShellTest_TR09(layers);
@@ -297,6 +316,11 @@ int main(int argc, char* argv[]) {
         ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR11, ChMaterialShellANCF_3443ML_TR11> ShellTest_TR11(layers);
         std::cout << "ChElementShellANCF_3443ML_TR11, " << layers << ", ";
         ShellTest_TR11.PrintTimingResults(num_steps);
+    }
+    for (unsigned int layers = 1; layers <= max_layers; layers *= 2) {
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3443ML_TR11S, ChMaterialShellANCF_3443ML_TR11S> ShellTest_TR11S(layers);
+        std::cout << "ChElementShellANCF_3443ML_TR11S, " << layers << ", ";
+        ShellTest_TR11S.PrintTimingResults(num_steps);
     }
 
     return (0);

@@ -28,11 +28,14 @@
 #include "chrono/fea/ChElementShellANCF_3443_TR05.h"
 #include "chrono/fea/ChElementShellANCF_3443_TR06.h"
 #include "chrono/fea/ChElementShellANCF_3443_TR07.h"
+#include "chrono/fea/ChElementShellANCF_3443_TR07s.h"
 #include "chrono/fea/ChElementShellANCF_3443_TR08.h"
 #include "chrono/fea/ChElementShellANCF_3443_TR08b.h"
+#include "chrono/fea/ChElementShellANCF_3443_TR08s.h"
 #include "chrono/fea/ChElementShellANCF_3443_TR09.h"
 #include "chrono/fea/ChElementShellANCF_3443_TR10.h"
 #include "chrono/fea/ChElementShellANCF_3443_TR11.h"
+#include "chrono/fea/ChElementShellANCF_3443_TR11s.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -1788,6 +1791,13 @@ int main(int argc, char* argv[]) {
         print_red("ChElementShellANCF_3443_TR07 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFShellTest<ChElementShellANCF_3443_TR07S, ChMaterialShellANCF_3443_TR07S> ChElementShellANCF_3443_TR07S_test;
+    if (ChElementShellANCF_3443_TR07S_test.RunElementChecks(0))
+        print_green("ChElementShellANCF_3443_TR07S Element Checks = PASSED\n");
+    else
+        print_red("ChElementShellANCF_3443_TR07S Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFShellTest<ChElementShellANCF_3443_TR08, ChMaterialShellANCF_3443_TR08> ChElementShellANCF_3443_TR08_test;
     if (ChElementShellANCF_3443_TR08_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3443_TR08 Element Checks = PASSED\n");
@@ -1800,6 +1810,13 @@ int main(int argc, char* argv[]) {
         print_green("ChElementShellANCF_3443_TR08b Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3443_TR08b Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFShellTest<ChElementShellANCF_3443_TR08S, ChMaterialShellANCF_3443_TR08S> ChElementShellANCF_3443_TR08S_test;
+    if (ChElementShellANCF_3443_TR08S_test.RunElementChecks(0))
+        print_green("ChElementShellANCF_3443_TR08S Element Checks = PASSED\n");
+    else
+        print_red("ChElementShellANCF_3443_TR08S Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellTest<ChElementShellANCF_3443_TR09, ChMaterialShellANCF_3443_TR09> ChElementShellANCF_3443_TR09_test;
@@ -1821,6 +1838,13 @@ int main(int argc, char* argv[]) {
         print_green("ChElementShellANCF_3443_TR11 Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3443_TR11 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFShellTest<ChElementShellANCF_3443_TR11S, ChMaterialShellANCF_3443_TR11S> ChElementShellANCF_3443_TR11S_test;
+    if (ChElementShellANCF_3443_TR11S_test.RunElementChecks(0))
+        print_green("ChElementShellANCF_3443_TR11S Element Checks = PASSED\n");
+    else
+        print_red("ChElementShellANCF_3443_TR11S Element Checks = FAILED\n");
 
     return 0;
 }

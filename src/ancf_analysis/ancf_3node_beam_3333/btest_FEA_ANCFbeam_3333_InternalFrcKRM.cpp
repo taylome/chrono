@@ -24,6 +24,7 @@
 #include "chrono/solver/ChDirectSolverLS.h"
 
 #include "chrono/fea/ChElementBeamANCF.h"
+#include "chrono/fea/ChElementBeamANCF_3333_TR00.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR01.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR02.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR03.h"
@@ -31,11 +32,14 @@
 #include "chrono/fea/ChElementBeamANCF_3333_TR05.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR06.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR07.h"
+#include "chrono/fea/ChElementBeamANCF_3333_TR07s.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR08.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR08b.h"
+#include "chrono/fea/ChElementBeamANCF_3333_TR08s.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR09.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR10.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR11.h"
+#include "chrono/fea/ChElementBeamANCF_3333_TR11s.h"
 
 #include "chrono/fea/ChMesh.h"
 
@@ -243,6 +247,10 @@ int main(int argc, char* argv[]) {
     std::cout << "ChElementBeamANCF_Org, ";
     BeamTest_Org.PrintTimingResults(num_steps);
 
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3333_TR00, ChMaterialBeamANCF_3333_TR00> BeamTest_TR00;
+    std::cout << "ChElementBeamANCF_3333_TR00, ";
+    BeamTest_TR00.PrintTimingResults(num_steps);
+
     ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3333_TR01, ChMaterialBeamANCF_3333_TR01> BeamTest_TR01;
     std::cout << "ChElementBeamANCF_3333_TR01, ";
     BeamTest_TR01.PrintTimingResults(num_steps);
@@ -271,13 +279,21 @@ int main(int argc, char* argv[]) {
     std::cout << "ChElementBeamANCF_3333_TR07, ";
     BeamTest_TR07.PrintTimingResults(num_steps);
 
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3333_TR07S, ChMaterialBeamANCF_3333_TR07S> BeamTest_TR07S;
+    std::cout << "ChElementBeamANCF_3333_TR07S, ";
+    BeamTest_TR07S.PrintTimingResults(num_steps);
+
     ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3333_TR08, ChMaterialBeamANCF_3333_TR08> BeamTest_TR08;
     std::cout << "ChElementBeamANCF_3333_TR08, ";
     BeamTest_TR08.PrintTimingResults(num_steps);
 
-    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3333_TR08b, ChMaterialBeamANCF_3333_TR08b> BeamTest_TR08b;
-    std::cout << "ChElementBeamANCF_3333_TR08b, ";
-    BeamTest_TR08b.PrintTimingResults(num_steps);
+    //ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3333_TR08b, ChMaterialBeamANCF_3333_TR08b> BeamTest_TR08b;
+    //std::cout << "ChElementBeamANCF_3333_TR08b, ";
+    //BeamTest_TR08b.PrintTimingResults(num_steps);
+
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3333_TR08S, ChMaterialBeamANCF_3333_TR08S> BeamTest_TR08S;
+    std::cout << "ChElementBeamANCF_3333_TR08S, ";
+    BeamTest_TR08S.PrintTimingResults(num_steps);
 
     ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3333_TR09, ChMaterialBeamANCF_3333_TR09> BeamTest_TR09;
     std::cout << "ChElementBeamANCF_3333_TR09, ";
@@ -290,6 +306,10 @@ int main(int argc, char* argv[]) {
     ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3333_TR11, ChMaterialBeamANCF_3333_TR11> BeamTest_TR11;
     std::cout << "ChElementBeamANCF_3333_TR11, ";
     BeamTest_TR11.PrintTimingResults(num_steps);
+
+    ANCFBeamTest<NUM_ELEMENTS, ChElementBeamANCF_3333_TR11S, ChMaterialBeamANCF_3333_TR11S> BeamTest_TR11S;
+    std::cout << "ChElementBeamANCF_3333_TR11S, ";
+    BeamTest_TR11S.PrintTimingResults(num_steps);
 
     return (0);
 }

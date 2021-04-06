@@ -14,32 +14,39 @@
 // Fully Parameterized ANCF beam element with 2 nodes. Description of this element
 // and its internal forces may be found in
 // =============================================================================
-// Internal Force Calculation Method is based on:  D Garcia-Vallejo, J Mayo,
-// J L Escalona, and J Dominguez. Efficient evaluation of the elastic forces and
-// the jacobian in the absolute nodal coordinate formulation. Nonlinear
-// Dynamics, 35(4) : 313-329, 2004.
+// Internal Force Calculation Method is based on:  Gerstmayr, J., Shabana, A.A.:
+// Efficient integration of the elastic forces and thin three-dimensional beam
+// elements in the absolute nodal coordinate formulation.In: Proceedings of the
+// Multibody Dynamics Eccomas thematic Conference, Madrid(2005)
 // =============================================================================
-// TR11 = a Garcia-Vallejo style implementation of the element with pre-calculation
-//     of the matrices needed for both the internal force and Jacobian Calculation
+// TR08S = a Gerstmayr style implementation of the element with pre-calculation
+//     of the terms needed for the generalized internal force calculation with
+//     an analytical Jacobian that is integrated across all GQ points at once
 //
 //  Mass Matrix = Constant, pre-calculated 8x8 matrix
 //
 //  Generalized Force due to gravity = Constant 24x1 Vector
 //     (assumption that gravity is constant too)
 //
-//  Generalized Internal Force Vector = Calculated using the Garcia-Vallejo method:
-//     Math is based on the method presented by Garcia-Vallejo et al.
-//     "Full Integration" Number of GQ Integration Points (5x3x3)
+//  Generalized Internal Force Vector = Calculated using the Gerstmayr method:
+//     Dense Math: e_bar = 3x8 and S_bar = 8x1
+//     Math is based on the method presented by Gerstmayr and Shabana
+//     1 less than "Full Integration" Number of GQ Integration Points (4x2x2)
+//     GQ integration is performed across all the GQ points at once
+//     Pre-calculation of terms for the generalized internal force calculation
 //
 //  Jacobian of the Generalized Internal Force Vector = Analytical Jacobian that
-//     is based on the method presented by Garcia-Vallejo et al.
-//     Internal force calculation results are cached for reuse during the Jacobian
-//     calculations
+//     is integrated across all GQ points at once
+//     F and Strains are not cached from the internal force calculation but are
+//     recalculated during the Jacobian calculations
 //
 // =============================================================================
+// Jacobian Symmetries Update & Upper Triangular Mass Matrix
+// =============================================================================
 
-#ifndef CHELEMENTBEAMANCF3243TR11_H
-#define CHELEMENTBEAMANCF3243TR11_H
+
+#ifndef CHELEMENTBEAMANCF3243TR08S_H
+#define CHELEMENTBEAMANCF3243TR08S_H
 
 #include <vector>
 
@@ -55,10 +62,10 @@ namespace fea {
 
 /// Material definition.
 /// This class implements material properties for an ANCF Beam.
-class ChApi ChMaterialBeamANCF_3243_TR11 {
+class ChApi ChMaterialBeamANCF_3243_TR08S {
   public:
     /// Construct an isotropic material.
-    ChMaterialBeamANCF_3243_TR11(double rho,        ///< material density
+    ChMaterialBeamANCF_3243_TR08S(double rho,        ///< material density
                                  double E,          ///< Young's modulus
                                  double nu,         ///< Poisson ratio
                                  const double& k1,  ///< Shear correction factor along beam local y axis
@@ -66,7 +73,7 @@ class ChApi ChMaterialBeamANCF_3243_TR11 {
     );
 
     /// Construct a (possibly) orthotropic material.
-    ChMaterialBeamANCF_3243_TR11(double rho,            ///< material density
+    ChMaterialBeamANCF_3243_TR08S(double rho,            ///< material density
                                  const ChVector<>& E,   ///< elasticity moduli (E_x, E_y, E_z)
                                  const ChVector<>& nu,  ///< Poisson ratios (nu_xy, nu_xz, nu_yz)
                                  const ChVector<>& G,   ///< shear moduli (G_xy, G_xz, G_yz)
@@ -77,8 +84,12 @@ class ChApi ChMaterialBeamANCF_3243_TR11 {
     /// Return the material density.
     double Get_rho() const { return m_rho; }
 
-    const ChVectorN<double, 6>& Get_D0() const { return m_D0; }
-    const ChMatrixNM<double, 3, 3>& Get_Dv() const { return m_Dv; }
+    const ChVectorN<double, 6>& Get_D0() const {
+        return m_D0;
+    }  ///< matrix of elastic coefficients (split of diagonal terms for integration across the entire element)
+    const ChMatrixNM<double, 3, 3>& Get_Dv() const {
+        return m_Dv;
+    }  ///< matrix of elastic coefficients (remainder of split, upper 3x3 terms for integration only on the beam axis)
 
   private:
     /// Calculate the matrix form of two stiffness tensors used by the ANCF beam for selective reduced integration of
@@ -110,18 +121,18 @@ class ChApi ChMaterialBeamANCF_3243_TR11 {
 /// </pre>
 /// where C is the third and central node.
 
-class ChApi ChElementBeamANCF_3243_TR11 : public ChElementBeam, public ChLoadableU, public ChLoadableUVW {
+class ChApi ChElementBeamANCF_3243_TR08S : public ChElementBeam, public ChLoadableU, public ChLoadableUVW {
   public:
     using ShapeVector = ChMatrixNM<double, 1, 8>;
 
-    /// Dense matrix with *fixed size* (known at compile time).
-    /// A ChMatrixNM is templated by the type of its coefficients and by the matrix dimensions (number of rows and
+    /// Dense matrix in column major format with *fixed size* (known at compile time).
+    /// A ChMatrixNMc is templated by the type of its coefficients and by the matrix dimensions (number of rows and
     /// columns).
     template <typename T, int M, int N>
     using ChMatrixNMc = Eigen::Matrix<T, M, N, Eigen::ColMajor>;
 
-    ChElementBeamANCF_3243_TR11();
-    ~ChElementBeamANCF_3243_TR11() {}
+    ChElementBeamANCF_3243_TR08S();
+    ~ChElementBeamANCF_3243_TR08S() {}
 
     /// Get the number of nodes used by this element.
     virtual int GetNnodes() override { return 2; }
@@ -144,7 +155,7 @@ class ChApi ChElementBeamANCF_3243_TR11 : public ChElementBeam, public ChLoadabl
     }
 
     /// Specify the element material.
-    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF_3243_TR11> beam_mat) { m_material = beam_mat; }
+    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF_3243_TR08S> beam_mat) { m_material = beam_mat; }
 
     /// Access the n-th node of this element.
     virtual std::shared_ptr<ChNodeFEAbase> GetNodeN(int n) override { return m_nodes[n]; }
@@ -156,7 +167,7 @@ class ChApi ChElementBeamANCF_3243_TR11 : public ChElementBeam, public ChLoadabl
     std::shared_ptr<ChNodeFEAxyzDDD> GetNodeB() const { return m_nodes[1]; }
 
     /// Return the material.
-    std::shared_ptr<ChMaterialBeamANCF_3243_TR11> GetMaterial() const { return m_material; }
+    std::shared_ptr<ChMaterialBeamANCF_3243_TR08S> GetMaterial() const { return m_material; }
 
     /// Turn gravity on/off.
     void SetGravityOn(bool val) { m_gravity_on = val; }
@@ -342,16 +353,28 @@ class ChApi ChElementBeamANCF_3243_TR11 : public ChElementBeam, public ChLoadabl
     /// stiffness matrix H in the function ComputeKRMmatricesGlobal().
     void ComputeInternalJacobians(ChMatrixNM<double, 24, 24>& JacobianMatrix, double Kfactor, double Rfactor);
 
-    // Calculate the generalized internal force for the element given the provided current state coordinates
-    void ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
-                                      const ChMatrixNMc<double, 8, 3>& e_bar,
-                                      const ChVectorN<double, 24>& e_dot);
+    // Calculate the calculate the Jacobian of the internal force integrand with damping included
+    void ComputeInternalJacobianDamping(ChMatrixRef& H, double Kfactor, double Rfactor, double Mfactor);
+
+    // Calculate the calculate the Jacobian of the internal force integrand without damping included
+    void ComputeInternalJacobianNoDamping(ChMatrixRef& H, double Kfactor, double Mfactor);
+
+    // Calculate the generalized internal force for the element given the provided current state coordinates with
+    // damping included
+    void ComputeInternalForcesAtState(ChVectorDynamic<>& Fi, const ChMatrixNM<double, 8, 6>& ebar_ebardot);
+
+    // Calculate the generalized internal force for the element given the provided current state coordinates without
+    // damping included
+    void ComputeInternalForcesAtStateNoDamping(ChVectorDynamic<>& Fi, const ChMatrixNM<double, 8, 3>& e_bar);
 
     // Return the pre-computed generalized force due to gravity
     void Get_GravityFrc(ChVectorN<double, 24>& Gi) { Gi = m_GravForce; }
 
     // Calculate the current 8x3 matrix of nodal coordinates.
     void CalcCoordMatrix(ChMatrixNMc<double, 8, 3>& e);
+
+    // Calculate the current 8x3 matrix of nodal coordinates.
+    void CalcCoordMatrix(ChMatrixNM<double, 8, 3>& e);
 
     // Calculate the current 24x1 vector of nodal coordinates.
     void CalcCoordVector(ChVectorN<double, 24>& e);
@@ -361,6 +384,9 @@ class ChApi ChElementBeamANCF_3243_TR11 : public ChElementBeam, public ChLoadabl
 
     // Calculate the current 24x1 vector of nodal coordinate time derivatives.
     void CalcCoordDerivVector(ChVectorN<double, 24>& edot);
+
+    // Calculate the current 8x3 matrix of nodal coordinates.
+    void CalcCombinedCoordMatrix(ChMatrixNM<double, 8, 6>& ebar_ebardot);
 
     // Calculate the 3x24 Sparse & Repetitive Normalized Shape Function Matrix
     void Calc_Sxi(ChMatrixNM<double, 3, 24>& Sxi, double xi, double eta, double zeta);
@@ -387,19 +413,22 @@ class ChApi ChElementBeamANCF_3243_TR11 : public ChElementBeam, public ChLoadabl
     double m_thicknessY;                                     ///< total element thickness along Y
     double m_thicknessZ;                                     ///< total element thickness along Z
     double m_Alpha;                                          ///< structural damping
-    double m_2Alpha;                                         ///< structural damping
+    double m_2Alpha;                                         ///< structural damping x2
     bool m_damping_enabled;                                  ///< Flag to run internal force damping calculations
     bool m_gravity_on;                                       ///< enable/disable gravity calculation
     ChVectorN<double, 24> m_GravForce;                       ///< Gravity Force
-    ChMatrixNM<double, 8, 8>
-        m_MassMatrix;  ///< mass matrix - in compact form for reduced memory and reduced KRM matrix computations
-    std::shared_ptr<ChMaterialBeamANCF_3243_TR11> m_material;  ///< beam material
+    std::shared_ptr<ChMaterialBeamANCF_3243_TR08S> m_material;  ///< beam material
     StrainFormulation m_strain_form;                           ///< Strain formulation
     ChMatrixNMc<double, 8, 3> m_e0_bar;  ///< Element Position Coordinate Matrix for the Reference Configuration
-
-    ChMatrixNM<double, 512, 8> m_Ccompact;
-    ChMatrixNM<double, 24, 24> m_K1;
-    ChMatrixNM<double, 24, 24> m_K2;
+    ChMatrixNM<double, 8, 60>
+        m_SD_precompute_col_ordered;  ///< Precomputed corrected normalized shape function derivative matrices for no
+                                      ///< Poisson Effect followed by Poisson Effect on the beam axis only in column by
+                                      ///< column order
+    ChVectorN<double, 16> m_GQWeight_det_J_0xi_D0;  ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale
+                                                    ///< factors for no Poisson Effect
+    ChVectorN<double, 4> m_GQWeight_det_J_0xi_Dv;  ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale
+                                                   ///< factor for Poisson Effect on the beam axis only
+    ChVectorN<double, 36> m_MassMatrix; ///Mass Matrix in extra compact form (Upper Triangular Part only)
 
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

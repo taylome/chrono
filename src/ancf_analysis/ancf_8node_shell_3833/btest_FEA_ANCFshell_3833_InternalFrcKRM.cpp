@@ -30,11 +30,14 @@
 #include "chrono/fea/ChElementShellANCF_3833_TR05.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR06.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR07.h"
+#include "chrono/fea/ChElementShellANCF_3833_TR07s.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR08.h"
 //#include "chrono/fea/ChElementShellANCF_3833_TR08b.h"
+#include "chrono/fea/ChElementShellANCF_3833_TR08s.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR09.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR10.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR11.h"
+#include "chrono/fea/ChElementShellANCF_3833_TR11s.h"
 
 #include "chrono/fea/ChMesh.h"
 
@@ -227,8 +230,8 @@ void ANCFShellTest<num_elements, ElementVersion, MaterialVersion>::PrintTimingRe
 
     for (auto i = 0; i < steps; i++) {
         PerturbNodes();
-        //TimeInternalFrc += GetInternalFrc();
-        TimeKRM += GetJacobian();
+        TimeInternalFrc += GetInternalFrc();
+        //TimeKRM += GetJacobian();
     }
 
     Timer_Total.stop();
@@ -287,14 +290,24 @@ int main(int argc, char* argv[]) {
         ShellTest_TR07.PrintTimingResults(num_steps);
     }
     {
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR07S, ChMaterialShellANCF_3833_TR07S> ShellTest_TR07S;
+        std::cout << "ChElementShellANCF_3833_TR07S, ";
+        ShellTest_TR07S.PrintTimingResults(num_steps);
+    }
+    {
         ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR08, ChMaterialShellANCF_3833_TR08> ShellTest_TR08;
         std::cout << "ChElementShellANCF_3833_TR08, ";
         ShellTest_TR08.PrintTimingResults(num_steps);
     }
+    //{
+    //     ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR08b, ChMaterialShellANCF_3833_TR08b> ShellTest_TR08b;
+    //     std::cout << "ChElementShellANCF_3833_TR08b, ";
+    //     ShellTest_TR08b.PrintTimingResults(num_steps);
+    //}
     {
-        // ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR08b, ChMaterialShellANCF_3833_TR08b> ShellTest_TR08b;
-        // std::cout << "ChElementShellANCF_3833_TR08b, ";
-        // ShellTest_TR08b.PrintTimingResults(num_steps);
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR08S, ChMaterialShellANCF_3833_TR08S> ShellTest_TR08S;
+        std::cout << "ChElementShellANCF_3833_TR08S, ";
+        ShellTest_TR08S.PrintTimingResults(num_steps);
     }
     {
         ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR09, ChMaterialShellANCF_3833_TR09> ShellTest_TR09;
@@ -310,6 +323,11 @@ int main(int argc, char* argv[]) {
         ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR11, ChMaterialShellANCF_3833_TR11> ShellTest_TR11;
         std::cout << "ChElementShellANCF_3833_TR11, ";
         ShellTest_TR11.PrintTimingResults(num_steps);
+    }
+    {
+        ANCFShellTest<NUM_ELEMENTS, ChElementShellANCF_3833_TR11S, ChMaterialShellANCF_3833_TR11S> ShellTest_TR11S;
+        std::cout << "ChElementShellANCF_3833_TR11S, ";
+        ShellTest_TR11S.PrintTimingResults(num_steps);
     }
 
     return (0);

@@ -30,11 +30,14 @@
 #include "chrono/fea/ChElementBrickANCF_3843_TR05.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR06.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR07.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR07s.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR08.h"
 //#include "chrono/fea/ChElementBrickANCF_3843_TR08b.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR08s.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR09.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR10.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR11.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR11s.h"
 
 #include "chrono/fea/ChMesh.h"
 
@@ -286,6 +289,11 @@ int main(int argc, char* argv[]) {
         BrickTest_TR07.PrintTimingResults(num_steps);
     }
     {
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR07S, ChMaterialBrickANCF_3843_TR07S> BrickTest_TR07S;
+        std::cout << "ChElementBrickANCF_3843_TR07S, ";
+        BrickTest_TR07S.PrintTimingResults(num_steps);
+    }
+    {
         ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR08, ChMaterialBrickANCF_3843_TR08> BrickTest_TR08;
         std::cout << "ChElementBrickANCF_3843_TR08, ";
         BrickTest_TR08.PrintTimingResults(num_steps);
@@ -293,6 +301,11 @@ int main(int argc, char* argv[]) {
     //ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR08b, ChMaterialBrickANCF_3843_TR08b> BrickTest_TR08b;
     //std::cout << "ChElementBrickANCF_3843_TR08b, ";
     //BrickTest_TR08b.PrintTimingResults(num_steps);
+    {
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR08S, ChMaterialBrickANCF_3843_TR08S> BrickTest_TR08S;
+        std::cout << "ChElementBrickANCF_3843_TR08S, ";
+        BrickTest_TR08S.PrintTimingResults(num_steps);
+    }
     {
         ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR09, ChMaterialBrickANCF_3843_TR09> BrickTest_TR09;
         std::cout << "ChElementBrickANCF_3843_TR09, ";
@@ -307,6 +320,11 @@ int main(int argc, char* argv[]) {
         ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR11, ChMaterialBrickANCF_3843_TR11> BrickTest_TR11;
         std::cout << "ChElementBrickANCF_3843_TR11, ";
         BrickTest_TR11.PrintTimingResults(num_steps);
+    }
+    {
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR11S, ChMaterialBrickANCF_3843_TR11S> BrickTest_TR11S;
+        std::cout << "ChElementBrickANCF_3843_TR11S, ";
+        BrickTest_TR11S.PrintTimingResults(num_steps);
     }
 
     return (0);

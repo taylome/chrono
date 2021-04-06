@@ -19,7 +19,7 @@
 // the jacobian in the absolute nodal coordinate formulation. Nonlinear
 // Dynamics, 35(4) : 313-329, 2004.
 // =============================================================================
-// TR11 = a Garcia-Vallejo style implementation of the element with pre-calculation
+// TR11S = a Garcia-Vallejo style implementation of the element with pre-calculation
 //     of the matrices needed for both the internal force and Jacobian Calculation
 //
 //  Mass Matrix = Constant, pre-calculated 8x8 matrix
@@ -38,8 +38,8 @@
 //
 // =============================================================================
 
-#ifndef CHELEMENTBEAMANCF3243TR11_H
-#define CHELEMENTBEAMANCF3243TR11_H
+#ifndef CHELEMENTBEAMANCF3243TR11S_H
+#define CHELEMENTBEAMANCF3243TR11S_H
 
 #include <vector>
 
@@ -55,10 +55,10 @@ namespace fea {
 
 /// Material definition.
 /// This class implements material properties for an ANCF Beam.
-class ChApi ChMaterialBeamANCF_3243_TR11 {
+class ChApi ChMaterialBeamANCF_3243_TR11S {
   public:
     /// Construct an isotropic material.
-    ChMaterialBeamANCF_3243_TR11(double rho,        ///< material density
+    ChMaterialBeamANCF_3243_TR11S(double rho,        ///< material density
                                  double E,          ///< Young's modulus
                                  double nu,         ///< Poisson ratio
                                  const double& k1,  ///< Shear correction factor along beam local y axis
@@ -66,7 +66,7 @@ class ChApi ChMaterialBeamANCF_3243_TR11 {
     );
 
     /// Construct a (possibly) orthotropic material.
-    ChMaterialBeamANCF_3243_TR11(double rho,            ///< material density
+    ChMaterialBeamANCF_3243_TR11S(double rho,            ///< material density
                                  const ChVector<>& E,   ///< elasticity moduli (E_x, E_y, E_z)
                                  const ChVector<>& nu,  ///< Poisson ratios (nu_xy, nu_xz, nu_yz)
                                  const ChVector<>& G,   ///< shear moduli (G_xy, G_xz, G_yz)
@@ -110,7 +110,7 @@ class ChApi ChMaterialBeamANCF_3243_TR11 {
 /// </pre>
 /// where C is the third and central node.
 
-class ChApi ChElementBeamANCF_3243_TR11 : public ChElementBeam, public ChLoadableU, public ChLoadableUVW {
+class ChApi ChElementBeamANCF_3243_TR11S : public ChElementBeam, public ChLoadableU, public ChLoadableUVW {
   public:
     using ShapeVector = ChMatrixNM<double, 1, 8>;
 
@@ -120,8 +120,8 @@ class ChApi ChElementBeamANCF_3243_TR11 : public ChElementBeam, public ChLoadabl
     template <typename T, int M, int N>
     using ChMatrixNMc = Eigen::Matrix<T, M, N, Eigen::ColMajor>;
 
-    ChElementBeamANCF_3243_TR11();
-    ~ChElementBeamANCF_3243_TR11() {}
+    ChElementBeamANCF_3243_TR11S();
+    ~ChElementBeamANCF_3243_TR11S() {}
 
     /// Get the number of nodes used by this element.
     virtual int GetNnodes() override { return 2; }
@@ -144,7 +144,7 @@ class ChApi ChElementBeamANCF_3243_TR11 : public ChElementBeam, public ChLoadabl
     }
 
     /// Specify the element material.
-    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF_3243_TR11> beam_mat) { m_material = beam_mat; }
+    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF_3243_TR11S> beam_mat) { m_material = beam_mat; }
 
     /// Access the n-th node of this element.
     virtual std::shared_ptr<ChNodeFEAbase> GetNodeN(int n) override { return m_nodes[n]; }
@@ -156,7 +156,7 @@ class ChApi ChElementBeamANCF_3243_TR11 : public ChElementBeam, public ChLoadabl
     std::shared_ptr<ChNodeFEAxyzDDD> GetNodeB() const { return m_nodes[1]; }
 
     /// Return the material.
-    std::shared_ptr<ChMaterialBeamANCF_3243_TR11> GetMaterial() const { return m_material; }
+    std::shared_ptr<ChMaterialBeamANCF_3243_TR11S> GetMaterial() const { return m_material; }
 
     /// Turn gravity on/off.
     void SetGravityOn(bool val) { m_gravity_on = val; }
@@ -391,13 +391,12 @@ class ChApi ChElementBeamANCF_3243_TR11 : public ChElementBeam, public ChLoadabl
     bool m_damping_enabled;                                  ///< Flag to run internal force damping calculations
     bool m_gravity_on;                                       ///< enable/disable gravity calculation
     ChVectorN<double, 24> m_GravForce;                       ///< Gravity Force
-    ChMatrixNM<double, 8, 8>
-        m_MassMatrix;  ///< mass matrix - in compact form for reduced memory and reduced KRM matrix computations
-    std::shared_ptr<ChMaterialBeamANCF_3243_TR11> m_material;  ///< beam material
+    ChVectorN<double, 36> m_MassMatrix; ///Mass Matrix in extra compact form (Upper Triangular Part only)
+    std::shared_ptr<ChMaterialBeamANCF_3243_TR11S> m_material;  ///< beam material
     StrainFormulation m_strain_form;                           ///< Strain formulation
     ChMatrixNMc<double, 8, 3> m_e0_bar;  ///< Element Position Coordinate Matrix for the Reference Configuration
 
-    ChMatrixNM<double, 512, 8> m_Ccompact;
+    ChMatrixNM<double, 288, 8> m_Ccompact;
     ChMatrixNM<double, 24, 24> m_K1;
     ChMatrixNM<double, 24, 24> m_K2;
 
