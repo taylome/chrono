@@ -246,7 +246,7 @@ void ANCFBeam3243Test<num_elements, ElementVersion, MaterialVersion>::PerturbNod
         ChVector<double> Perturbation;
         if (Use_OMP) {
             #pragma omp parallel for
-            for (unsigned int in = 0; in < NodeList.size(); in++) {
+            for (int in = 0; in < NodeList.size(); in++) {
                 Perturbation.eigen().Random();
                 //auto Node = std::dynamic_pointer_cast<ChNodeFEAxyzDDD>(NodeList[in]);
                 auto Node = std::static_pointer_cast<ChNodeFEAxyzDDD>(NodeList[in]);
@@ -284,7 +284,7 @@ double ANCFBeam3243Test<num_elements, ElementVersion, MaterialVersion>::GetInter
 
         if (Use_OMP) {
             #pragma omp parallel for
-            for (unsigned int ie = 0; ie < ElementList.size(); ie++) {
+            for (int ie = 0; ie < ElementList.size(); ie++) {
                 ElementList[ie]->ComputeInternalForces(Fi);
             }
         }
@@ -313,7 +313,7 @@ double ANCFBeam3243Test<num_elements, ElementVersion, MaterialVersion>::GetJacob
 
         if (Use_OMP) {
             #pragma omp parallel for
-            for (unsigned int ie = 0; ie < ElementList.size(); ie++) {
+            for (int ie = 0; ie < ElementList.size(); ie++) {
                 ElementList[ie]->ComputeKRMmatricesGlobal(H, 1.0, 1.0, 1.0);
             }
         }
@@ -330,6 +330,11 @@ double ANCFBeam3243Test<num_elements, ElementVersion, MaterialVersion>::GetJacob
 
 template <int num_elements, typename ElementVersion, typename MaterialVersion>
 void ANCFBeam3243Test<num_elements, ElementVersion, MaterialVersion>::PrintTimingResults(const std::string& TestName, int steps) {
+    std::cout << "-------------------------------------" << std::endl;
+    std::cout << "Test Name, Num Els, Steps, Threads, ";
+    std::cout << "IntFrc Max(us), IntFrc Min(us), IntFrc Mean(us), IntFrc StDev(us), ";
+    std::cout << "KRM Max(us), KRM Min(us), KRM Mean(us), KRM StDev(us), " << std::endl;
+    std::cout << std::flush;
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> Times;
     Times.resize(steps, 2);
@@ -342,7 +347,6 @@ void ANCFBeam3243Test<num_elements, ElementVersion, MaterialVersion>::PrintTimin
     Timer_Total.reset();
     Timer_Total.start();
 
-
     //Run Single Threaded Tests
     for (auto i = 0; i < steps; i++) {
         PerturbNodes(false);
@@ -353,10 +357,6 @@ void ANCFBeam3243Test<num_elements, ElementVersion, MaterialVersion>::PrintTimin
         Times(i, 1) = GetJacobian(false) * (1.0e6 / double(num_elements)); //Get Time Per Function Call in microseconds
     }
 
-    std::cout << "-------------------------------------" << std::endl;
-    std::cout << "Test Name, Num Els, Steps, Threads, ";
-    std::cout << "IntFrc Max(us), IntFrc Min(us), IntFrc Mean(us), IntFrc StDev(us), ";
-    std::cout << "KRM Max(us), KRM Min(us), KRM Mean(us), KRM StDev(us), " << std::endl;
     std::cout << TestName << ", " << num_elements << ", " << steps << ", 0, "
         << Times.col(0).maxCoeff() << ", "
         << Times.col(0).minCoeff() << ", "
@@ -366,7 +366,7 @@ void ANCFBeam3243Test<num_elements, ElementVersion, MaterialVersion>::PrintTimin
         << Times.col(1).minCoeff() << ", "
         << Times.col(1).mean() << ", "
         << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1)) << std::endl;
-
+    std::cout << std::flush;
 
 
     //Run Multi-Threaded Tests
@@ -398,6 +398,7 @@ void ANCFBeam3243Test<num_elements, ElementVersion, MaterialVersion>::PrintTimin
             << Times.col(1).minCoeff() << ", "
             << Times.col(1).mean() << ", "
             << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1)) << std::endl;
+        std::cout << std::flush;
 
         if (NumThreads == MaxThreads)
             run = false;
@@ -590,7 +591,7 @@ void ANCFBeam3333Test<num_elements, ElementVersion, MaterialVersion>::PerturbNod
         ChVector<double> Perturbation;
         if (Use_OMP) {
             #pragma omp parallel for
-            for (unsigned int in = 0; in < NodeList.size(); in++) {
+            for (int in = 0; in < NodeList.size(); in++) {
                 Perturbation.eigen().Random();
                 //auto Node = std::dynamic_pointer_cast<ChNodeFEAxyzDD>(NodeList[in]);
                 auto Node = std::static_pointer_cast<ChNodeFEAxyzDD>(NodeList[in]);
@@ -626,7 +627,7 @@ double ANCFBeam3333Test<num_elements, ElementVersion, MaterialVersion>::GetInter
 
         if (Use_OMP) {
             #pragma omp parallel for
-            for (unsigned int ie = 0; ie < ElementList.size(); ie++) {
+            for (int ie = 0; ie < ElementList.size(); ie++) {
                 ElementList[ie]->ComputeInternalForces(Fi);
             }
         }
@@ -655,7 +656,7 @@ double ANCFBeam3333Test<num_elements, ElementVersion, MaterialVersion>::GetJacob
 
         if (Use_OMP) {
             #pragma omp parallel for
-            for (unsigned int ie = 0; ie < ElementList.size(); ie++) {
+            for (int ie = 0; ie < ElementList.size(); ie++) {
                 ElementList[ie]->ComputeKRMmatricesGlobal(H, 1.0, 1.0, 1.0);
             }
         }
@@ -672,6 +673,11 @@ double ANCFBeam3333Test<num_elements, ElementVersion, MaterialVersion>::GetJacob
 
 template <int num_elements, typename ElementVersion, typename MaterialVersion>
 void ANCFBeam3333Test<num_elements, ElementVersion, MaterialVersion>::PrintTimingResults(const std::string& TestName, int steps) {
+    std::cout << "-------------------------------------" << std::endl;
+    std::cout << "Test Name, Num Els, Steps, Threads, ";
+    std::cout << "IntFrc Max(us), IntFrc Min(us), IntFrc Mean(us), IntFrc StDev(us), ";
+    std::cout << "KRM Max(us), KRM Min(us), KRM Mean(us), KRM StDev(us), " << std::endl;
+    std::cout << std::flush;
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> Times;
     Times.resize(steps, 2);
@@ -695,10 +701,6 @@ void ANCFBeam3333Test<num_elements, ElementVersion, MaterialVersion>::PrintTimin
         Times(i, 1) = GetJacobian(false) * (1.0e6 / double(num_elements)); //Get Time Per Function Call in microseconds
     }
 
-    std::cout << "-------------------------------------" << std::endl;
-    std::cout << "Test Name, Num Els, Steps, Threads, ";
-    std::cout << "IntFrc Max(us), IntFrc Min(us), IntFrc Mean(us), IntFrc StDev(us), ";
-    std::cout << "KRM Max(us), KRM Min(us), KRM Mean(us), KRM StDev(us), " << std::endl;
     std::cout << TestName << ", " << num_elements << ", " << steps << ", 0, "
         << Times.col(0).maxCoeff() << ", "
         << Times.col(0).minCoeff() << ", "
@@ -708,7 +710,7 @@ void ANCFBeam3333Test<num_elements, ElementVersion, MaterialVersion>::PrintTimin
         << Times.col(1).minCoeff() << ", "
         << Times.col(1).mean() << ", "
         << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1)) << std::endl;
-
+    std::cout << std::flush;
 
 
     //Run Multi-Threaded Tests
@@ -740,6 +742,7 @@ void ANCFBeam3333Test<num_elements, ElementVersion, MaterialVersion>::PrintTimin
             << Times.col(1).minCoeff() << ", "
             << Times.col(1).mean() << ", "
             << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1)) << std::endl;
+        std::cout << std::flush;
 
         if (NumThreads == MaxThreads)
             run = false;
@@ -943,7 +946,7 @@ void ANCFShell3443Test<num_elements, ElementVersion, MaterialVersion>::PerturbNo
         ChVector<double> Perturbation;
         if (Use_OMP) {
 #pragma omp parallel for
-            for (unsigned int in = 0; in < NodeList.size(); in++) {
+            for (int in = 0; in < NodeList.size(); in++) {
                 Perturbation.eigen().Random();
                 //auto Node = std::dynamic_pointer_cast<ChNodeFEAxyzDDD>(NodeList[in]);
                 auto Node = std::static_pointer_cast<ChNodeFEAxyzDDD>(NodeList[in]);
@@ -981,7 +984,7 @@ double ANCFShell3443Test<num_elements, ElementVersion, MaterialVersion>::GetInte
 
         if (Use_OMP) {
             #pragma omp parallel for
-            for (unsigned int ie = 0; ie < ElementList.size(); ie++) {
+            for (int ie = 0; ie < ElementList.size(); ie++) {
                 ElementList[ie]->ComputeInternalForces(Fi);
             }
         }
@@ -1010,7 +1013,7 @@ double ANCFShell3443Test<num_elements, ElementVersion, MaterialVersion>::GetJaco
 
         if (Use_OMP) {
             #pragma omp parallel for
-            for (unsigned int ie = 0; ie < ElementList.size(); ie++) {
+            for (int ie = 0; ie < ElementList.size(); ie++) {
                 ElementList[ie]->ComputeKRMmatricesGlobal(H, 1.0, 1.0, 1.0);
             }
         }
@@ -1027,6 +1030,11 @@ double ANCFShell3443Test<num_elements, ElementVersion, MaterialVersion>::GetJaco
 
 template <int num_elements, typename ElementVersion, typename MaterialVersion>
 void ANCFShell3443Test<num_elements, ElementVersion, MaterialVersion>::PrintTimingResults(const std::string& TestName, int steps) {
+    std::cout << "-------------------------------------" << std::endl;
+    std::cout << "Test Name, Num Els, Steps, Threads, ";
+    std::cout << "IntFrc Max(us), IntFrc Min(us), IntFrc Mean(us), IntFrc StDev(us), ";
+    std::cout << "KRM Max(us), KRM Min(us), KRM Mean(us), KRM StDev(us), " << std::endl;
+    std::cout << std::flush;
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> Times;
     Times.resize(steps, 2);
@@ -1050,10 +1058,6 @@ void ANCFShell3443Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
         Times(i, 1) = GetJacobian(false) * (1.0e6 / double(num_elements)); //Get Time Per Function Call in microseconds
     }
 
-    std::cout << "-------------------------------------" << std::endl;
-    std::cout << "Test Name, Num Els, Steps, Threads, ";
-    std::cout << "IntFrc Max(us), IntFrc Min(us), IntFrc Mean(us), IntFrc StDev(us), ";
-    std::cout << "KRM Max(us), KRM Min(us), KRM Mean(us), KRM StDev(us), " << std::endl;
     std::cout << TestName << ", " << num_elements << ", " << steps << ", 0, "
         << Times.col(0).maxCoeff() << ", "
         << Times.col(0).minCoeff() << ", "
@@ -1063,7 +1067,7 @@ void ANCFShell3443Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
         << Times.col(1).minCoeff() << ", "
         << Times.col(1).mean() << ", "
         << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1)) << std::endl;
-
+    std::cout << std::flush;
 
 
     //Run Multi-Threaded Tests
@@ -1095,6 +1099,7 @@ void ANCFShell3443Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
             << Times.col(1).minCoeff() << ", "
             << Times.col(1).mean() << ", "
             << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1)) << std::endl;
+        std::cout << std::flush;
 
         if (NumThreads == MaxThreads)
             run = false;
@@ -1292,7 +1297,7 @@ void ANCFShell3443MLTest<num_elements, ElementVersion, MaterialVersion>::Perturb
         ChVector<double> Perturbation;
         if (Use_OMP) {
 #pragma omp parallel for
-            for (unsigned int in = 0; in < NodeList.size(); in++) {
+            for (int in = 0; in < NodeList.size(); in++) {
                 Perturbation.eigen().Random();
                 //auto Node = std::dynamic_pointer_cast<ChNodeFEAxyzDDD>(NodeList[in]);
                 auto Node = std::static_pointer_cast<ChNodeFEAxyzDDD>(NodeList[in]);
@@ -1330,7 +1335,7 @@ double ANCFShell3443MLTest<num_elements, ElementVersion, MaterialVersion>::GetIn
 
         if (Use_OMP) {
 #pragma omp parallel for
-            for (unsigned int ie = 0; ie < ElementList.size(); ie++) {
+            for (int ie = 0; ie < ElementList.size(); ie++) {
                 ElementList[ie]->ComputeInternalForces(Fi);
             }
         }
@@ -1359,7 +1364,7 @@ double ANCFShell3443MLTest<num_elements, ElementVersion, MaterialVersion>::GetJa
 
         if (Use_OMP) {
 #pragma omp parallel for
-            for (unsigned int ie = 0; ie < ElementList.size(); ie++) {
+            for (int ie = 0; ie < ElementList.size(); ie++) {
                 ElementList[ie]->ComputeKRMmatricesGlobal(H, 1.0, 1.0, 1.0);
             }
         }
@@ -1376,6 +1381,11 @@ double ANCFShell3443MLTest<num_elements, ElementVersion, MaterialVersion>::GetJa
 
 template <int num_elements, typename ElementVersion, typename MaterialVersion>
 void ANCFShell3443MLTest<num_elements, ElementVersion, MaterialVersion>::PrintTimingResults(const std::string& TestName, int steps) {
+    std::cout << "-------------------------------------" << std::endl;
+    std::cout << "Test Name, Num Els, Steps, Threads, ";
+    std::cout << "IntFrc Max(us), IntFrc Min(us), IntFrc Mean(us), IntFrc StDev(us), ";
+    std::cout << "KRM Max(us), KRM Min(us), KRM Mean(us), KRM StDev(us), " << std::endl;
+    std::cout << std::flush;
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> Times;
     Times.resize(steps, 2);
@@ -1399,10 +1409,6 @@ void ANCFShell3443MLTest<num_elements, ElementVersion, MaterialVersion>::PrintTi
         Times(i, 1) = GetJacobian(false) * (1.0e6 / double(num_elements)); //Get Time Per Function Call in microseconds
     }
 
-    std::cout << "-------------------------------------" << std::endl;
-    std::cout << "Test Name, Num Els, Steps, Threads, ";
-    std::cout << "IntFrc Max(us), IntFrc Min(us), IntFrc Mean(us), IntFrc StDev(us), ";
-    std::cout << "KRM Max(us), KRM Min(us), KRM Mean(us), KRM StDev(us), " << std::endl;
     std::cout << TestName << ", " << num_elements << ", " << steps << ", 0, "
         << Times.col(0).maxCoeff() << ", "
         << Times.col(0).minCoeff() << ", "
@@ -1412,7 +1418,7 @@ void ANCFShell3443MLTest<num_elements, ElementVersion, MaterialVersion>::PrintTi
         << Times.col(1).minCoeff() << ", "
         << Times.col(1).mean() << ", "
         << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1)) << std::endl;
-
+    std::cout << std::flush;
 
 
     //Run Multi-Threaded Tests
@@ -1444,6 +1450,7 @@ void ANCFShell3443MLTest<num_elements, ElementVersion, MaterialVersion>::PrintTi
             << Times.col(1).minCoeff() << ", "
             << Times.col(1).mean() << ", "
             << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1)) << std::endl;
+        std::cout << std::flush;
 
         if (NumThreads == MaxThreads)
             run = false;
@@ -1653,7 +1660,7 @@ void ANCFShell3833Test<num_elements, ElementVersion, MaterialVersion>::PerturbNo
         ChVector<double> Perturbation;
         if (Use_OMP) {
             #pragma omp parallel for
-            for (unsigned int in = 0; in < NodeList.size(); in++) {
+            for (int in = 0; in < NodeList.size(); in++) {
                 Perturbation.eigen().Random();
                 //auto Node = std::dynamic_pointer_cast<ChNodeFEAxyzDD>(NodeList[in]);
                 auto Node = std::static_pointer_cast<ChNodeFEAxyzDD>(NodeList[in]);
@@ -1689,7 +1696,7 @@ double ANCFShell3833Test<num_elements, ElementVersion, MaterialVersion>::GetInte
 
         if (Use_OMP) {
             #pragma omp parallel for
-            for (unsigned int ie = 0; ie < ElementList.size(); ie++) {
+            for (int ie = 0; ie < ElementList.size(); ie++) {
                 ElementList[ie]->ComputeInternalForces(Fi);
             }
         }
@@ -1718,7 +1725,7 @@ double ANCFShell3833Test<num_elements, ElementVersion, MaterialVersion>::GetJaco
 
         if (Use_OMP) {
             #pragma omp parallel for
-            for (unsigned int ie = 0; ie < ElementList.size(); ie++) {
+            for (int ie = 0; ie < ElementList.size(); ie++) {
                 ElementList[ie]->ComputeKRMmatricesGlobal(H, 1.0, 1.0, 1.0);
             }
         }
@@ -1735,6 +1742,11 @@ double ANCFShell3833Test<num_elements, ElementVersion, MaterialVersion>::GetJaco
 
 template <int num_elements, typename ElementVersion, typename MaterialVersion>
 void ANCFShell3833Test<num_elements, ElementVersion, MaterialVersion>::PrintTimingResults(const std::string& TestName, int steps) {
+    std::cout << "-------------------------------------" << std::endl;
+    std::cout << "Test Name, Num Els, Steps, Threads, ";
+    std::cout << "IntFrc Max(us), IntFrc Min(us), IntFrc Mean(us), IntFrc StDev(us), ";
+    std::cout << "KRM Max(us), KRM Min(us), KRM Mean(us), KRM StDev(us), " << std::endl;
+    std::cout << std::flush;
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> Times;
     Times.resize(steps, 2);
@@ -1758,10 +1770,6 @@ void ANCFShell3833Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
         Times(i, 1) = GetJacobian(false) * (1.0e6 / double(num_elements)); //Get Time Per Function Call in microseconds
     }
 
-    std::cout << "-------------------------------------" << std::endl;
-    std::cout << "Test Name, Num Els, Steps, Threads, ";
-    std::cout << "IntFrc Max(us), IntFrc Min(us), IntFrc Mean(us), IntFrc StDev(us), ";
-    std::cout << "KRM Max(us), KRM Min(us), KRM Mean(us), KRM StDev(us), " << std::endl;
     std::cout << TestName << ", " << num_elements << ", " << steps << ", 0, "
         << Times.col(0).maxCoeff() << ", "
         << Times.col(0).minCoeff() << ", "
@@ -1771,7 +1779,7 @@ void ANCFShell3833Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
         << Times.col(1).minCoeff() << ", "
         << Times.col(1).mean() << ", "
         << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1)) << std::endl;
-
+    std::cout << std::flush;
 
 
     //Run Multi-Threaded Tests
@@ -1803,6 +1811,7 @@ void ANCFShell3833Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
             << Times.col(1).minCoeff() << ", "
             << Times.col(1).mean() << ", "
             << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1)) << std::endl;
+        std::cout << std::flush;
 
         if (NumThreads == MaxThreads)
             run = false;
@@ -2010,7 +2019,7 @@ void ANCFShell3833MLTest<num_elements, ElementVersion, MaterialVersion>::Perturb
         ChVector<double> Perturbation;
         if (Use_OMP) {
 #pragma omp parallel for
-            for (unsigned int in = 0; in < NodeList.size(); in++) {
+            for (int in = 0; in < NodeList.size(); in++) {
                 Perturbation.eigen().Random();
                 //auto Node = std::dynamic_pointer_cast<ChNodeFEAxyzDD>(NodeList[in]);
                 auto Node = std::static_pointer_cast<ChNodeFEAxyzDD>(NodeList[in]);
@@ -2046,7 +2055,7 @@ double ANCFShell3833MLTest<num_elements, ElementVersion, MaterialVersion>::GetIn
 
         if (Use_OMP) {
 #pragma omp parallel for
-            for (unsigned int ie = 0; ie < ElementList.size(); ie++) {
+            for (int ie = 0; ie < ElementList.size(); ie++) {
                 ElementList[ie]->ComputeInternalForces(Fi);
             }
         }
@@ -2075,7 +2084,7 @@ double ANCFShell3833MLTest<num_elements, ElementVersion, MaterialVersion>::GetJa
 
         if (Use_OMP) {
 #pragma omp parallel for
-            for (unsigned int ie = 0; ie < ElementList.size(); ie++) {
+            for (int ie = 0; ie < ElementList.size(); ie++) {
                 ElementList[ie]->ComputeKRMmatricesGlobal(H, 1.0, 1.0, 1.0);
             }
         }
@@ -2092,6 +2101,11 @@ double ANCFShell3833MLTest<num_elements, ElementVersion, MaterialVersion>::GetJa
 
 template <int num_elements, typename ElementVersion, typename MaterialVersion>
 void ANCFShell3833MLTest<num_elements, ElementVersion, MaterialVersion>::PrintTimingResults(const std::string& TestName, int steps) {
+    std::cout << "-------------------------------------" << std::endl;
+    std::cout << "Test Name, Num Els, Steps, Threads, ";
+    std::cout << "IntFrc Max(us), IntFrc Min(us), IntFrc Mean(us), IntFrc StDev(us), ";
+    std::cout << "KRM Max(us), KRM Min(us), KRM Mean(us), KRM StDev(us), " << std::endl;
+    std::cout << std::flush;
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> Times;
     Times.resize(steps, 2);
@@ -2115,10 +2129,6 @@ void ANCFShell3833MLTest<num_elements, ElementVersion, MaterialVersion>::PrintTi
         Times(i, 1) = GetJacobian(false) * (1.0e6 / double(num_elements)); //Get Time Per Function Call in microseconds
     }
 
-    std::cout << "-------------------------------------" << std::endl;
-    std::cout << "Test Name, Num Els, Steps, Threads, ";
-    std::cout << "IntFrc Max(us), IntFrc Min(us), IntFrc Mean(us), IntFrc StDev(us), ";
-    std::cout << "KRM Max(us), KRM Min(us), KRM Mean(us), KRM StDev(us), " << std::endl;
     std::cout << TestName << ", " << num_elements << ", " << steps << ", 0, "
         << Times.col(0).maxCoeff() << ", "
         << Times.col(0).minCoeff() << ", "
@@ -2128,7 +2138,7 @@ void ANCFShell3833MLTest<num_elements, ElementVersion, MaterialVersion>::PrintTi
         << Times.col(1).minCoeff() << ", "
         << Times.col(1).mean() << ", "
         << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1)) << std::endl;
-
+    std::cout << std::flush;
 
 
     //Run Multi-Threaded Tests
@@ -2160,6 +2170,7 @@ void ANCFShell3833MLTest<num_elements, ElementVersion, MaterialVersion>::PrintTi
             << Times.col(1).minCoeff() << ", "
             << Times.col(1).mean() << ", "
             << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1)) << std::endl;
+        std::cout << std::flush;
 
         if (NumThreads == MaxThreads)
             run = false;
@@ -2376,7 +2387,7 @@ void ANCFBrick3843Test<num_elements, ElementVersion, MaterialVersion>::PerturbNo
         ChVector<double> Perturbation;
         if (Use_OMP) {
             #pragma omp parallel for
-            for (unsigned int in = 0; in < NodeList.size(); in++) {
+            for (int in = 0; in < NodeList.size(); in++) {
                 Perturbation.eigen().Random();
                 //auto Node = std::dynamic_pointer_cast<ChNodeFEAxyzDDD>(NodeList[in]);
                 auto Node = std::static_pointer_cast<ChNodeFEAxyzDDD>(NodeList[in]);
@@ -2414,7 +2425,7 @@ double ANCFBrick3843Test<num_elements, ElementVersion, MaterialVersion>::GetInte
         
         if (Use_OMP) {
             #pragma omp parallel for
-            for (unsigned int ie = 0; ie < ElementList.size(); ie++) {
+            for (int ie = 0; ie < ElementList.size(); ie++) {
                 ElementList[ie]->ComputeInternalForces(Fi);
             }
         }
@@ -2443,7 +2454,7 @@ double ANCFBrick3843Test<num_elements, ElementVersion, MaterialVersion>::GetJaco
 
         if (Use_OMP) {
             #pragma omp parallel for
-            for (unsigned int ie = 0; ie < ElementList.size(); ie++) {
+            for (int ie = 0; ie < ElementList.size(); ie++) {
                 ElementList[ie]->ComputeKRMmatricesGlobal(H, 1.0, 1.0, 1.0);
             }
         }
@@ -2460,6 +2471,11 @@ double ANCFBrick3843Test<num_elements, ElementVersion, MaterialVersion>::GetJaco
 
 template <int num_elements, typename ElementVersion, typename MaterialVersion>
 void ANCFBrick3843Test<num_elements, ElementVersion, MaterialVersion>::PrintTimingResults(const std::string& TestName, int steps) {
+    std::cout << "-------------------------------------" << std::endl;
+    std::cout << "Test Name, Num Els, Steps, Threads, ";
+    std::cout << "IntFrc Max(us), IntFrc Min(us), IntFrc Mean(us), IntFrc StDev(us), ";
+    std::cout << "KRM Max(us), KRM Min(us), KRM Mean(us), KRM StDev(us), " << std::endl;
+    std::cout << std::flush;
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> Times;
     Times.resize(steps, 2);
@@ -2483,10 +2499,6 @@ void ANCFBrick3843Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
         Times(i, 1) = GetJacobian(false) * (1.0e6 / double(num_elements)); //Get Time Per Function Call in microseconds
     }
 
-    std::cout << "-------------------------------------" << std::endl;
-    std::cout << "Test Name, Num Els, Steps, Threads, ";
-    std::cout << "IntFrc Max(us), IntFrc Min(us), IntFrc Mean(us), IntFrc StDev(us), ";
-    std::cout << "KRM Max(us), KRM Min(us), KRM Mean(us), KRM StDev(us), " << std::endl;
     std::cout << TestName << ", " << num_elements << ", " << steps << ", 0, "
         << Times.col(0).maxCoeff() << ", "
         << Times.col(0).minCoeff() << ", "
@@ -2496,7 +2508,7 @@ void ANCFBrick3843Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
         << Times.col(1).minCoeff() << ", "
         << Times.col(1).mean() << ", "
         << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1)) << std::endl;
-
+    std::cout << std::flush;
 
 
     //Run Multi-Threaded Tests
@@ -2528,6 +2540,7 @@ void ANCFBrick3843Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
             << Times.col(1).minCoeff() << ", "
             << Times.col(1).mean() << ", "
             << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1)) << std::endl;
+        std::cout << std::flush;
 
         if (NumThreads == MaxThreads)
             run = false;
@@ -2615,6 +2628,8 @@ void Run_ANCFBrick_3843_Tests() {
 // =============================================================================
 
 int main(int argc, char* argv[]) {
+    
+    std::ios::sync_with_stdio(false);
 
     Run_ANCFBeam_3243_Tests();
     Run_ANCFBeam_3333_Tests();
