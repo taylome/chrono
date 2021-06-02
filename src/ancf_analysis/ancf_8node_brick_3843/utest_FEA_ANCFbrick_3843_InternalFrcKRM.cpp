@@ -27,11 +27,14 @@
 #include "chrono/fea/ChElementBrickANCF_3843_TR04.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR05.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR06.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR06_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR07.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR07s.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR08.h"
 //#include "chrono/fea/ChElementBrickANCF_3843_TR08b.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR08s.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR08s_GQ444.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR08T_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR09.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR10.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR11.h"
@@ -1854,6 +1857,13 @@ int main(int argc, char* argv[]) {
         print_red("ChElementBrickANCF_3843_TR06 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementBrickANCF_3843_TR06_GQ444, ChMaterialBrickANCF_3843_TR06_GQ444> ChElementBrickANCF_3843_TR06_GQ444_test;
+    if (ChElementBrickANCF_3843_TR06_GQ444_test.RunElementChecks(0))
+        print_green("ChElementBrickANCF_3843_TR06_GQ444 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBrickANCF_3843_TR06_GQ444 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFBrickTest<ChElementBrickANCF_3843_TR07, ChMaterialBrickANCF_3843_TR07> ChElementBrickANCF_3843_TR07_test;
     if (ChElementBrickANCF_3843_TR07_test.RunElementChecks(0))
         print_green("ChElementBrickANCF_3843_TR07 Element Checks = PASSED\n");
@@ -1887,6 +1897,20 @@ int main(int argc, char* argv[]) {
         print_green("ChElementBrickANCF_3843_TR08S Element Checks = PASSED\n");
     else
         print_red("ChElementBrickANCF_3843_TR08S Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementBrickANCF_3843_TR08S_GQ444, ChMaterialBrickANCF_3843_TR08S_GQ444> ChElementBrickANCF_3843_TR08S_GQ444_test;
+    if (ChElementBrickANCF_3843_TR08S_GQ444_test.RunElementChecks(0))
+        print_green("ChElementBrickANCF_3843_TR08S_GQ444 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBrickANCF_3843_TR08S_GQ444 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementBrickANCF_3843_TR08T_GQ444, ChMaterialBrickANCF_3843_TR08T_GQ444> ChElementBrickANCF_3843_TR08T_GQ444_test;
+    if (ChElementBrickANCF_3843_TR08T_GQ444_test.RunElementChecks(0))
+        print_green("ChElementBrickANCF_3843_TR08T_GQ444 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBrickANCF_3843_TR08T_GQ444 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFBrickTest<ChElementBrickANCF_3843_TR09, ChMaterialBrickANCF_3843_TR09> ChElementBrickANCF_3843_TR09_test;

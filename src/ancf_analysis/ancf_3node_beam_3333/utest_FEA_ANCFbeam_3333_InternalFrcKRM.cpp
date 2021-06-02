@@ -29,11 +29,13 @@
 #include "chrono/fea/ChElementBeamANCF_3333_TR04.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR05.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR06.h"
+#include "chrono/fea/ChElementBeamANCF_3333_TR06_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR07.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR07s.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR08.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR08b.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR08s.h"
+#include "chrono/fea/ChElementBeamANCF_3333_TR08s_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR09.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR10.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR11.h"
@@ -1784,6 +1786,13 @@ int main(int argc, char* argv[]) {
         print_red("ChElementBeamANCF_3333_TR06 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3333_TR06_GQ322, ChMaterialBeamANCF_3333_TR06_GQ322> ChElementBeamANCF_3333_TR06_GQ322_test;
+    if (ChElementBeamANCF_3333_TR06_GQ322_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3333_TR06_GQ322 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3333_TR06_GQ322 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3333_TR07, ChMaterialBeamANCF_3333_TR07> ChElementBeamANCF_3333_TR07_test;
     if (ChElementBeamANCF_3333_TR07_test.RunElementChecks(0))
         print_green("ChElementBeamANCF_3333_TR07 Element Checks = PASSED\n");
@@ -1817,6 +1826,13 @@ int main(int argc, char* argv[]) {
         print_green("ChElementBeamANCF_3333_TR08S Element Checks = PASSED\n");
     else
         print_red("ChElementBeamANCF_3333_TR08S Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3333_TR08S_GQ322, ChMaterialBeamANCF_3333_TR08S_GQ322> ChElementBeamANCF_3333_TR08S_GQ322_test;
+    if (ChElementBeamANCF_3333_TR08S_GQ322_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3333_TR08S_GQ322 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3333_TR08S_GQ322 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3333_TR09, ChMaterialBeamANCF_3333_TR09> ChElementBeamANCF_3333_TR09_test;
