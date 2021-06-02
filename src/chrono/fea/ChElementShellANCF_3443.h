@@ -127,20 +127,23 @@ class ChMaterialShellANCF_3443 {
 template <int NP = 4, int NT = 2>
 class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, public ChLoadableUVW {
   public:
+    static const int NIP = NP * NP * NT;  ///< number of Gauss quadrature points
+    static const int NSF = 16;            ///< number of shape functions
+
     template <typename T, int M, int N>
     using ChMatrixNMc = Eigen::Matrix<T, M, N, Eigen::ColMajor>;
 	
-    using VectorN = ChVectorN<double, 16>;
-    using Vector3N = ChVectorN<double, 48>;
-    using VectorNIP = ChVectorN<double, NP*NP*NT>;
-	using Matrix3xN = ChMatrixNM<double, 3, 16>;
-    using Matrix3x3N = ChMatrixNM<double, 3, 48>;
-    using Matrix6x3N = ChMatrixNM<double, 6, 48>;
-    using MatrixNxN = ChMatrixNM<double, 16, 16>;
-    using Matrix3Nx3N = ChMatrixNM<double, 48, 48>;
-    using MatrixNx3 = ChMatrixNM<double, 16, 3>;
-    using MatrixNx3c = ChMatrixNMc<double, 16, 3>;
-    using MatrixNx6 = ChMatrixNM<double, 16, 6>;
+    using VectorN = ChVectorN<double, NSF>;
+    using Vector3N = ChVectorN<double, 3 * NSF>;
+    using VectorNIP = ChVectorN<double, NIP>;
+    using Matrix3xN = ChMatrixNM<double, 3, NSF>;
+    using Matrix3x3N = ChMatrixNM<double, 3, 3 * NSF>;
+    using Matrix6x3N = ChMatrixNM<double, 6, 3 * NSF>;
+    using MatrixNxN = ChMatrixNM<double, NSF, NSF>;
+    using Matrix3Nx3N = ChMatrixNM<double, 3 * NSF, 3 * NSF>;
+    using MatrixNx3 = ChMatrixNM<double, NSF, 3>;
+    using MatrixNx3c = ChMatrixNMc<double, NSF, 3>;
+    using MatrixNx6 = ChMatrixNM<double, NSF, 6>;
 
     ChElementShellANCF_3443();
     ~ChElementShellANCF_3443() {}
@@ -477,26 +480,29 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
     /// with precomputed tables.
     static ChQuadratureTables* GetStaticGQTables();
 
-    std::vector<std::shared_ptr<ChNodeFEAxyzDDD> > m_nodes;    ///< element nodes
+    std::vector<std::shared_ptr<ChNodeFEAxyzDDD>> m_nodes;         ///< element nodes
     std::vector<Layer, Eigen::aligned_allocator<Layer>> m_layers;  ///< element layers
-    std::vector<double, Eigen::aligned_allocator<double>> m_layer_zoffsets;  ///< Offsets of Bottom of Layers to the Bottom of the Element
-    int m_numLayers;                                            ///< number of layers for this element
-    unsigned int m_numLayerGQPnts;                                       ///< number of Guass-Quadrature Points for each layer
-    unsigned int m_numGQPnts;                                       ///< total number of Guass-Quadrature Points for the element
-    double m_lenX;                                             ///< total element length along X
-    double m_lenY;                                             ///< total element length along Y
-    double m_thicknessZ;                                       ///< total element thickness along Z
-    double m_Alpha;                                            ///< structural damping
-    double m_2Alpha;                                           ///< structural damping x2
-    bool m_damping_enabled;                                    ///< Flag to run internal force damping calculations
-    bool m_gravity_on;                                         ///< enable/disable gravity calculation
-    Vector3N m_GravForce;                                      ///< Gravity Force
-    Matrix3xN m_ebar0;  ///< Element Position Coordinate Vector for the Reference Configuration
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> m_SD_precompute_col_ordered;  ///< Precomputed corrected normalized shape function derivative
-                                                     ///< matrices
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> m_GQWeight_det_J_0xi_D;    ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale
-                                                     ///< factors
-    ChVectorN<double, 136> m_MassMatrix; ///Mass Matrix in extra compact form (Upper Triangular Part only)
+    std::vector<double, Eigen::aligned_allocator<double>>
+        m_layer_zoffsets;           ///< Offsets of Bottom of Layers to the Bottom of the Element
+    int m_numLayers;                ///< number of layers for this element
+    unsigned int m_numLayerGQPnts;  ///< number of Guass-Quadrature Points for each layer
+    unsigned int m_numGQPnts;       ///< total number of Guass-Quadrature Points for the element
+    double m_lenX;                  ///< total element length along X
+    double m_lenY;                  ///< total element length along Y
+    double m_thicknessZ;            ///< total element thickness along Z
+    double m_Alpha;                 ///< structural damping
+    double m_2Alpha;                ///< structural damping x2
+    bool m_damping_enabled;         ///< Flag to run internal force damping calculations
+    bool m_gravity_on;              ///< enable/disable gravity calculation
+    Vector3N m_GravForce;           ///< Gravity Force
+    Matrix3xN m_ebar0;              ///< Element Position Coordinate Vector for the Reference Configuration
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+        m_SD_precompute_col_ordered;  ///< Precomputed corrected normalized shape function derivative
+                                      ///< matrices
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>
+        m_GQWeight_det_J_0xi_D;           ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale
+                                          ///< factors
+    ChVectorN<double, 136> m_MassMatrix;  /// Mass Matrix in extra compact form (Upper Triangular Part only)
 
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
