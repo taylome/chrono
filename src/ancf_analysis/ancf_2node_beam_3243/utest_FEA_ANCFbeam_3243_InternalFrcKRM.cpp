@@ -30,6 +30,7 @@
 #include "chrono/fea/ChElementBeamANCF_3243_TR06_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR07.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR07s.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR07s_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR08.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR08b.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR08s.h"
@@ -1785,6 +1786,13 @@ int main(int argc, char* argv[]) {
         print_green("ChElementBeamANCF_3243_TR07S Element Checks = PASSED\n");
     else
         print_red("ChElementBeamANCF_3243_TR07S Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR07S_GQ322, ChMaterialBeamANCF_3243_TR07S_GQ322> ChElementBeamANCF_3243_TR07S_GQ322_test;
+    if (ChElementBeamANCF_3243_TR07S_GQ322_test.RunElementChecks(1))
+        print_green("ChElementBeamANCF_3243_TR07S_GQ322 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR07S_GQ322 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3243_TR08, ChMaterialBeamANCF_3243_TR08> ChElementBeamANCF_3243_TR08_test;

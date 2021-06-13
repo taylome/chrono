@@ -32,6 +32,7 @@
 #include "chrono/fea/ChElementShellANCF_3833ML_TR07.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR07b.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR07s.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR07s_GQ332.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR08.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR08s.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR08s_GQ332.h"
@@ -2579,6 +2580,13 @@ int main(int argc, char* argv[]) {
         print_green("ChElementShellANCF_3833ML_TR07S Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR07S Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFShellMLTest<ChElementShellANCF_3833ML_TR07S_GQ332, ChMaterialShellANCF_3833ML_TR07S_GQ332> ChElementShellANCF_3833ML_TR07S_GQ332_test;
+    if (ChElementShellANCF_3833ML_TR07S_GQ332_test.RunElementChecks(1))
+        print_green("ChElementShellANCF_3833ML_TR07S_GQ332 Element Checks = PASSED\n");
+    else
+        print_red("ChElementShellANCF_3833ML_TR07S_GQ332 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR08, ChMaterialShellANCF_3833ML_TR08> ChElementShellANCF_3833ML_TR08_test;

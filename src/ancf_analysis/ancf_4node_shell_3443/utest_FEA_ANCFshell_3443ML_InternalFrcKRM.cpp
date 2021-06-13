@@ -33,6 +33,7 @@
 #include "chrono/fea/ChElementShellANCF_3443ML_TR07.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR07b.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR07s.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR07s_GQ442.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR08.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR08s.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR08s_GQ332.h"
@@ -178,10 +179,8 @@ ANCFShellMLTest<ElementVersion, MaterialVersion>::ANCFShellMLTest() {
     m_nodeB = nodeB;
     auto nodeC = chrono_types::make_shared<ChNodeFEAxyzDDD>(ChVector<>(length, width, 0), dir1, dir2, dir3);
     mesh->AddNode(nodeC);
-    nodeC = nodeC;
     auto nodeD = chrono_types::make_shared<ChNodeFEAxyzDDD>(ChVector<>(0, width, 0), dir1, dir2, dir3);
     mesh->AddNode(nodeD);
-    nodeD = nodeD;
 
     auto element = chrono_types::make_shared<ElementVersion>();
     element->SetNodes(nodeA, nodeB, nodeC, nodeD);
@@ -2507,6 +2506,13 @@ int main(int argc, char* argv[]) {
         print_green("ChElementShellANCF_3443ML_TR07S Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3443ML_TR07S Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFShellMLTest<ChElementShellANCF_3443ML_TR07S_GQ442, ChMaterialShellANCF_3443ML_TR07S_GQ442> ChElementShellANCF_3443ML_TR07S_GQ442_test;
+    if (ChElementShellANCF_3443ML_TR07S_GQ442_test.RunElementChecks(0))
+        print_green("ChElementShellANCF_3443ML_TR07S_GQ442 Element Checks = PASSED\n");
+    else
+        print_red("ChElementShellANCF_3443ML_TR07S_GQ442 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3443ML_TR08, ChMaterialShellANCF_3443ML_TR08> ChElementShellANCF_3443ML_TR08_test;
