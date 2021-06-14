@@ -26,6 +26,7 @@
 #include "chrono/fea/ChElementBrickANCF_3843_TR03.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR04.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR05.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR05_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR06.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR06_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR07.h"
@@ -1849,6 +1850,13 @@ int main(int argc, char* argv[]) {
         print_green("ChElementBrickANCF_3843_TR05 Element Checks = PASSED\n");
     else
         print_red("ChElementBrickANCF_3843_TR05 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementBrickANCF_3843_TR05_GQ444, ChMaterialBrickANCF_3843_TR05_GQ444> ChElementBrickANCF_3843_TR05_GQ444_test;
+    if (ChElementBrickANCF_3843_TR05_GQ444_test.RunElementChecks(0))
+        print_green("ChElementBrickANCF_3843_TR05_GQ444 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBrickANCF_3843_TR05_GQ444 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFBrickTest<ChElementBrickANCF_3843_TR06, ChMaterialBrickANCF_3843_TR06> ChElementBrickANCF_3843_TR06_test;

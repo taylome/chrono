@@ -27,6 +27,7 @@
 #include "chrono/fea/ChElementShellANCF_3833ML_TR03.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR04.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR05.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR05_GQ332.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR06.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR06_GQ332.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR07.h"
@@ -2545,6 +2546,13 @@ int main(int argc, char* argv[]) {
         print_green("ChElementShellANCF_3833ML_TR05 Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR05 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFShellMLTest<ChElementShellANCF_3833ML_TR05_GQ332, ChMaterialShellANCF_3833ML_TR05_GQ332> ChElementShellANCF_3833ML_TR05_GQ332_test;
+    if (ChElementShellANCF_3833ML_TR05_GQ332_test.RunElementChecks(1))
+        print_green("ChElementShellANCF_3833ML_TR05_GQ332 Element Checks = PASSED\n");
+    else
+        print_red("ChElementShellANCF_3833ML_TR05_GQ332 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR06, ChMaterialShellANCF_3833ML_TR06> ChElementShellANCF_3833ML_TR06_test;
