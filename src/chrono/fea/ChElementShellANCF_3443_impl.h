@@ -57,7 +57,7 @@
 // ------------------------------------------------------------------------------
 template <int NP, int NT>
 ChElementShellANCF_3443<NP,NT>::ChElementShellANCF_3443()
-    : m_gravity_on(false), m_numLayers(0), m_numLayerGQPnts(0), m_lenX(0), m_lenY(0), m_thicknessZ(0), m_Alpha(0), m_damping_enabled(false) {
+    : m_gravity_on(false), m_numLayers(0), m_lenX(0), m_lenY(0), m_thicknessZ(0), m_Alpha(0), m_damping_enabled(false) {
     m_nodes.resize(4);
 }
 
@@ -188,8 +188,8 @@ void ChElementShellANCF_3443<NP,NT>::ComputeKRMmatricesGlobal(ChMatrixRef H,
     H = JacobianMatrix;
     //Mass Matrix is Stored in Compact Upper Triangular Form
     unsigned int idx = 0;
-    for (unsigned int i = 0; i < 16; i++) {
-        for (unsigned int j = i; j < 16; j++) {
+    for (unsigned int i = 0; i < NSF; i++) {
+        for (unsigned int j = i; j < NSF; j++) {
             H(3 * i, 3 * j) += Mfactor * m_MassMatrix(idx);
             H(3 * i + 1, 3 * j + 1) += Mfactor * m_MassMatrix(idx);
             H(3 * i + 2, 3 * j + 2) += Mfactor * m_MassMatrix(idx);
@@ -218,8 +218,8 @@ void ChElementShellANCF_3443<NP,NT>::ComputeMmatrixGlobal(ChMatrixRef M) {
     //Mass Matrix is Stored in Compact Upper Triangular Form
     //Expand it out into its Full Sparse Symmetric Form
     unsigned int idx = 0;
-    for (unsigned int i = 0; i < 16; i++) {
-        for (unsigned int j = i; j < 16; j++) {
+    for (unsigned int i = 0; i < NSF; i++) {
+        for (unsigned int j = i; j < NSF; j++) {
             M(3 * i, 3 * j) = m_MassMatrix(idx);
             M(3 * i + 1, 3 * j + 1) = m_MassMatrix(idx);
             M(3 * i + 2, 3 * j + 2) = m_MassMatrix(idx);
@@ -252,7 +252,7 @@ void ChElementShellANCF_3443<NP,NT>::ComputeMassMatrixAndGravityForce(const ChVe
     unsigned int GQ_idx_zeta = 2;  // 3 Point Gauss-Quadrature;
 
     // Set these to zeros since they will be incremented as the vector/matrix is calculated
-    ChMatrixNM<double, 16, 16> MassMatrixCompactSquare;
+    ChMatrixNM<double, NSF, NSF> MassMatrixCompactSquare;
     MassMatrixCompactSquare.setZero();
     m_GravForce.setZero();
 
@@ -285,8 +285,8 @@ void ChElementShellANCF_3443<NP,NT>::ComputeMassMatrixAndGravityForce(const ChVe
     //Store just the unique entries in the Mass Matrix in Compact Upper Triangular Form
     //since the full Mass Matrix is both sparse and symmetric
     unsigned int idx = 0;
-    for (unsigned int i = 0; i < 16; i++) {
-        for (unsigned int j = i; j < 16; j++) {
+    for (unsigned int i = 0; i < NSF; i++) {
+        for (unsigned int j = i; j < NSF; j++) {
             m_MassMatrix(idx) = MassMatrixCompactSquare(i, j);
             idx++;
         }
@@ -306,20 +306,16 @@ void ChElementShellANCF_3443<NP,NT>::ComputeNodalMass() {
 template <int NP, int NT>
 void ChElementShellANCF_3443<NP,NT>::PrecomputeInternalForceMatricesWeights() {
     ChQuadratureTables* GQTable = GetStaticGQTables();
-    unsigned int GQ_idx_xi_eta = NP;    // 4 Point Gauss-Quadrature;
-    unsigned int GQ_idx_zeta = NT;      // 2 Point Gauss-Quadrature;
+    unsigned int GQ_idx_xi_eta = NP-1;    // 4 Point Gauss-Quadrature;
+    unsigned int GQ_idx_zeta = NT-1;      // 2 Point Gauss-Quadrature;
 
-    m_numLayerGQPnts = (GQ_idx_xi_eta + 1) * (GQ_idx_xi_eta + 1) * (GQ_idx_zeta + 1);
-    m_numGQPnts = m_numLayers * m_numLayerGQPnts;
+    m_SD.resize(NSF, 3 * m_numLayers * NIP);
+    m_kGQ.resize(m_numLayers * NIP, 1);
 
-    m_SD_precompute_col_ordered.resize(16, 3 * m_numGQPnts);
-    m_GQWeight_det_J_0xi_D.resize(m_numGQPnts, 1);
-
-    ChMatrixNM<double, 16, 3> SD_precompute_D;
+    ChMatrixNM<double, NSF, 3> SD_precompute_D;
 
     for (size_t kl = 0; kl < m_numLayers; kl++) {
         double thickness = m_layers[kl].Get_thickness();
-        double theta = m_layers[kl].Get_theta();
         double zoffset = m_layer_zoffsets[kl];
 
         for (unsigned int it_xi = 0; it_xi < GQTable->Lroots[GQ_idx_xi_eta].size(); it_xi++) {
@@ -340,12 +336,12 @@ void ChElementShellANCF_3443<NP,NT>::PrecomputeInternalForceMatricesWeights() {
                     J_0xi.noalias() = m_ebar0 * Sxi_D;
 
                     SD_precompute_D = Sxi_D * J_0xi.inverse();
-                    m_GQWeight_det_J_0xi_D(index) = -J_0xi.determinant() * GQ_weight;
+                    m_kGQ(index) = -J_0xi.determinant() * GQ_weight;
 
                     //Group all of the columns together across the entire element in blocks layer by layer
-                    m_SD_precompute_col_ordered.col((3 * kl * m_numLayerGQPnts) + index) = SD_precompute_D.col(0);
-                    m_SD_precompute_col_ordered.col((3 * kl * m_numLayerGQPnts) + index + m_numLayerGQPnts) = SD_precompute_D.col(1);
-                    m_SD_precompute_col_ordered.col((3 * kl * m_numLayerGQPnts) + index + 2 * m_numLayerGQPnts) = SD_precompute_D.col(2);
+                    m_SD.col((3 * kl * NIP) + index) = SD_precompute_D.col(0);
+                    m_SD.col((3 * kl * NIP) + index + NIP) = SD_precompute_D.col(1);
+                    m_SD.col((3 * kl * NIP) + index + 2 * NIP) = SD_precompute_D.col(2);
 
                     index++;
                 }
@@ -362,7 +358,6 @@ void ChElementShellANCF_3443<NP,NT>::PrecomputeInternalForceMatricesWeights() {
 template <int NP, int NT>
 void ChElementShellANCF_3443<NP,NT>::SetAlphaDamp(double a) {
     m_Alpha = a;
-    m_2Alpha = 2 * a;
     if (std::abs(m_Alpha) > 1e-10)
         m_damping_enabled = true;
     else
@@ -380,7 +375,6 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalForces(ChVectorDynamic<>& Fi
         CalcCombinedCoordMatrix(ebar_ebardot);
 
         ComputeInternalForcesAtState(Fi, ebar_ebardot);
-        //Fi.setZero();
     }
     else {
         MatrixNx3 e_bar;
@@ -395,198 +389,153 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalForces(ChVectorDynamic<>& Fi
 }
 
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi, const MatrixNx6& ebar_ebardot) {
+void ChElementShellANCF_3443<NP, NT>::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
+                                                                   const MatrixNx6& ebar_ebardot) {
     // Straight & Normalized Internal Force Integrand is of order : 8 in xi, order : 4 in eta, and order : 4 in zeta.
     // This requires GQ 5 points along the xi direction and 3 points along the eta and zeta directions for "Full
-    // Integration" However, very similar results can be obtained with 1 fewer GQ point in  each direction, resulting in
-    // roughly 1/3 of the calculations
+    // Integration" However, very similar results can be obtained with fewer GQ point in each direction, resulting in
+    // significantly fewer calculations
 
     MatrixNx3 QiCompact;
     QiCompact.setZero();
 
-    // F here is "F_Transpose_CombinedBlockDamping_col_ordered"
     for (size_t kl = 0; kl < m_numLayers; kl++) {
-        auto F = m_SD_precompute_col_ordered.block<NSF, 3 * NIP>(0, 3 * NIP * kl).transpose() * ebar_ebardot;
+        // Calculate the deformation gradient and time derivative of the deformation gradient for all Gauss quadrature
+        // points in a single matrix multiplication.  Note that since the shape function derivative matrix is ordered by
+        // columns, the resulting deformation gradient will be ordered by components
+        ChMatrixNMc<double, 3 * NIP, 6> FC = m_SD.block<NSF, 3 * NIP>(0, 3 * NIP * kl).transpose() * ebar_ebardot;
 
-        VectorNIP E0_Block = F.template block<NIP, 1>(0, 0).cwiseProduct(F.template block<NIP, 1>(0, 0));
-        E0_Block += F.template block<NIP, 1>(0, 1).cwiseProduct(F.template block<NIP, 1>(0, 1));
-        E0_Block += F.template block<NIP, 1>(0, 2).cwiseProduct(F.template block<NIP, 1>(0, 2));
+        // Calculate each individual value of the Green-Lagrange strain component by component across all the
+        // Gauss-Quadrature points at a time for the current layer to better leverage vectorized CPU instructions.
+        // Results are written in Voigt notation epsilon = [E11,E22,E33,2*E23,2*E13,2*E12]
+        VectorNIP E0_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(0, 0));
+        E0_Block += FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(0, 1));
+        E0_Block += FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(0, 2));
         E0_Block.array() -= 1;
         E0_Block *= 0.5;
-        VectorNIP E_BlockDamping = F.template block<NIP, 1>(0, 0).cwiseProduct(F.template block<NIP, 1>(0, 3));
-        E_BlockDamping += F.template block<NIP, 1>(0, 1).cwiseProduct(F.template block<NIP, 1>(0, 4));
-        E_BlockDamping += F.template block<NIP, 1>(0, 2).cwiseProduct(F.template block<NIP, 1>(0, 5));
+        VectorNIP E_BlockDamping = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(0, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(0, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(0, 5));
         E0_Block += m_Alpha * E_BlockDamping;
-        E0_Block.array() *= m_GQWeight_det_J_0xi_D.array();
+        E0_Block.array() *= m_kGQ.array();
 
-    //    VectorNIP E1_Block = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0));
-    //    E1_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1));
-    //    E1_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2));
-    //    E1_Block.array() -= 1;
-    //    E1_Block *= 0.5;
-    //    E_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 5));
-    //    E1_Block += m_Alpha * E_BlockDamping;
-    //    E1_Block.array() *= m_GQWeight_det_J_0xi_D.array();
+        VectorNIP E1_Block = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 0));
+        E1_Block += FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 1));
+        E1_Block += FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 2));
+        E1_Block.array() -= 1;
+        E1_Block *= 0.5;
+        E_BlockDamping.noalias() = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 5));
+        E1_Block += m_Alpha * E_BlockDamping;
+        E1_Block.array() *= m_kGQ.array();
 
-    //    VectorNIP E2_Block = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0));
-    //    E2_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1));
-    //    E2_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2));
-    //    E2_Block.array() -= 1;
-    //    E2_Block *= 0.5;
-    //    E_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 5));
-    //    E2_Block += m_Alpha * E_BlockDamping;
-    //    E2_Block.array() *= m_GQWeight_det_J_0xi_D.array();
+        VectorNIP E2_Block = FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0));
+        E2_Block += FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1));
+        E2_Block += FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
+        E2_Block.array() -= 1;
+        E2_Block *= 0.5;
+        E_BlockDamping.noalias() =
+            FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 5));
+        E2_Block += m_Alpha * E_BlockDamping;
+        E2_Block.array() *= m_kGQ.array();
 
-    //    VectorNIP E3_Block = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0));
-    //    E3_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1));
-    //    E3_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2));
-    //    E_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 5));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 5));
-    //    E3_Block += m_Alpha * E_BlockDamping;
-    //    E3_Block.array() *= m_GQWeight_det_J_0xi_D.array();
+        VectorNIP E3_Block = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0));
+        E3_Block += FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1));
+        E3_Block += FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
+        E_BlockDamping.noalias() =
+            FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 5));
+        E_BlockDamping += FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 5));
+        E3_Block += m_Alpha * E_BlockDamping;
+        E3_Block.array() *= m_kGQ.array();
 
-    //    VectorNIP E4_Block = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0));
-    //    E4_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1));
-    //    E4_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2));
-    //    E_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 5));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 5));
-    //    E4_Block += m_Alpha * E_BlockDamping;
-    //    E4_Block.array() *= m_GQWeight_det_J_0xi_D.array();
+        VectorNIP E4_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0));
+        E4_Block += FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1));
+        E4_Block += FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
+        E_BlockDamping.noalias() = FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(FC.template block<NIP, 1>(0, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(FC.template block<NIP, 1>(0, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(FC.template block<NIP, 1>(0, 5));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 5));
+        E4_Block += m_Alpha * E_BlockDamping;
+        E4_Block.array() *= m_kGQ.array();
 
-    //    VectorNIP E5_Block = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0));
-    //    E5_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1));
-    //    E5_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2));
-    //    E_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 5));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 5));
-    //    E5_Block += m_Alpha * E_BlockDamping;
-    //    E5_Block.array() *= m_GQWeight_det_J_0xi_D.array();
+        VectorNIP E5_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 0));
+        E5_Block += FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 1));
+        E5_Block += FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 2));
+        E_BlockDamping.noalias() = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(0, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(0, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(0, 5));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 5));
+        E5_Block += m_Alpha * E_BlockDamping;
+        E5_Block.array() *= m_kGQ.array();
 
-    //    ChMatrixNM<double, 6, 6> D;
-    //    m_layers[kl].GetMaterial()->Get_Rotated_D(D, m_layers[kl].Get_theta());
+        ChMatrixNM<double, 6, 6> D;
+        m_layers[kl].GetMaterial()->Get_Rotated_D(D, m_layers[kl].Get_theta());
 
-    //    VectorNIP SPK2_0_Block = D(0, 0)*E0_Block + D(0, 1)*E1_Block + D(0, 2)*E2_Block + D(0, 3)*E3_Block + D(0, 4)*E4_Block + D(0, 5)*E5_Block;
-    //    VectorNIP SPK2_1_Block = D(1, 0)*E0_Block + D(1, 1)*E1_Block + D(1, 2)*E2_Block + D(1, 3)*E3_Block + D(1, 4)*E4_Block + D(1, 5)*E5_Block;
-    //    VectorNIP SPK2_2_Block = D(2, 0)*E0_Block + D(2, 1)*E1_Block + D(2, 2)*E2_Block + D(2, 3)*E3_Block + D(2, 4)*E4_Block + D(2, 5)*E5_Block;
-    //    VectorNIP SPK2_3_Block = D(3, 0)*E0_Block + D(3, 1)*E1_Block + D(3, 2)*E2_Block + D(3, 3)*E3_Block + D(3, 4)*E4_Block + D(3, 5)*E5_Block;
-    //    VectorNIP SPK2_4_Block = D(4, 0)*E0_Block + D(4, 1)*E1_Block + D(4, 2)*E2_Block + D(4, 3)*E3_Block + D(4, 4)*E4_Block + D(4, 5)*E5_Block;
-    //    VectorNIP SPK2_5_Block = D(5, 0)*E0_Block + D(5, 1)*E1_Block + D(5, 2)*E2_Block + D(5, 3)*E3_Block + D(5, 4)*E4_Block + D(5, 5)*E5_Block;
+        // Now calculate the 2nd Piola-Kirchoff stresses across all the Gauss quadrature points in the current layer at
+        // a time for each component of the tensors
+        VectorNIP SPK2_0_Block = D(0, 0) * E0_Block + D(0, 1) * E1_Block + D(0, 2) * E2_Block + D(0, 3) * E3_Block +
+                                 D(0, 4) * E4_Block + D(0, 5) * E5_Block;
+        VectorNIP SPK2_1_Block = D(1, 0) * E0_Block + D(1, 1) * E1_Block + D(1, 2) * E2_Block + D(1, 3) * E3_Block +
+                                 D(1, 4) * E4_Block + D(1, 5) * E5_Block;
+        VectorNIP SPK2_2_Block = D(2, 0) * E0_Block + D(2, 1) * E1_Block + D(2, 2) * E2_Block + D(2, 3) * E3_Block +
+                                 D(2, 4) * E4_Block + D(2, 5) * E5_Block;
+        VectorNIP SPK2_3_Block = D(3, 0) * E0_Block + D(3, 1) * E1_Block + D(3, 2) * E2_Block + D(3, 3) * E3_Block +
+                                 D(3, 4) * E4_Block + D(3, 5) * E5_Block;
+        VectorNIP SPK2_4_Block = D(4, 0) * E0_Block + D(4, 1) * E1_Block + D(4, 2) * E2_Block + D(4, 3) * E3_Block +
+                                 D(4, 4) * E4_Block + D(4, 5) * E5_Block;
+        VectorNIP SPK2_5_Block = D(5, 0) * E0_Block + D(5, 1) * E1_Block + D(5, 2) * E2_Block + D(5, 3) * E3_Block +
+                                 D(5, 4) * E4_Block + D(5, 5) * E5_Block;
 
-    //    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor, 96, 3> P_transpose_scaled_Block_col_ordered;
-    //    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> P_transpose_scaled_Block_col_ordered;
-    //    //P_transpose_scaled_Block_col_ordered.resize(96, 3);
-    //    //ChMatrixNMc<double, 96, 3>
-    //    //    P_transpose_scaled_Block_col_ordered;  // 1st tensor Piola-Kirchoff stress tensor (non-symmetric tensor) - Tiled
-    //    //                                           // across all Gauss-Quadrature points in column order in a big matrix
-    //    ChMatrixNMc<double, 3*NP*NP*NT, 3>
-    //        P_transpose_scaled_Block_col_ordered;  // 1st tensor Piola-Kirchoff stress tensor (non-symmetric tensor) - Tiled
-    //                                               // across all Gauss-Quadrature points in column order in a big matrix
+        // Matrix of the scaled values of the transpose of the first Piola-Kirchoff stress group by components
+        ChMatrixNMc<double, 3 * NIP, 3> P_Block;
 
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(0, 0) =
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(SPK2_0_Block) +
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(SPK2_5_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(0, 0) +=
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(SPK2_4_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(0, 1) =
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(SPK2_0_Block) +
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(SPK2_5_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(0, 1) +=
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(SPK2_4_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(0, 2) =
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(SPK2_0_Block) +
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(SPK2_5_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(0, 2) +=
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(SPK2_4_Block);
+        P_Block.template block<NIP, 1>(0, 0) = FC.template block<NIP, 1>(0, 0).cwiseProduct(SPK2_0_Block) +
+                                      FC.template block<NIP, 1>(NIP, 0).cwiseProduct(SPK2_5_Block);
+        P_Block.template block<NIP, 1>(0, 0) += FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(SPK2_4_Block);
+        P_Block.template block<NIP, 1>(0, 1) = FC.template block<NIP, 1>(0, 1).cwiseProduct(SPK2_0_Block) +
+                                      FC.template block<NIP, 1>(NIP, 1).cwiseProduct(SPK2_5_Block);
+        P_Block.template block<NIP, 1>(0, 1) += FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(SPK2_4_Block);
+        P_Block.template block<NIP, 1>(0, 2) = FC.template block<NIP, 1>(0, 2).cwiseProduct(SPK2_0_Block) +
+                                      FC.template block<NIP, 1>(NIP, 2).cwiseProduct(SPK2_5_Block);
+        P_Block.template block<NIP, 1>(0, 2) += FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(SPK2_4_Block);
 
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0) =
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(SPK2_5_Block) +
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(SPK2_1_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0) +=
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(SPK2_3_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1) =
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(SPK2_5_Block) +
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(SPK2_1_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1) +=
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(SPK2_3_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2) =
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(SPK2_5_Block) +
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(SPK2_1_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2) +=
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(SPK2_3_Block);
+        P_Block.template block<NIP, 1>(NIP, 0) = FC.template block<NIP, 1>(0, 0).cwiseProduct(SPK2_5_Block) +
+                                        FC.template block<NIP, 1>(NIP, 0).cwiseProduct(SPK2_1_Block);
+        P_Block.template block<NIP, 1>(NIP, 0) += FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(SPK2_3_Block);
+        P_Block.template block<NIP, 1>(NIP, 1) = FC.template block<NIP, 1>(0, 1).cwiseProduct(SPK2_5_Block) +
+                                        FC.template block<NIP, 1>(NIP, 1).cwiseProduct(SPK2_1_Block);
+        P_Block.template block<NIP, 1>(NIP, 1) += FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(SPK2_3_Block);
+        P_Block.template block<NIP, 1>(NIP, 2) = FC.template block<NIP, 1>(0, 2).cwiseProduct(SPK2_5_Block) +
+                                        FC.template block<NIP, 1>(NIP, 2).cwiseProduct(SPK2_1_Block);
+        P_Block.template block<NIP, 1>(NIP, 2) += FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(SPK2_3_Block);
 
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0) =
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(SPK2_4_Block) +
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(SPK2_3_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0) +=
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(SPK2_2_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1) =
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(SPK2_4_Block) +
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(SPK2_3_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1) +=
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(SPK2_2_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2) =
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(SPK2_4_Block) +
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(SPK2_3_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2) +=
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(SPK2_2_Block);
+        P_Block.template block<NIP, 1>(2 * NIP, 0) = FC.template block<NIP, 1>(0, 0).cwiseProduct(SPK2_4_Block) +
+                                            FC.template block<NIP, 1>(NIP, 0).cwiseProduct(SPK2_3_Block);
+        P_Block.template block<NIP, 1>(2 * NIP, 0) += FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(SPK2_2_Block);
+        P_Block.template block<NIP, 1>(2 * NIP, 1) = FC.template block<NIP, 1>(0, 1).cwiseProduct(SPK2_4_Block) +
+                                            FC.template block<NIP, 1>(NIP, 1).cwiseProduct(SPK2_3_Block);
+        P_Block.template block<NIP, 1>(2 * NIP, 1) += FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(SPK2_2_Block);
+        P_Block.template block<NIP, 1>(2 * NIP, 2) = FC.template block<NIP, 1>(0, 2).cwiseProduct(SPK2_4_Block) +
+                                            FC.template block<NIP, 1>(NIP, 2).cwiseProduct(SPK2_3_Block);
+        P_Block.template block<NIP, 1>(2 * NIP, 2) += FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(SPK2_2_Block);
 
-    //    // =============================================================================
+        // =============================================================================
 
-    //    QiCompact += m_SD_precompute_col_ordered.block<16, 3*NP*NP*NT>(0, 3*kl*NP*NP*NT) * P_transpose_scaled_Block_col_ordered;
+        // Now multiply the first Piola-Kirchoff stresses by the shape function derivative matrix for the current layer
+        // to get the generalized force vector in matrix form (in the correct order if its calculated in row-major memory
+        // layout)
+        QiCompact += m_SD.block<NSF, 3 * NIP>(0, 3 * kl * NIP) * P_Block;
     }
 
     Eigen::Map<Vector3N> QiReshaped(QiCompact.data(), QiCompact.size());
@@ -598,144 +547,107 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalForcesAtStateNoDamping(ChVec
     const MatrixNx3& e_bar) {
     // Straight & Normalized Internal Force Integrand is of order : 8 in xi, order : 4 in eta, and order : 4 in zeta.
     // This requires GQ 5 points along the xi direction and 3 points along the eta and zeta directions for "Full
-    // Integration" However, very similar results can be obtained with 1 fewer GQ point in  each direction, resulting in
-    // roughly 1/3 of the calculations
+    // Integration" However, very similar results can be obtained with fewer GQ point in each direction, resulting in
+    // significantly fewer calculations
 
-    //MatrixNx3 QiCompact;
-    //QiCompact.setZero();
+    MatrixNx3 QiCompact;
+    QiCompact.setZero();
 
-    //for (size_t kl = 0; kl < m_numLayers; kl++) {
-    //    ChMatrixNMc<double, 3*NP*NP*NT, 3>  F_Transpose_CombinedBlock_col_ordered = m_SD_precompute_col_ordered.block<16, 3*NP*NP*NT>(0, 3*kl*NP*NP*NT).transpose() * e_bar;
+    for (size_t kl = 0; kl < m_numLayers; kl++) {
+        ChMatrixNMc<double, 3 * NIP, 3> FC = m_SD.block<NSF, 3 * NIP>(0, 3 * kl * NIP).transpose() * e_bar;
 
-    //    VectorNIP E0_Block = F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 0));
-    //    E0_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 1));
-    //    E0_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 2));
-    //    E0_Block.array() -= 1;
-    //    E0_Block.array() *= m_GQWeight_det_J_0xi_D.array();
-    //    E0_Block *= 0.5;
+        VectorNIP E0_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(0, 0)) +
+                             FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(0, 1)) +
+                             FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(0, 2));
+        E0_Block.array() -= 1;
+        E0_Block.array() *= m_kGQ.array();
+        E0_Block *= 0.5;
 
-    //    VectorNIP E1_Block = F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0));
-    //    E1_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1));
-    //    E1_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2));
-    //    E1_Block.array() -= 1;
-    //    E1_Block.array() *= m_GQWeight_det_J_0xi_D.array();
-    //    E1_Block *= 0.5;
+        VectorNIP E1_Block = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 0)) +
+                             FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 1)) +
+                             FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 2));
+        E1_Block.array() -= 1;
+        E1_Block.array() *= m_kGQ.array();
+        E1_Block *= 0.5;
 
-    //    VectorNIP E2_Block = F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0));
-    //    E2_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1));
-    //    E2_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2));
-    //    E2_Block.array() -= 1;
-    //    E2_Block.array() *= m_GQWeight_det_J_0xi_D.array();
-    //    E2_Block *= 0.5;
+        VectorNIP E2_Block = FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0)) +
+                             FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1)) +
+                             FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
+        E2_Block.array() -= 1;
+        E2_Block.array() *= m_kGQ.array();
+        E2_Block *= 0.5;
 
-    //    VectorNIP E3_Block = F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0));
-    //    E3_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1));
-    //    E3_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2));
-    //    E3_Block.array() *= m_GQWeight_det_J_0xi_D.array();
+        VectorNIP E3_Block = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0)) +
+                             FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1)) +
+                             FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
+        E3_Block.array() *= m_kGQ.array();
 
-    //    VectorNIP E4_Block = F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0));
-    //    E4_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1));
-    //    E4_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2));
-    //    E4_Block.array() *= m_GQWeight_det_J_0xi_D.array();
+        VectorNIP E4_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0)) +
+                             FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1)) +
+                             FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
+        E4_Block.array() *= m_kGQ.array();
 
-    //    VectorNIP E5_Block = F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0));
-    //    E5_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1));
-    //    E5_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2));
-    //    E5_Block.array() *= m_GQWeight_det_J_0xi_D.array();
+        VectorNIP E5_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 0)) +
+                             FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 1)) +
+                             FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 2));
+        E5_Block.array() *= m_kGQ.array();
 
+        ChMatrixNM<double, 6, 6> D;
+        m_layers[kl].GetMaterial()->Get_Rotated_D(D, m_layers[kl].Get_theta());
 
-    //    ChMatrixNM<double, 6, 6> D;
-    //    m_layers[kl].GetMaterial()->Get_Rotated_D(D, m_layers[kl].Get_theta());
+        VectorNIP SPK2_0_Block = D(0, 0) * E0_Block + D(0, 1) * E1_Block + D(0, 2) * E2_Block + D(0, 3) * E3_Block +
+                                 D(0, 4) * E4_Block + D(0, 5) * E5_Block;
+        VectorNIP SPK2_1_Block = D(1, 0) * E0_Block + D(1, 1) * E1_Block + D(1, 2) * E2_Block + D(1, 3) * E3_Block +
+                                 D(1, 4) * E4_Block + D(1, 5) * E5_Block;
+        VectorNIP SPK2_2_Block = D(2, 0) * E0_Block + D(2, 1) * E1_Block + D(2, 2) * E2_Block + D(2, 3) * E3_Block +
+                                 D(2, 4) * E4_Block + D(2, 5) * E5_Block;
+        VectorNIP SPK2_3_Block = D(3, 0) * E0_Block + D(3, 1) * E1_Block + D(3, 2) * E2_Block + D(3, 3) * E3_Block +
+                                 D(3, 4) * E4_Block + D(3, 5) * E5_Block;
+        VectorNIP SPK2_4_Block = D(4, 0) * E0_Block + D(4, 1) * E1_Block + D(4, 2) * E2_Block + D(4, 3) * E3_Block +
+                                 D(4, 4) * E4_Block + D(4, 5) * E5_Block;
+        VectorNIP SPK2_5_Block = D(5, 0) * E0_Block + D(5, 1) * E1_Block + D(5, 2) * E2_Block + D(5, 3) * E3_Block +
+                                 D(5, 4) * E4_Block + D(5, 5) * E5_Block;
 
-    //    VectorNIP SPK2_0_Block = D(0, 0)*E0_Block + D(0, 1)*E1_Block + D(0, 2)*E2_Block + D(0, 3)*E3_Block + D(0, 4)*E4_Block + D(0, 5)*E5_Block;
-    //    VectorNIP SPK2_1_Block = D(1, 0)*E0_Block + D(1, 1)*E1_Block + D(1, 2)*E2_Block + D(1, 3)*E3_Block + D(1, 4)*E4_Block + D(1, 5)*E5_Block;
-    //    VectorNIP SPK2_2_Block = D(2, 0)*E0_Block + D(2, 1)*E1_Block + D(2, 2)*E2_Block + D(2, 3)*E3_Block + D(2, 4)*E4_Block + D(2, 5)*E5_Block;
-    //    VectorNIP SPK2_3_Block = D(3, 0)*E0_Block + D(3, 1)*E1_Block + D(3, 2)*E2_Block + D(3, 3)*E3_Block + D(3, 4)*E4_Block + D(3, 5)*E5_Block;
-    //    VectorNIP SPK2_4_Block = D(4, 0)*E0_Block + D(4, 1)*E1_Block + D(4, 2)*E2_Block + D(4, 3)*E3_Block + D(4, 4)*E4_Block + D(4, 5)*E5_Block;
-    //    VectorNIP SPK2_5_Block = D(5, 0)*E0_Block + D(5, 1)*E1_Block + D(5, 2)*E2_Block + D(5, 3)*E3_Block + D(5, 4)*E4_Block + D(5, 5)*E5_Block;
+        // Matrix of the scaled values of the transpose of the first Piola-Kirchoff stress group by components
+        ChMatrixNMc<double, 3 * NIP, 3> P_Block;
 
-    //    //ChMatrixNMc<double, 96, 3>
-    //    //    P_transpose_scaled_Block_col_ordered;  // 1st tensor Piola-Kirchoff stress tensor (non-symmetric tensor) - Tiled
-    //    //                                           // across all Gauss-Quadrature points in column order in a big matrix
-    //    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> P_transpose_scaled_Block_col_ordered;
-    //    //P_transpose_scaled_Block_col_ordered.resize(96, 3);
-    //    ChMatrixNMc<double, 3*NP*NP*NT, 3>
-    //        P_transpose_scaled_Block_col_ordered;  // 1st tensor Piola-Kirchoff stress tensor (non-symmetric tensor) - Tiled
-    //                                               // across all Gauss-Quadrature points in column order in a big matrix
+        P_Block.template block<NIP, 1>(0, 0) = FC.template block<NIP, 1>(0, 0).cwiseProduct(SPK2_0_Block) +
+                                               FC.template block<NIP, 1>(NIP, 0).cwiseProduct(SPK2_5_Block) +
+                                               FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(SPK2_4_Block);
+        P_Block.template block<NIP, 1>(0, 1) = FC.template block<NIP, 1>(0, 1).cwiseProduct(SPK2_0_Block) +
+                                               FC.template block<NIP, 1>(NIP, 1).cwiseProduct(SPK2_5_Block) +
+                                               FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(SPK2_4_Block);
+        P_Block.template block<NIP, 1>(0, 2) = FC.template block<NIP, 1>(0, 2).cwiseProduct(SPK2_0_Block) +
+                                               FC.template block<NIP, 1>(NIP, 2).cwiseProduct(SPK2_5_Block) +
+                                               FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(SPK2_4_Block);
 
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(0, 0) =
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(SPK2_0_Block) +
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(SPK2_5_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(0, 0) +=
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(SPK2_4_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(0, 1) =
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(SPK2_0_Block) +
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(SPK2_5_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(0, 1) +=
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(SPK2_4_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(0, 2) =
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(SPK2_0_Block) +
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(SPK2_5_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(0, 2) +=
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(SPK2_4_Block);
+        P_Block.template block<NIP, 1>(NIP, 0) = FC.template block<NIP, 1>(0, 0).cwiseProduct(SPK2_5_Block) +
+                                                 FC.template block<NIP, 1>(NIP, 0).cwiseProduct(SPK2_1_Block) +
+                                                 FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(SPK2_3_Block);
+        P_Block.template block<NIP, 1>(NIP, 1) = FC.template block<NIP, 1>(0, 1).cwiseProduct(SPK2_5_Block) +
+                                                 FC.template block<NIP, 1>(NIP, 1).cwiseProduct(SPK2_1_Block) +
+                                                 FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(SPK2_3_Block);
+        P_Block.template block<NIP, 1>(NIP, 2) = FC.template block<NIP, 1>(0, 2).cwiseProduct(SPK2_5_Block) +
+                                                 FC.template block<NIP, 1>(NIP, 2).cwiseProduct(SPK2_1_Block) +
+                                                 FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(SPK2_3_Block);
 
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0) =
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(SPK2_5_Block) +
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(SPK2_1_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0) +=
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(SPK2_3_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1) =
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(SPK2_5_Block) +
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(SPK2_1_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1) +=
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(SPK2_3_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2) =
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(SPK2_5_Block) +
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(SPK2_1_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2) +=
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(SPK2_3_Block);
+        P_Block.template block<NIP, 1>(2 * NIP, 0) = FC.template block<NIP, 1>(0, 0).cwiseProduct(SPK2_4_Block) +
+                                                     FC.template block<NIP, 1>(NIP, 0).cwiseProduct(SPK2_3_Block) +
+                                                     FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(SPK2_2_Block);
+        P_Block.template block<NIP, 1>(2 * NIP, 1) = FC.template block<NIP, 1>(0, 1).cwiseProduct(SPK2_4_Block) +
+                                                     FC.template block<NIP, 1>(NIP, 1).cwiseProduct(SPK2_3_Block) +
+                                                     FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(SPK2_2_Block);
+        P_Block.template block<NIP, 1>(2 * NIP, 2) = FC.template block<NIP, 1>(0, 2).cwiseProduct(SPK2_4_Block) +
+                                                     FC.template block<NIP, 1>(NIP, 2).cwiseProduct(SPK2_3_Block) +
+                                                     FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(SPK2_2_Block);
 
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0) =
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(SPK2_4_Block) +
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(SPK2_3_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0) +=
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(SPK2_2_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1) =
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(SPK2_4_Block) +
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(SPK2_3_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1) +=
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(SPK2_2_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2) =
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(SPK2_4_Block) +
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(SPK2_3_Block);
-    //    P_transpose_scaled_Block_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2) +=
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(SPK2_2_Block);
+        // =============================================================================
 
-    //    // =============================================================================
+        QiCompact += m_SD.block<NSF, 3 * NIP>(0, 3 * kl * NIP) * P_Block;
+    }
 
-    //    QiCompact += m_SD_precompute_col_ordered.block<16, 3*NP*NP*NT>(0, 3*NP*NP*NT) * P_transpose_scaled_Block_col_ordered;
-    //}
-
-    //Eigen::Map<Vector3N> QiReshaped(QiCompact.data(), QiCompact.size());
-    //Fi = QiReshaped;
+    Eigen::Map<Vector3N> QiReshaped(QiCompact.data(), QiCompact.size());
+    Fi = QiReshaped;
 }
 
 // -----------------------------------------------------------------------------
@@ -797,543 +709,500 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalJacobianDamping(ChMatrixRef&
     double Rfactor,
     double Mfactor) {
 
-    //MatrixNx6 ebar_ebardot;
-    //CalcCombinedCoordMatrix(ebar_ebardot);
+    MatrixNx6 ebar_ebardot;
+    CalcCombinedCoordMatrix(ebar_ebardot);
 
-    //H.setZero();
+    H.setZero();
 
-    //for (int kl = 0; kl < m_numLayers; kl++) {
+    for (int kl = 0; kl < m_numLayers; kl++) {
 
-    //    ChMatrixNMc<double, 3*NP*NP*NT, 6>  F_Transpose_CombinedBlockDamping_col_ordered = m_SD_precompute_col_ordered.block<16, 3*NP*NP*NT>(0, 3*NP*NP*NT).transpose() * ebar_ebardot;
+        ChMatrixNMc<double, 3*NIP, 6> FC = m_SD.block<NSF, 3*NIP>(0, 3*NIP*kl).transpose() * ebar_ebardot;
 
-    //    // ChMatrixNM<double, 48, 180> partial_epsilon_partial_e_Transpose;
-    //    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 48, 6*NP*NP*NT> partial_epsilon_partial_e_Transpose;
-    //    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> partial_epsilon_partial_e_Transpose;
-    //    partial_epsilon_partial_e_Transpose.resize(48, 6*NP*NP*NT);
+        // ChMatrixNM<double, 48, 180> partial_epsilon_partial_e_Transpose;
+        //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 48, 6*NIP> partial_epsilon_partial_e_Transpose;
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> partial_epsilon_partial_e_Transpose;
+        partial_epsilon_partial_e_Transpose.resize(3*NSF, 6*NIP);
 
-    //    for (auto i = 0; i < 16; i++) {
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 0*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0*NP*NP*NT, 0).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 1*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(1*NP*NP*NT, 0).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 2*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 3*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(1*NP*NP*NT, 0).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 4*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0*NP*NP*NT, 0).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 5*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0*NP*NP*NT, 0).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(1*NP*NP*NT, 0).transpose());
+        for (auto i = 0; i < NSF; i++) {
+            partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 0*NIP) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(0*NIP, 0).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 1*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(1*NIP, 0).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 0).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(1*NIP, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 0).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(0*NIP, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 0).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(0*NIP, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(1*NIP, 0).transpose());
 
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 0) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 2*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 3*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 4*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 5*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 1).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 1).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 1).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose());
 
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 0) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 2*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 3*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 4*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 5*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).transpose());
-    //    }
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 2).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 2).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 2).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose());
+        }
 
-    //    //ChMatrixNMc<double, 96, 3> scaled_F_Transpose_col_ordered =
-    //    //    (Kfactor + m_Alpha * Rfactor) * F_Transpose_CombinedBlockDamping_col_ordered.block<96, 3>(0, 0) +
-    //    //    (m_Alpha * Kfactor) * F_Transpose_CombinedBlockDamping_col_ordered.block<96, 3>(0, 3);
-    //    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> scaled_F_Transpose_col_ordered;
-    //    //scaled_F_Transpose_col_ordered.resize(96, 3);
-    //    //scaled_F_Transpose_col_ordered.noalias() = (Kfactor + m_Alpha * Rfactor) * F_Transpose_CombinedBlockDamping_col_ordered.block<96, 3>(0, 0) +
-    //    //    (m_Alpha * Kfactor) * F_Transpose_CombinedBlockDamping_col_ordered.block<96, 3>(0, 3);
-    //    ChMatrixNMc<double, 3*NP*NP*NT, 3> scaled_F_Transpose_col_ordered = (Kfactor + m_Alpha * Rfactor) * F_Transpose_CombinedBlockDamping_col_ordered.block<3*NP*NP*NT, 3>(0, 0) +
-    //            (m_Alpha * Kfactor) * F_Transpose_CombinedBlockDamping_col_ordered.block<3*NP*NP*NT, 3>(0, 3);
+        //ChMatrixNMc<double, 96, 3> scaled_FC =
+        //    (Kfactor + m_Alpha * Rfactor) * FC.template block<96, 3>(0, 0) +
+        //    (m_Alpha * Kfactor) * FC.template block<96, 3>(0, 3);
+        //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> scaled_FC;
+        //scaled_FC.resize(96, 3);
+        //scaled_FC.noalias() = (Kfactor + m_Alpha * Rfactor) * FC.template block<96, 3>(0, 0) +
+        //    (m_Alpha * Kfactor) * FC.template block<96, 3>(0, 3);
+        ChMatrixNMc<double, 3*NIP, 3> scaled_FC = (Kfactor + m_Alpha * Rfactor) * FC.template block<3*NIP, 3>(0, 0) +
+                (m_Alpha * Kfactor) * FC.template block<3*NIP, 3>(0, 3);
 
-    //    for (auto i = 0; i < 3; i++) {
-    //        scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, i).array() *= m_GQWeight_det_J_0xi_D.array();
-    //        scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, i).array() *= m_GQWeight_det_J_0xi_D.array();
-    //        scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, i).array() *= m_GQWeight_det_J_0xi_D.array();
-    //    }
+        for (auto i = 0; i < 3; i++) {
+            scaled_FC.template block<NIP, 1>(0, i).array() *= m_kGQ.array();
+            scaled_FC.template block<NIP, 1>(NIP, i).array() *= m_kGQ.array();
+            scaled_FC.template block<NIP, 1>(2*NIP, i).array() *= m_kGQ.array();
+        }
 
-    //    // ChMatrixNM<double, 48, 6*NP*NP*NT> Scaled_Combined_partial_epsilon_partial_e_Transpose;
-    //    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 48, 6*NP*NP*NT> Scaled_Combined_partial_epsilon_partial_e_Transpose;
-    //    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Scaled_Combined_partial_epsilon_partial_e_Transpose;
-    //    Scaled_Combined_partial_epsilon_partial_e_Transpose.resize(48, 6*NP*NP*NT);
-
-
-    //    for (auto i = 0; i < 16; i++) {
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 0) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 0).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 2*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 3*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 4*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 0).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 5*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 0).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).transpose());
-
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 0) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 1).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 2*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 3*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 4*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 1).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 5*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 1).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).transpose());
-
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 0) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 2).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 2*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 3*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 4*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 2).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 5*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 2).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).transpose());
-    //    }
+        // ChMatrixNM<double, 48, 6*NIP> Scaled_Combined_partial_epsilon_partial_e_Transpose;
+        //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 48, 6*NIP> Scaled_Combined_partial_epsilon_partial_e_Transpose;
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Scaled_Combined_partial_epsilon_partial_e_Transpose;
+        Scaled_Combined_partial_epsilon_partial_e_Transpose.resize(3*NSF, 6*NIP);
 
 
-    //    ChMatrixNM<double, 6, 6> D;
-    //    m_layers[kl].GetMaterial()->Get_Rotated_D(D, m_layers[kl].Get_theta());
+        for (auto i = 0; i < NSF; i++) {
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 0).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 0).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 0).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 0).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 0).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 0).transpose());
 
-    //    // ChMatrixNM<double, 48, 6*NP*NP*NT> DScaled_Combined_partial_epsilon_partial_e_Transpose;
-    //    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 48, 6*NP*NP*NT> DScaled_Combined_partial_epsilon_partial_e_Transpose;
-    //    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> DScaled_Combined_partial_epsilon_partial_e_Transpose;
-    //    DScaled_Combined_partial_epsilon_partial_e_Transpose.resize(48, 6*NP*NP*NT);
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 1).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 1).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 1).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 1).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 1).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 1).transpose());
 
-    //    DScaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 0) = D(0, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 0) + D(0, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, NP*NP*NT) + D(0, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 2*NP*NP*NT) + D(0, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 3*NP*NP*NT) + D(0, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 4*NP*NP*NT) + D(0, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 5*NP*NP*NT);
-    //    DScaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, NP*NP*NT) = D(1, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 0) + D(1, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, NP*NP*NT) + D(1, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 2*NP*NP*NT) + D(1, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 3*NP*NP*NT) + D(1, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 4*NP*NP*NT) + D(1, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 5*NP*NP*NT);
-    //    DScaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 2*NP*NP*NT) = D(2, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 0) + D(2, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, NP*NP*NT) + D(2, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 2*NP*NP*NT) + D(2, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 3*NP*NP*NT) + D(2, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 4*NP*NP*NT) + D(2, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 5*NP*NP*NT);
-    //    DScaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 3*NP*NP*NT) = D(3, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 0) + D(3, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, NP*NP*NT) + D(3, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 2*NP*NP*NT) + D(3, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 3*NP*NP*NT) + D(3, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 4*NP*NP*NT) + D(3, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 5*NP*NP*NT);
-    //    DScaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 4*NP*NP*NT) = D(4, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 0) + D(4, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, NP*NP*NT) + D(4, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 2*NP*NP*NT) + D(4, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 3*NP*NP*NT) + D(4, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 4*NP*NP*NT) + D(4, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 5*NP*NP*NT);
-    //    DScaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 5*NP*NP*NT) = D(5, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 0) + D(5, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, NP*NP*NT) + D(5, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 2*NP*NP*NT) + D(5, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 3*NP*NP*NT) + D(5, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 4*NP*NP*NT) + D(5, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 5*NP*NP*NT);
-
-    //    H.noalias() += partial_epsilon_partial_e_Transpose * DScaled_Combined_partial_epsilon_partial_e_Transpose.transpose();
-
-    //    //===========================================================================================
-
-    //    VectorNIP E0_Block = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 0));
-    //    E0_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1));
-    //    E0_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2));
-    //    E0_Block.array() -= 1;
-    //    E0_Block *= 0.5;
-    //    VectorNIP E_BlockDamping = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 5));
-    //    E0_Block += m_Alpha * E_BlockDamping;
-    //    E0_Block.array() *= m_GQWeight_det_J_0xi_D.array();
-
-    //    VectorNIP E1_Block = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0));
-    //    E1_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1));
-    //    E1_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2));
-    //    E1_Block.array() -= 1;
-    //    E1_Block *= 0.5;
-    //    E_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 5));
-    //    E1_Block += m_Alpha * E_BlockDamping;
-    //    E1_Block.array() *= m_GQWeight_det_J_0xi_D.array();
-
-    //    VectorNIP E2_Block = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0));
-    //    E2_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1));
-    //    E2_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2));
-    //    E2_Block.array() -= 1;
-    //    E2_Block *= 0.5;
-    //    E_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 5));
-    //    E2_Block += m_Alpha * E_BlockDamping;
-    //    E2_Block.array() *= m_GQWeight_det_J_0xi_D.array();
-
-    //    VectorNIP E3_Block = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0));
-    //    E3_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1));
-    //    E3_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2));
-    //    E_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 5));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 5));
-    //    E3_Block += m_Alpha * E_BlockDamping;
-    //    E3_Block.array() *= m_GQWeight_det_J_0xi_D.array();
-
-    //    VectorNIP E4_Block = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0));
-    //    E4_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1));
-    //    E4_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2));
-    //    E_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 5));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 5));
-    //    E4_Block += m_Alpha * E_BlockDamping;
-    //    E4_Block.array() *= m_GQWeight_det_J_0xi_D.array();
-
-    //    VectorNIP E5_Block = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0));
-    //    E5_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1));
-    //    E5_Block += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2));
-    //    E_BlockDamping.noalias() = F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 5));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 3));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 4));
-    //    E_BlockDamping += F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlockDamping_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 5));
-    //    E5_Block += m_Alpha * E_BlockDamping;
-    //    E5_Block.array() *= m_GQWeight_det_J_0xi_D.array();
-
-    //    VectorNIP SPK2_0_Block = D(0, 0)*E0_Block + D(0, 1)*E1_Block + D(0, 2)*E2_Block + D(0, 3)*E3_Block + D(0, 4)*E4_Block + D(0, 5)*E5_Block;
-    //    VectorNIP SPK2_1_Block = D(1, 0)*E0_Block + D(1, 1)*E1_Block + D(1, 2)*E2_Block + D(1, 3)*E3_Block + D(1, 4)*E4_Block + D(1, 5)*E5_Block;
-    //    VectorNIP SPK2_2_Block = D(2, 0)*E0_Block + D(2, 1)*E1_Block + D(2, 2)*E2_Block + D(2, 3)*E3_Block + D(2, 4)*E4_Block + D(2, 5)*E5_Block;
-    //    VectorNIP SPK2_3_Block = D(3, 0)*E0_Block + D(3, 1)*E1_Block + D(3, 2)*E2_Block + D(3, 3)*E3_Block + D(3, 4)*E4_Block + D(3, 5)*E5_Block;
-    //    VectorNIP SPK2_4_Block = D(4, 0)*E0_Block + D(4, 1)*E1_Block + D(4, 2)*E2_Block + D(4, 3)*E3_Block + D(4, 4)*E4_Block + D(4, 5)*E5_Block;
-    //    VectorNIP SPK2_5_Block = D(5, 0)*E0_Block + D(5, 1)*E1_Block + D(5, 2)*E2_Block + D(5, 3)*E3_Block + D(5, 4)*E4_Block + D(5, 5)*E5_Block;
-
-    //    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> S_scaled_SD_precompute_col_ordered;
-    //    //S_scaled_SD_precompute_col_ordered.resize(16, 96);
-    //    ChMatrixNM<double, 16, 3*NP*NP*NT> S_scaled_SD_precompute_col_ordered;
-
-    //    for (auto i = 0; i < 16; i++) {
-    //        S_scaled_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, 0) =
-    //            SPK2_0_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT)) +
-    //            SPK2_5_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT)) +
-    //            SPK2_4_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT));
-
-    //        S_scaled_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, NP*NP*NT) =
-    //            SPK2_5_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT)) +
-    //            SPK2_1_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT)) +
-    //            SPK2_3_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT));
-
-    //        S_scaled_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, 2*NP*NP*NT) =
-    //            SPK2_4_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT)) +
-    //            SPK2_3_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT)) +
-    //            SPK2_2_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT));
-    //    }
-
-    //    //Calculate Just the Non-sparse Upper Triangular Entires and then expand out to full size
-    //    unsigned int idx = 0;
-    //    for (unsigned int i = 0; i < 16; i++) {
-    //        for (unsigned int j = i; j < 16; j++) {
-    //            double d = Kfactor * m_SD_precompute_col_ordered.block<1, 3*NP*NP*NT>(i, NP*NP*NT) * S_scaled_SD_precompute_col_ordered.block<1, 3*NP*NP*NT>(j, 0).transpose();
-
-    //            H(3 * i, 3 * j) += d;
-    //            H(3 * i + 1, 3 * j + 1) += d;
-    //            H(3 * i + 2, 3 * j + 2) += d;
-    //            if (i != j) {
-    //                H(3 * j, 3 * i) += d;
-    //                H(3 * j + 1, 3 * i + 1) += d;
-    //                H(3 * j + 2, 3 * i + 2) += d;
-    //            }
-    //            idx++;
-    //        }
-    //    }
-    //}
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 2).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 2).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 2).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 2).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 2).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 2).transpose());
+        }
 
 
-    ////Add in the Mass Matrix Which is Stored in Compact Upper Triangular Form
-    //ChVectorN<double, 136> ScaledMassMatrix = Mfactor * m_MassMatrix;
-    //unsigned int idx = 0;
-    //for (unsigned int i = 0; i < 16; i++) {
-    //    for (unsigned int j = i; j < 16; j++) {
-    //        H(3 * i, 3 * j) += ScaledMassMatrix(idx);
-    //        H(3 * i + 1, 3 * j + 1) += ScaledMassMatrix(idx);
-    //        H(3 * i + 2, 3 * j + 2) += ScaledMassMatrix(idx);
-    //        if (i != j) {
-    //            H(3 * j, 3 * i) += ScaledMassMatrix(idx);
-    //            H(3 * j + 1, 3 * i + 1) += ScaledMassMatrix(idx);
-    //            H(3 * j + 2, 3 * i + 2) += ScaledMassMatrix(idx);
-    //        }
-    //        idx++;
-    //    }
-    //}
+        ChMatrixNM<double, 6, 6> D;
+        m_layers[kl].GetMaterial()->Get_Rotated_D(D, m_layers[kl].Get_theta());
+
+        // ChMatrixNM<double, 48, 6*NIP> DScaled_Combined_partial_epsilon_partial_e_Transpose;
+        //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 48, 6*NIP> DScaled_Combined_partial_epsilon_partial_e_Transpose;
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> DScaled_Combined_partial_epsilon_partial_e_Transpose;
+        DScaled_Combined_partial_epsilon_partial_e_Transpose.resize(3*NSF, 6*NIP);
+
+        DScaled_Combined_partial_epsilon_partial_e_Transpose.template block<3*NSF, NIP>(0, 0) = D(0, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 0) + D(0, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, NIP) + D(0, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 2*NIP) + D(0, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 3*NIP) + D(0, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 4*NIP) + D(0, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 5*NIP);
+        DScaled_Combined_partial_epsilon_partial_e_Transpose.template block<3*NSF, NIP>(0, NIP) = D(1, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 0) + D(1, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, NIP) + D(1, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 2*NIP) + D(1, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 3*NIP) + D(1, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 4*NIP) + D(1, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 5*NIP);
+        DScaled_Combined_partial_epsilon_partial_e_Transpose.template block<3*NSF, NIP>(0, 2*NIP) = D(2, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 0) + D(2, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, NIP) + D(2, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 2*NIP) + D(2, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 3*NIP) + D(2, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 4*NIP) + D(2, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 5*NIP);
+        DScaled_Combined_partial_epsilon_partial_e_Transpose.template block<3*NSF, NIP>(0, 3*NIP) = D(3, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 0) + D(3, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, NIP) + D(3, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 2*NIP) + D(3, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 3*NIP) + D(3, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 4*NIP) + D(3, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 5*NIP);
+        DScaled_Combined_partial_epsilon_partial_e_Transpose.template block<3*NSF, NIP>(0, 4*NIP) = D(4, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 0) + D(4, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, NIP) + D(4, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 2*NIP) + D(4, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 3*NIP) + D(4, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 4*NIP) + D(4, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 5*NIP);
+        DScaled_Combined_partial_epsilon_partial_e_Transpose.template block<3*NSF, NIP>(0, 5*NIP) = D(5, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 0) + D(5, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, NIP) + D(5, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 2*NIP) + D(5, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 3*NIP) + D(5, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 4*NIP) + D(5, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<3*NSF, NIP>(0, 5*NIP);
+
+        H.noalias() += partial_epsilon_partial_e_Transpose * DScaled_Combined_partial_epsilon_partial_e_Transpose.transpose();
+
+        //===========================================================================================
+
+        VectorNIP E0_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(0, 0));
+        E0_Block += FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(0, 1));
+        E0_Block += FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(0, 2));
+        E0_Block.array() -= 1;
+        E0_Block *= 0.5;
+        VectorNIP E_BlockDamping = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(0, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(0, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(0, 5));
+        E0_Block += m_Alpha * E_BlockDamping;
+        E0_Block.array() *= m_kGQ.array();
+
+        VectorNIP E1_Block = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 0));
+        E1_Block += FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 1));
+        E1_Block += FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 2));
+        E1_Block.array() -= 1;
+        E1_Block *= 0.5;
+        E_BlockDamping.noalias() = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 5));
+        E1_Block += m_Alpha * E_BlockDamping;
+        E1_Block.array() *= m_kGQ.array();
+
+        VectorNIP E2_Block = FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0));
+        E2_Block += FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1));
+        E2_Block += FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
+        E2_Block.array() -= 1;
+        E2_Block *= 0.5;
+        E_BlockDamping.noalias() =
+            FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 5));
+        E2_Block += m_Alpha * E_BlockDamping;
+        E2_Block.array() *= m_kGQ.array();
+
+        VectorNIP E3_Block = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0));
+        E3_Block += FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1));
+        E3_Block += FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
+        E_BlockDamping.noalias() =
+            FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 5));
+        E_BlockDamping += FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 5));
+        E3_Block += m_Alpha * E_BlockDamping;
+        E3_Block.array() *= m_kGQ.array();
+
+        VectorNIP E4_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0));
+        E4_Block += FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1));
+        E4_Block += FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
+        E_BlockDamping.noalias() = FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(FC.template block<NIP, 1>(0, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(FC.template block<NIP, 1>(0, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(FC.template block<NIP, 1>(0, 5));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 5));
+        E4_Block += m_Alpha * E_BlockDamping;
+        E4_Block.array() *= m_kGQ.array();
+
+        VectorNIP E5_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 0));
+        E5_Block += FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 1));
+        E5_Block += FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 2));
+        E_BlockDamping.noalias() = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(0, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(0, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(0, 5));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 3));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 4));
+        E_BlockDamping += FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 5));
+        E5_Block += m_Alpha * E_BlockDamping;
+        E5_Block.array() *= m_kGQ.array();
+
+        VectorNIP SPK2_0_Block = D(0, 0)*E0_Block + D(0, 1)*E1_Block + D(0, 2)*E2_Block + D(0, 3)*E3_Block + D(0, 4)*E4_Block + D(0, 5)*E5_Block;
+        VectorNIP SPK2_1_Block = D(1, 0)*E0_Block + D(1, 1)*E1_Block + D(1, 2)*E2_Block + D(1, 3)*E3_Block + D(1, 4)*E4_Block + D(1, 5)*E5_Block;
+        VectorNIP SPK2_2_Block = D(2, 0)*E0_Block + D(2, 1)*E1_Block + D(2, 2)*E2_Block + D(2, 3)*E3_Block + D(2, 4)*E4_Block + D(2, 5)*E5_Block;
+        VectorNIP SPK2_3_Block = D(3, 0)*E0_Block + D(3, 1)*E1_Block + D(3, 2)*E2_Block + D(3, 3)*E3_Block + D(3, 4)*E4_Block + D(3, 5)*E5_Block;
+        VectorNIP SPK2_4_Block = D(4, 0)*E0_Block + D(4, 1)*E1_Block + D(4, 2)*E2_Block + D(4, 3)*E3_Block + D(4, 4)*E4_Block + D(4, 5)*E5_Block;
+        VectorNIP SPK2_5_Block = D(5, 0)*E0_Block + D(5, 1)*E1_Block + D(5, 2)*E2_Block + D(5, 3)*E3_Block + D(5, 4)*E4_Block + D(5, 5)*E5_Block;
+
+        //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> S_scaled_SD;
+        //S_scaled_SD.resize(NSF, 96);
+        ChMatrixNM<double, NSF, 3*NIP> S_scaled_SD;
+
+        for (auto i = 0; i < NSF; i++) {
+            S_scaled_SD.template block<1, NIP>(i, 0) =
+                SPK2_0_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+0)*NIP)) +
+                SPK2_5_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+1)*NIP)) +
+                SPK2_4_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+2)*NIP));
+
+            S_scaled_SD.template block<1, NIP>(i, NIP) =
+                SPK2_5_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+0)*NIP)) +
+                SPK2_1_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+1)*NIP)) +
+                SPK2_3_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+2)*NIP));
+
+            S_scaled_SD.template block<1, NIP>(i, 2*NIP) =
+                SPK2_4_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+0)*NIP)) +
+                SPK2_3_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+1)*NIP)) +
+                SPK2_2_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+2)*NIP));
+        }
+
+        //Calculate Just the Non-sparse Upper Triangular Entires and then expand out to full size
+        unsigned int idx = 0;
+        for (unsigned int i = 0; i < NSF; i++) {
+            for (unsigned int j = i; j < NSF; j++) {
+                double d = Kfactor * m_SD.block<1, 3*NIP>(i, 3 * kl * NIP) * S_scaled_SD.template block<1, 3*NIP>(j, 0).transpose();
+
+                H(3 * i, 3 * j) += d;
+                H(3 * i + 1, 3 * j + 1) += d;
+                H(3 * i + 2, 3 * j + 2) += d;
+                if (i != j) {
+                    H(3 * j, 3 * i) += d;
+                    H(3 * j + 1, 3 * i + 1) += d;
+                    H(3 * j + 2, 3 * i + 2) += d;
+                }
+                idx++;
+            }
+        }
+    }
+
+
+    //Add in the Mass Matrix Which is Stored in Compact Upper Triangular Form
+    ChVectorN<double, 136> ScaledMassMatrix = Mfactor * m_MassMatrix;
+    unsigned int idx = 0;
+    for (unsigned int i = 0; i < NSF; i++) {
+        for (unsigned int j = i; j < NSF; j++) {
+            H(3 * i, 3 * j) += ScaledMassMatrix(idx);
+            H(3 * i + 1, 3 * j + 1) += ScaledMassMatrix(idx);
+            H(3 * i + 2, 3 * j + 2) += ScaledMassMatrix(idx);
+            if (i != j) {
+                H(3 * j, 3 * i) += ScaledMassMatrix(idx);
+                H(3 * j + 1, 3 * i + 1) += ScaledMassMatrix(idx);
+                H(3 * j + 2, 3 * i + 2) += ScaledMassMatrix(idx);
+            }
+            idx++;
+        }
+    }
 }
 
 template <int NP, int NT>
 void ChElementShellANCF_3443<NP,NT>::ComputeInternalJacobianNoDamping(ChMatrixRef& H, double Kfactor, double Mfactor) {
 
-    //MatrixNx3 e_bar;
-    //CalcCoordMatrix(e_bar);
+    MatrixNx3 e_bar;
+    CalcCoordMatrix(e_bar);
 
-    //H.setZero();
+    H.setZero();
 
-    //for (int kl = 0; kl < m_numLayers; kl++) {
-    //    ChMatrixNMc<double, 3*NP*NP*NT, 3>  F_Transpose_CombinedBlock_col_ordered = m_SD_precompute_col_ordered.block<16, 3*NP*NP*NT>(0, 3*NP*NP*NT * kl).transpose() * e_bar;
+    for (int kl = 0; kl < m_numLayers; kl++) {
+        ChMatrixNMc<double, 3*NIP, 3>  FC = m_SD.block<NSF, 3*NIP>(0, 3*NIP * kl).transpose() * e_bar;
 
-    //    // ChMatrixNM<double, 48, 180> partial_epsilon_partial_e_Transpose;
-    //    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 48, 6*NP*NP*NT> partial_epsilon_partial_e_Transpose;
-    //    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> partial_epsilon_partial_e_Transpose;
-    //    partial_epsilon_partial_e_Transpose.resize(48, 6*NP*NP*NT);
+        // ChMatrixNM<double, 48, 180> partial_epsilon_partial_e_Transpose;
+        //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 48, 6*NIP> partial_epsilon_partial_e_Transpose;
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> partial_epsilon_partial_e_Transpose;
+        partial_epsilon_partial_e_Transpose.resize(3*NSF, 6*NIP);
 
-    //    for (auto i = 0; i < 16; i++) {
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 0) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 0).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 2*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 3*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 4*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 0).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 5*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 0).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).transpose());
+        for (auto i = 0; i < NSF; i++) {
+            partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 0).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 0).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 0).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 0).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 0).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 0).transpose());
 
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 0) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 1).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 2*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 3*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 4*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 1).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 5*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 1).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 1).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 1).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 1).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose());
 
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 0) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 2).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 2*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 3*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 4*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 2).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).transpose());
-    //        partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 5*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 2).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).transpose());
-    //    }
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 2).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 2).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 2).transpose());
+            partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose());
+        }
 
-    //    //ChMatrixNMc<double, 3*NP*NP*NT, 3> scaled_F_Transpose_col_ordered =
-    //    //    (Kfactor + m_Alpha * Rfactor) * m_F_Transpose_CombinedBlockDamping_col_ordered.block<96, 3>(0, 0) +
-    //    //    (m_Alpha * Kfactor) * m_F_Transpose_CombinedBlockDamping_col_ordered.block<96, 3>(0, 3);
-    //    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> scaled_F_Transpose_col_ordered;
-    //    //scaled_F_Transpose_col_ordered.resize(96, 3);
-    //    //scaled_F_Transpose_col_ordered.noalias() = Kfactor * F_Transpose_CombinedBlock_col_ordered;
-    //    ChMatrixNMc<double, 3*NP*NP*NT, 3> scaled_F_Transpose_col_ordered = Kfactor * F_Transpose_CombinedBlock_col_ordered;
+        //ChMatrixNMc<double, 3*NIP, 3> scaled_FC =
+        //    (Kfactor + m_Alpha * Rfactor) * m_FC.template block<96, 3>(0, 0) +
+        //    (m_Alpha * Kfactor) * m_FC.template block<96, 3>(0, 3);
+        //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> scaled_FC;
+        //scaled_FC.resize(96, 3);
+        //scaled_FC.noalias() = Kfactor * FC;
+        ChMatrixNMc<double, 3*NIP, 3> scaled_FC = Kfactor * FC;
 
-    //    for (auto i = 0; i < 3; i++) {
-    //        scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, i).array() *= m_GQWeight_det_J_0xi_D.array();
-    //        scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, i).array() *= m_GQWeight_det_J_0xi_D.array();
-    //        scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, i).array() *= m_GQWeight_det_J_0xi_D.array();
-    //    }
+        for (auto i = 0; i < 3; i++) {
+            scaled_FC.template block<NIP, 1>(0, i).array() *= m_kGQ.array();
+            scaled_FC.template block<NIP, 1>(NIP, i).array() *= m_kGQ.array();
+            scaled_FC.template block<NIP, 1>(2*NIP, i).array() *= m_kGQ.array();
+        }
 
-    //    // ChMatrixNM<double, 48, 6*NP*NP*NT> Scaled_Combined_partial_epsilon_partial_e_Transpose;
-    //    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 48, 6*NP*NP*NT> Scaled_Combined_partial_epsilon_partial_e_Transpose;
-    //    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Scaled_Combined_partial_epsilon_partial_e_Transpose;
-    //    Scaled_Combined_partial_epsilon_partial_e_Transpose.resize(48, 6*NP*NP*NT);
+        // ChMatrixNM<double, 48, 6*NIP> Scaled_Combined_partial_epsilon_partial_e_Transpose;
+        //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 48, 6*NIP> Scaled_Combined_partial_epsilon_partial_e_Transpose;
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Scaled_Combined_partial_epsilon_partial_e_Transpose;
+        Scaled_Combined_partial_epsilon_partial_e_Transpose.resize(3*NSF, 6*NIP);
 
-    //    for (auto i = 0; i < 16; i++) {
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 0) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 0).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 2*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 3*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 4*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 0).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>(3 * i, 5*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 0).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).transpose());
+        for (auto i = 0; i < NSF; i++) {
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 0).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 0).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 0).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 0).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 0).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>(3 * i, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 0).transpose());
 
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 0) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 1).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 2*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 3*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 4*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 1).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 1, 5*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 1).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 1).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 1).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 1).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 1).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 1).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 1, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 1).transpose());
 
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 0) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 2).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 2*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 3*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 4*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 2).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).transpose());
-    //        Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NP*NP*NT>((3 * i) + 2, 5*NP*NP*NT) = m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(0, 2).transpose()) +
-    //            m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT).cwiseProduct(scaled_F_Transpose_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).transpose());
-    //    }
-
-
-    //    ChMatrixNM<double, 6, 6> D;
-    //    m_layers[kl].GetMaterial()->Get_Rotated_D(D, m_layers[kl].Get_theta());
-
-    //    // ChMatrixNM<double, 48, 6*NP*NP*NT> DScaled_Combined_partial_epsilon_partial_e_Transpose;
-    //    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 48, 6*NP*NP*NT> DScaled_Combined_partial_epsilon_partial_e_Transpose;
-    //    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> DScaled_Combined_partial_epsilon_partial_e_Transpose;
-    //    DScaled_Combined_partial_epsilon_partial_e_Transpose.resize(48, 6*NP*NP*NT);
-
-    //    DScaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 0) = D(0, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 0) + D(0, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, NP*NP*NT) + D(0, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 2*NP*NP*NT) + D(0, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 3*NP*NP*NT) + D(0, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 4*NP*NP*NT) + D(0, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 5*NP*NP*NT);
-    //    DScaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, NP*NP*NT) = D(1, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 0) + D(1, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, NP*NP*NT) + D(1, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 2*NP*NP*NT) + D(1, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 3*NP*NP*NT) + D(1, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 4*NP*NP*NT) + D(1, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 5*NP*NP*NT);
-    //    DScaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 2*NP*NP*NT) = D(2, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 0) + D(2, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, NP*NP*NT) + D(2, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 2*NP*NP*NT) + D(2, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 3*NP*NP*NT) + D(2, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 4*NP*NP*NT) + D(2, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 5*NP*NP*NT);
-    //    DScaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 3*NP*NP*NT) = D(3, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 0) + D(3, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, NP*NP*NT) + D(3, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 2*NP*NP*NT) + D(3, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 3*NP*NP*NT) + D(3, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 4*NP*NP*NT) + D(3, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 5*NP*NP*NT);
-    //    DScaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 4*NP*NP*NT) = D(4, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 0) + D(4, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, NP*NP*NT) + D(4, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 2*NP*NP*NT) + D(4, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 3*NP*NP*NT) + D(4, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 4*NP*NP*NT) + D(4, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 5*NP*NP*NT);
-    //    DScaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 5*NP*NP*NT) = D(5, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 0) + D(5, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, NP*NP*NT) + D(5, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 2*NP*NP*NT) + D(5, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 3*NP*NP*NT) + D(5, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 4*NP*NP*NT) + D(5, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NP*NP*NT>(0, 5*NP*NP*NT);
-
-    //    H.noalias() += partial_epsilon_partial_e_Transpose * DScaled_Combined_partial_epsilon_partial_e_Transpose.transpose();
-
-    //    //===========================================================================================
-    //    VectorNIP E0_Block = F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 0));
-    //    E0_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 1));
-    //    E0_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 2));
-    //    E0_Block.array() -= 1;
-    //    E0_Block.array() *= m_GQWeight_det_J_0xi_D.array();
-    //    E0_Block *= 0.5;
-
-    //    VectorNIP E1_Block = F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0));
-    //    E1_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1));
-    //    E1_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2));
-    //    E1_Block.array() -= 1;
-    //    E1_Block.array() *= m_GQWeight_det_J_0xi_D.array();
-    //    E1_Block *= 0.5;
-
-    //    VectorNIP E2_Block = F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0));
-    //    E2_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1));
-    //    E2_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2));
-    //    E2_Block.array() -= 1;
-    //    E2_Block.array() *= m_GQWeight_det_J_0xi_D.array();
-    //    E2_Block *= 0.5;
-
-    //    VectorNIP E3_Block = F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0));
-    //    E3_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1));
-    //    E3_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2));
-    //    E3_Block.array() *= m_GQWeight_det_J_0xi_D.array();
-
-    //    VectorNIP E4_Block = F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 0));
-    //    E4_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 1));
-    //    E4_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(2*NP*NP*NT, 2));
-    //    E4_Block.array() *= m_GQWeight_det_J_0xi_D.array();
-
-    //    VectorNIP E5_Block = F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 0).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 0));
-    //    E5_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 1).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 1));
-    //    E5_Block += F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(0, 2).cwiseProduct(
-    //        F_Transpose_CombinedBlock_col_ordered.block<NP*NP*NT, 1>(NP*NP*NT, 2));
-    //    E5_Block.array() *= m_GQWeight_det_J_0xi_D.array();
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 2).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 2).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 2).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 2).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(2*NIP, 2).transpose());
+            Scaled_Combined_partial_epsilon_partial_e_Transpose.block<1, NIP>((3 * i) + 2, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(scaled_FC.template block<NIP, 1>(NIP, 2).transpose());
+        }
 
 
-    //    VectorNIP SPK2_0_Block = D(0, 0)*E0_Block + D(0, 1)*E1_Block + D(0, 2)*E2_Block + D(0, 3)*E3_Block + D(0, 4)*E4_Block + D(0, 5)*E5_Block;
-    //    VectorNIP SPK2_1_Block = D(1, 0)*E0_Block + D(1, 1)*E1_Block + D(1, 2)*E2_Block + D(1, 3)*E3_Block + D(1, 4)*E4_Block + D(1, 5)*E5_Block;
-    //    VectorNIP SPK2_2_Block = D(2, 0)*E0_Block + D(2, 1)*E1_Block + D(2, 2)*E2_Block + D(2, 3)*E3_Block + D(2, 4)*E4_Block + D(2, 5)*E5_Block;
-    //    VectorNIP SPK2_3_Block = D(3, 0)*E0_Block + D(3, 1)*E1_Block + D(3, 2)*E2_Block + D(3, 3)*E3_Block + D(3, 4)*E4_Block + D(3, 5)*E5_Block;
-    //    VectorNIP SPK2_4_Block = D(4, 0)*E0_Block + D(4, 1)*E1_Block + D(4, 2)*E2_Block + D(4, 3)*E3_Block + D(4, 4)*E4_Block + D(4, 5)*E5_Block;
-    //    VectorNIP SPK2_5_Block = D(5, 0)*E0_Block + D(5, 1)*E1_Block + D(5, 2)*E2_Block + D(5, 3)*E3_Block + D(5, 4)*E4_Block + D(5, 5)*E5_Block;
+        ChMatrixNM<double, 6, 6> D;
+        m_layers[kl].GetMaterial()->Get_Rotated_D(D, m_layers[kl].Get_theta());
 
-    //    //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> S_scaled_SD_precompute_col_ordered;
-    //    //S_scaled_SD_precompute_col_ordered.resize(16, 96);
-    //    ChMatrixNM<double, 16, 3*NP*NP*NT> S_scaled_SD_precompute_col_ordered;
+        // ChMatrixNM<double, 48, 6*NIP> DScaled_Combined_partial_epsilon_partial_e_Transpose;
+        //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor, 48, 6*NIP> DScaled_Combined_partial_epsilon_partial_e_Transpose;
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> DScaled_Combined_partial_epsilon_partial_e_Transpose;
+        DScaled_Combined_partial_epsilon_partial_e_Transpose.resize(3*NSF, 6*NIP);
 
-    //    for (auto i = 0; i < 16; i++) {
-    //        S_scaled_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, 0) =
-    //            SPK2_0_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT)) +
-    //            SPK2_5_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT)) +
-    //            SPK2_4_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT));
+        DScaled_Combined_partial_epsilon_partial_e_Transpose.template block<3 * NSF, NIP>(0, 0) = D(0, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 0) + D(0, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, NIP) + D(0, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 2*NIP) + D(0, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 3*NIP) + D(0, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 4*NIP) + D(0, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 5*NIP);
+        DScaled_Combined_partial_epsilon_partial_e_Transpose.template block<3 * NSF, NIP>(0, NIP) = D(1, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 0) + D(1, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, NIP) + D(1, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 2*NIP) + D(1, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 3*NIP) + D(1, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 4*NIP) + D(1, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 5*NIP);
+        DScaled_Combined_partial_epsilon_partial_e_Transpose.template block<3 * NSF, NIP>(0, 2*NIP) = D(2, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 0) + D(2, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, NIP) + D(2, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 2*NIP) + D(2, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 3*NIP) + D(2, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 4*NIP) + D(2, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 5*NIP);
+        DScaled_Combined_partial_epsilon_partial_e_Transpose.template block<3 * NSF, NIP>(0, 3*NIP) = D(3, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 0) + D(3, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, NIP) + D(3, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 2*NIP) + D(3, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 3*NIP) + D(3, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 4*NIP) + D(3, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 5*NIP);
+        DScaled_Combined_partial_epsilon_partial_e_Transpose.template block<3 * NSF, NIP>(0, 4*NIP) = D(4, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 0) + D(4, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, NIP) + D(4, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 2*NIP) + D(4, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 3*NIP) + D(4, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 4*NIP) + D(4, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 5*NIP);
+        DScaled_Combined_partial_epsilon_partial_e_Transpose.template block<3 * NSF, NIP>(0, 5*NIP) = D(5, 0)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 0) + D(5, 1)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, NIP) + D(5, 2)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 2*NIP) + D(5, 3)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 3*NIP) + D(5, 4)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 4*NIP) + D(5, 5)*Scaled_Combined_partial_epsilon_partial_e_Transpose.block<48, NIP>(0, 5*NIP);
 
-    //        S_scaled_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, NP*NP*NT) =
-    //            SPK2_5_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT)) +
-    //            SPK2_1_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT)) +
-    //            SPK2_3_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT));
+        H.noalias() += partial_epsilon_partial_e_Transpose * DScaled_Combined_partial_epsilon_partial_e_Transpose.transpose();
 
-    //        S_scaled_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, 2*NP*NP*NT) =
-    //            SPK2_4_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+0)*NP*NP*NT)) +
-    //            SPK2_3_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+1)*NP*NP*NT)) +
-    //            SPK2_2_Block.transpose().cwiseProduct(m_SD_precompute_col_ordered.block<1, NP*NP*NT>(i, (3*kl+2)*NP*NP*NT));
-    //    }
+        //===========================================================================================
+        VectorNIP E0_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(
+            FC.template block<NIP, 1>(0, 0));
+        E0_Block += FC.template block<NIP, 1>(0, 1).cwiseProduct(
+            FC.template block<NIP, 1>(0, 1));
+        E0_Block += FC.template block<NIP, 1>(0, 2).cwiseProduct(
+            FC.template block<NIP, 1>(0, 2));
+        E0_Block.array() -= 1;
+        E0_Block.array() *= m_kGQ.array();
+        E0_Block *= 0.5;
 
-    //    //Calculate Just the Non-sparse Upper Triangular Entires and then expand out to full size
-    //    unsigned int idx = 0;
-    //    for (unsigned int i = 0; i < 16; i++) {
-    //        for (unsigned int j = i; j < 16; j++) {
-    //            double d = Kfactor * m_SD_precompute_col_ordered.block<1, 3*NP*NP*NT>(i, 3*NP*NP*NT * kl) * S_scaled_SD_precompute_col_ordered.block<1, 3*NP*NP*NT>(j, 0).transpose();
+        VectorNIP E1_Block = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(
+            FC.template block<NIP, 1>(NIP, 0));
+        E1_Block += FC.template block<NIP, 1>(NIP, 1).cwiseProduct(
+            FC.template block<NIP, 1>(NIP, 1));
+        E1_Block += FC.template block<NIP, 1>(NIP, 2).cwiseProduct(
+            FC.template block<NIP, 1>(NIP, 2));
+        E1_Block.array() -= 1;
+        E1_Block.array() *= m_kGQ.array();
+        E1_Block *= 0.5;
 
-    //            H(3 * i, 3 * j) += d;
-    //            H(3 * i + 1, 3 * j + 1) += d;
-    //            H(3 * i + 2, 3 * j + 2) += d;
-    //            if (i != j) {
-    //                H(3 * j, 3 * i) += d;
-    //                H(3 * j + 1, 3 * i + 1) += d;
-    //                H(3 * j + 2, 3 * i + 2) += d;
-    //            }
-    //            idx++;
-    //        }
-    //    }
-    //}
+        VectorNIP E2_Block = FC.template block<NIP, 1>(2*NIP, 0).cwiseProduct(
+            FC.template block<NIP, 1>(2*NIP, 0));
+        E2_Block += FC.template block<NIP, 1>(2*NIP, 1).cwiseProduct(
+            FC.template block<NIP, 1>(2*NIP, 1));
+        E2_Block += FC.template block<NIP, 1>(2*NIP, 2).cwiseProduct(
+            FC.template block<NIP, 1>(2*NIP, 2));
+        E2_Block.array() -= 1;
+        E2_Block.array() *= m_kGQ.array();
+        E2_Block *= 0.5;
+
+        VectorNIP E3_Block = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(
+            FC.template block<NIP, 1>(2*NIP, 0));
+        E3_Block += FC.template block<NIP, 1>(NIP, 1).cwiseProduct(
+            FC.template block<NIP, 1>(2*NIP, 1));
+        E3_Block += FC.template block<NIP, 1>(NIP, 2).cwiseProduct(
+            FC.template block<NIP, 1>(2*NIP, 2));
+        E3_Block.array() *= m_kGQ.array();
+
+        VectorNIP E4_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(
+            FC.template block<NIP, 1>(2*NIP, 0));
+        E4_Block += FC.template block<NIP, 1>(0, 1).cwiseProduct(
+            FC.template block<NIP, 1>(2*NIP, 1));
+        E4_Block += FC.template block<NIP, 1>(0, 2).cwiseProduct(
+            FC.template block<NIP, 1>(2*NIP, 2));
+        E4_Block.array() *= m_kGQ.array();
+
+        VectorNIP E5_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(
+            FC.template block<NIP, 1>(NIP, 0));
+        E5_Block += FC.template block<NIP, 1>(0, 1).cwiseProduct(
+            FC.template block<NIP, 1>(NIP, 1));
+        E5_Block += FC.template block<NIP, 1>(0, 2).cwiseProduct(
+            FC.template block<NIP, 1>(NIP, 2));
+        E5_Block.array() *= m_kGQ.array();
 
 
-    ////Add in the Mass Matrix Which is Stored in Compact Upper Triangular Form
-    //ChVectorN<double, 136> ScaledMassMatrix = Mfactor * m_MassMatrix;
-    //unsigned int idx = 0;
-    //for (unsigned int i = 0; i < 16; i++) {
-    //    for (unsigned int j = i; j < 16; j++) {
-    //        H(3 * i, 3 * j) += ScaledMassMatrix(idx);
-    //        H(3 * i + 1, 3 * j + 1) += ScaledMassMatrix(idx);
-    //        H(3 * i + 2, 3 * j + 2) += ScaledMassMatrix(idx);
-    //        if (i != j) {
-    //            H(3 * j, 3 * i) += ScaledMassMatrix(idx);
-    //            H(3 * j + 1, 3 * i + 1) += ScaledMassMatrix(idx);
-    //            H(3 * j + 2, 3 * i + 2) += ScaledMassMatrix(idx);
-    //        }
-    //        idx++;
-    //    }
-    //}
+        VectorNIP SPK2_0_Block = D(0, 0)*E0_Block + D(0, 1)*E1_Block + D(0, 2)*E2_Block + D(0, 3)*E3_Block + D(0, 4)*E4_Block + D(0, 5)*E5_Block;
+        VectorNIP SPK2_1_Block = D(1, 0)*E0_Block + D(1, 1)*E1_Block + D(1, 2)*E2_Block + D(1, 3)*E3_Block + D(1, 4)*E4_Block + D(1, 5)*E5_Block;
+        VectorNIP SPK2_2_Block = D(2, 0)*E0_Block + D(2, 1)*E1_Block + D(2, 2)*E2_Block + D(2, 3)*E3_Block + D(2, 4)*E4_Block + D(2, 5)*E5_Block;
+        VectorNIP SPK2_3_Block = D(3, 0)*E0_Block + D(3, 1)*E1_Block + D(3, 2)*E2_Block + D(3, 3)*E3_Block + D(3, 4)*E4_Block + D(3, 5)*E5_Block;
+        VectorNIP SPK2_4_Block = D(4, 0)*E0_Block + D(4, 1)*E1_Block + D(4, 2)*E2_Block + D(4, 3)*E3_Block + D(4, 4)*E4_Block + D(4, 5)*E5_Block;
+        VectorNIP SPK2_5_Block = D(5, 0)*E0_Block + D(5, 1)*E1_Block + D(5, 2)*E2_Block + D(5, 3)*E3_Block + D(5, 4)*E4_Block + D(5, 5)*E5_Block;
+
+        //Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> S_scaled_SD;
+        //S_scaled_SD.resize(NSF, 96);
+        ChMatrixNM<double, NSF, 3*NIP> S_scaled_SD;
+
+        for (auto i = 0; i < NSF; i++) {
+            S_scaled_SD.template block<1, NIP>(i, 0) =
+                SPK2_0_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+0)*NIP)) +
+                SPK2_5_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+1)*NIP)) +
+                SPK2_4_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+2)*NIP));
+
+            S_scaled_SD.template block<1, NIP>(i, NIP) =
+                SPK2_5_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+0)*NIP)) +
+                SPK2_1_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+1)*NIP)) +
+                SPK2_3_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+2)*NIP));
+
+            S_scaled_SD.template block<1, NIP>(i, 2*NIP) =
+                SPK2_4_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+0)*NIP)) +
+                SPK2_3_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+1)*NIP)) +
+                SPK2_2_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+2)*NIP));
+        }
+
+        //Calculate Just the Non-sparse Upper Triangular Entires and then expand out to full size
+        unsigned int idx = 0;
+        for (unsigned int i = 0; i < NSF; i++) {
+            for (unsigned int j = i; j < NSF; j++) {
+                double d = Kfactor * m_SD.block<1, 3*NIP>(i, 3 * kl * NIP) * S_scaled_SD.template block<1, 3*NIP>(j, 0).transpose();
+
+                H(3 * i, 3 * j) += d;
+                H(3 * i + 1, 3 * j + 1) += d;
+                H(3 * i + 2, 3 * j + 2) += d;
+                if (i != j) {
+                    H(3 * j, 3 * i) += d;
+                    H(3 * j + 1, 3 * i + 1) += d;
+                    H(3 * j + 2, 3 * i + 2) += d;
+                }
+                idx++;
+            }
+        }
+    }
+
+
+    //Add in the Mass Matrix Which is Stored in Compact Upper Triangular Form
+    ChVectorN<double, 136> ScaledMassMatrix = Mfactor * m_MassMatrix;
+    unsigned int idx = 0;
+    for (unsigned int i = 0; i < NSF; i++) {
+        for (unsigned int j = i; j < NSF; j++) {
+            H(3 * i, 3 * j) += ScaledMassMatrix(idx);
+            H(3 * i + 1, 3 * j + 1) += ScaledMassMatrix(idx);
+            H(3 * i + 2, 3 * j + 2) += ScaledMassMatrix(idx);
+            if (i != j) {
+                H(3 * j, 3 * i) += ScaledMassMatrix(idx);
+                H(3 * j + 1, 3 * i + 1) += ScaledMassMatrix(idx);
+                H(3 * j + 2, 3 * i + 2) += ScaledMassMatrix(idx);
+            }
+            idx++;
+        }
+    }
 }
 
 // -----------------------------------------------------------------------------

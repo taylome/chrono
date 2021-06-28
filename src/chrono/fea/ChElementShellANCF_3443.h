@@ -485,22 +485,18 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
     std::vector<double, Eigen::aligned_allocator<double>>
         m_layer_zoffsets;           ///< Offsets of Bottom of Layers to the Bottom of the Element
     int m_numLayers;                ///< number of layers for this element
-    unsigned int m_numLayerGQPnts;  ///< number of Guass-Quadrature Points for each layer
-    unsigned int m_numGQPnts;       ///< total number of Guass-Quadrature Points for the element
     double m_lenX;                  ///< total element length along X
     double m_lenY;                  ///< total element length along Y
     double m_thicknessZ;            ///< total element thickness along Z
     double m_Alpha;                 ///< structural damping
-    double m_2Alpha;                ///< structural damping x2
     bool m_damping_enabled;         ///< Flag to run internal force damping calculations
     bool m_gravity_on;              ///< enable/disable gravity calculation
     Vector3N m_GravForce;           ///< Gravity Force
     Matrix3xN m_ebar0;              ///< Element Position Coordinate Vector for the Reference Configuration
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
-        m_SD_precompute_col_ordered;  ///< Precomputed corrected normalized shape function derivative
-                                      ///< matrices
+        m_SD;  ///< Precomputed corrected normalized shape function derivative matrices ordered by columns instead of by Gauss quadrature points
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>
-        m_GQWeight_det_J_0xi_D;           ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale
+        m_kGQ;           ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale
                                           ///< factors
     ChVectorN<double, 136> m_MassMatrix;  /// Mass Matrix in extra compact form (Upper Triangular Part only)
 
