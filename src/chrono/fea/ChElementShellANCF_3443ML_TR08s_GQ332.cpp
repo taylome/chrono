@@ -302,7 +302,7 @@ void ChElementShellANCF_3443ML_TR08S_GQ332::ComputeNodalMass() {
 // Precalculate constant matrices and scalars for the internal force calculations
 void ChElementShellANCF_3443ML_TR08S_GQ332::PrecomputeInternalForceMatricesWeights() {
     ChQuadratureTables* GQTable = GetStaticGQTables();
-    unsigned int GQ_idx_xi_eta = 2;    // 6 Point Gauss-Quadrature;
+    unsigned int GQ_idx_xi_eta = 2;    // 3 Point Gauss-Quadrature;
     unsigned int GQ_idx_zeta = 1;      // 2 Point Gauss-Quadrature;
 
     m_numLayerGQPnts = (GQ_idx_xi_eta + 1) * (GQ_idx_xi_eta + 1) * (GQ_idx_zeta + 1);
