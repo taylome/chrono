@@ -435,8 +435,8 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
     ChVectorN<double, (NSF*(NSF+1))/2> m_MassMatrix;  /// Mass Matrix in extra compact form (Upper Triangular Part only)
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> m_O1; ///< Precomputed Matrix combined with the nodal coordinates used for the "Pre-Integration" style method internal force calculation
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> m_O2; ///< Precomputed Matrix combined with the nodal coordinates used for the "Pre-Integration" style method Jacobian calculation
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor, NSF, NSF> m_K3Compact; ///< Precomputed Matrix combined with the nodal coordinates used for the "Pre-Integration" style method internal force calculation
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor, NSF, NSF> m_K13Compact; ///< Saved results from the generalized internal force calculation that are reused for the Jacobian calculations for the "Pre-Integration" style method 
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> m_K3Compact; ///< Precomputed Matrix combined with the nodal coordinates used for the "Pre-Integration" style method internal force calculation
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> m_K13Compact; ///< Saved results from the generalized internal force calculation that are reused for the Jacobian calculations for the "Pre-Integration" style method 
 
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

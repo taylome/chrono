@@ -497,9 +497,6 @@ void ChElementShellANCF_3443<NP, NT>::ComputeNF(
     J_Cxi_Inv = J_Cxi.inverse();
 
     // Compute the unique pieces that make up the moment projection matrix "G"
-    // See: Antonio M Recuero, Javier F Aceituno, Jose L Escalona, and Ahmed A Shabana.
-    // A nonlinear approach for modeling rail flexibility using the absolute nodal coordinate
-    // formulation. Nonlinear Dynamics, 83(1-2):463-481, 2016.
     VectorN G_A = Sxi_D.col(0).transpose() * J_Cxi_Inv(0, 0) + Sxi_D.col(1).transpose() * J_Cxi_Inv(1, 0) +
         Sxi_D.col(2).transpose() * J_Cxi_Inv(2, 0);
     VectorN G_B = Sxi_D.col(0).transpose() * J_Cxi_Inv(0, 1) + Sxi_D.col(1).transpose() * J_Cxi_Inv(1, 1) +
@@ -683,6 +680,12 @@ void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeightsPreI
     unsigned int GQ_idx_xi_eta = NP - 1;    // Gauss-Quadrature table index for xi and eta
     unsigned int GQ_idx_zeta = NT - 1;      // Gauss-Quadrature table index for zeta
 
+    m_O1.resize(NSF*NSF, NSF*NSF);
+    m_O2.resize(NSF*NSF, NSF*NSF);
+    m_K3Compact.resize(NSF, NSF);
+    m_K13Compact.resize(NSF, NSF);
+
+    m_K13Compact.setZero();
     m_K3Compact.setZero();
     m_O1.setZero();
 
@@ -779,10 +782,10 @@ void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeightsPreI
                             scale *= GQWeight_det_J_0xi;
 
                             MatrixNxN Sxi_D_0xi_n_Sxi_D_0xi_c_transpose =
-                                Sxi_D_0xi.template block<16, 1>(0, n) * Sxi_D_0xi.template block<16, 1>(0, c).transpose();
-                            for (unsigned int f = 0; f < 16; f++) {
-                                for (unsigned int t = 0; t < 16; t++) {
-                                    m_O1.block<16, 16>(16 * t, 16 * f) += scale(t, f) * Sxi_D_0xi_n_Sxi_D_0xi_c_transpose;
+                                Sxi_D_0xi.template block<NSF, 1>(0, n) * Sxi_D_0xi.template block<NSF, 1>(0, c).transpose();
+                            for (unsigned int f = 0; f < NSF; f++) {
+                                for (unsigned int t = 0; t < NSF; t++) {
+                                    m_O1.block<NSF, NSF>(NSF * t, NSF * f) += scale(t, f) * Sxi_D_0xi_n_Sxi_D_0xi_c_transpose;
                                 }
                             }
                         }
@@ -793,9 +796,9 @@ void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeightsPreI
     }
 
     //Since O2 is just a reordered version of O1, wait until O1 is completely calculated and then generate O2 from it
-    for (unsigned int f = 0; f < 16; f++) {
-        for (unsigned int t = 0; t < 16; t++) {
-            m_O2.block<16, 16>(16 * t, 16 * f) = m_O1.block<16, 16>(16 * t, 16 * f).transpose();
+    for (unsigned int f = 0; f < NSF; f++) {
+        for (unsigned int t = 0; t < NSF; t++) {
+            m_O2.block<NSF, NSF>(NSF * t, NSF * f) = m_O1.block<NSF, NSF>(NSF * t, NSF * f).transpose();
         }
     }
 }
@@ -1921,9 +1924,9 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianPreInt(ChMatrixRef&
     ChMatrixNMc<double, 9, NSF * NSF> PI2;
 
     for (unsigned int v = 0; v < NSF; v++) {
-        PI2.template block<3, NSF>(0, NSF * v) = e_bar.template block<1, 3>(v, 0).transpose() * tempRow0;
-        PI2.template block<3, NSF>(3, NSF * v) = e_bar.template block<1, 3>(v, 0).transpose() * tempRow1;
-        PI2.template block<3, NSF>(6, NSF * v) = e_bar.template block<1, 3>(v, 0).transpose() * tempRow2;
+        PI2.template block<3, NSF>(0, NSF * v) = e_bar.template block<3, 1>(0, v) * tempRow0;
+        PI2.template block<3, NSF>(3, NSF * v) = e_bar.template block<3, 1>(0, v) * tempRow1;
+        PI2.template block<3, NSF>(6, NSF * v) = e_bar.template block<3, 1>(0, v) * tempRow2;
     }
 
     // Calculate the matrix containing the dense part of the Jacobian matrix in a reordered form. This is then reordered
@@ -1940,12 +1943,12 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianPreInt(ChMatrixRef&
 
     // Add in the sparse (blocks times the 3x3 identity matrix) component of the Jacobian that was already calculated as
     // part of the generalized internal force calculations
-    MatrixNxN KM_Compact = -Kfactor * m_K13Compact;
+    MatrixNxN K_K13Compact = -Kfactor * m_K13Compact;
     for (unsigned int i = 0; i < NSF; i++) {
         for (unsigned int j = 0; j < NSF; j++) {
-            H(3 * i, 3 * j) += KM_Compact(i, j);
-            H(3 * i + 1, 3 * j + 1) += KM_Compact(i, j);
-            H(3 * i + 2, 3 * j + 2) += KM_Compact(i, j);
+            H(3 * i, 3 * j) += K_K13Compact(i, j);
+            H(3 * i + 1, 3 * j + 1) += K_K13Compact(i, j);
+            H(3 * i + 2, 3 * j + 2) += K_K13Compact(i, j);
         }
     }
 }
