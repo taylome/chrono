@@ -39,7 +39,7 @@
 // Constructor
 // ------------------------------------------------------------------------------
 template <int NP, int NT>
-ChElementShellANCF_3443<NP,NT>::ChElementShellANCF_3443()
+ChElementShellANCF_3443<NP, NT>::ChElementShellANCF_3443()
     : m_gravity_on(false), m_numLayers(0), m_lenX(0), m_lenY(0), m_thicknessZ(0), m_Alpha(0), m_damping_enabled(false) {
     m_nodes.resize(4);
 }
@@ -48,19 +48,19 @@ ChElementShellANCF_3443<NP,NT>::ChElementShellANCF_3443()
 // Set element nodes
 // ------------------------------------------------------------------------------
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::SetNodes(std::shared_ptr<ChNodeFEAxyzDDD> nodeA,
-                                           std::shared_ptr<ChNodeFEAxyzDDD> nodeB,
-                                           std::shared_ptr<ChNodeFEAxyzDDD> nodeC,
-                                           std::shared_ptr<ChNodeFEAxyzDDD> nodeD) {
+void ChElementShellANCF_3443<NP, NT>::SetNodes(std::shared_ptr<ChNodeFEAxyzDDD> nodeA,
+                                               std::shared_ptr<ChNodeFEAxyzDDD> nodeB,
+                                               std::shared_ptr<ChNodeFEAxyzDDD> nodeC,
+                                               std::shared_ptr<ChNodeFEAxyzDDD> nodeD) {
     assert(nodeA);
     assert(nodeB);
-	assert(nodeC);
-	assert(nodeD);
+    assert(nodeC);
+    assert(nodeD);
 
     m_nodes[0] = nodeA;
     m_nodes[1] = nodeB;
-	m_nodes[2] = nodeC;
-	m_nodes[3] = nodeD;
+    m_nodes[2] = nodeC;
+    m_nodes[3] = nodeD;
 
     std::vector<ChVariables*> mvars;
     mvars.push_back(&m_nodes[0]->Variables());
@@ -79,7 +79,7 @@ void ChElementShellANCF_3443<NP,NT>::SetNodes(std::shared_ptr<ChNodeFEAxyzDDD> n
     mvars.push_back(&m_nodes[3]->Variables_D());
     mvars.push_back(&m_nodes[3]->Variables_DD());
     mvars.push_back(&m_nodes[3]->Variables_DDD());
-	
+
     Kmatr.SetVariables(mvars);
 
     // Initial positions and slopes of the element nodes
@@ -91,13 +91,14 @@ void ChElementShellANCF_3443<NP,NT>::SetNodes(std::shared_ptr<ChNodeFEAxyzDDD> n
 // Add a layer.
 // -----------------------------------------------------------------------------
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::AddLayer(double thickness, double theta, std::shared_ptr<ChMaterialShellANCF> material) {
+void ChElementShellANCF_3443<NP, NT>::AddLayer(double thickness,
+                                               double theta,
+                                               std::shared_ptr<ChMaterialShellANCF> material) {
     m_layers.push_back(Layer(thickness, theta, material));
     m_layer_zoffsets.push_back(m_thicknessZ);
     m_numLayers += 1;
     m_thicknessZ += thickness;
 }
-
 
 // -----------------------------------------------------------------------------
 // Element Settings
@@ -119,8 +120,8 @@ void ChElementShellANCF_3443<NP, NT>::SetIntFrcCalcMethod(IntFrcMethod method) {
     m_method = method;
 
     // Check to see if SetupInitial has already been called (i.e. at least one set of precomputed matrices has been
-    // populated).  If so, the precomputed matrices will need to be generated if they do not already exist.  If not, this
-    // will be handled once SetupInitial is called.
+    // populated).  If so, the precomputed matrices will need to be generated if they do not already exist.  If not,
+    // this will be handled once SetupInitial is called.
     if (m_SD.size() + m_O1.size() > 0) {
         if (method == ContInt) {
             if (m_SD.size() == 0) {
@@ -141,17 +142,20 @@ void ChElementShellANCF_3443<NP, NT>::SetIntFrcCalcMethod(IntFrcMethod method) {
 
 // Get the Green-Lagrange strain tensor at the normalized element coordinates (xi, eta, zeta)
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP, NT>::GetGreenLagrangeStrain(const double xi, const double eta, const double zeta, ChMatrix33<>& E) {
-
-    MatrixNx3c Sxi_D; // Matrix of normalized shape function derivatives
+void ChElementShellANCF_3443<NP, NT>::GetGreenLagrangeStrain(const double xi,
+                                                             const double eta,
+                                                             const double zeta,
+                                                             ChMatrix33<>& E) {
+    MatrixNx3c Sxi_D;  // Matrix of normalized shape function derivatives
     Calc_Sxi_D(Sxi_D, xi, eta, zeta, m_thicknessZ, 0);
 
-    ChMatrix33<double> J_0xi; // Element Jacobian between the reference configuration and normalized configuration
+    ChMatrix33<double> J_0xi;  // Element Jacobian between the reference configuration and normalized configuration
     J_0xi.noalias() = m_ebar0 * Sxi_D;
 
-    Sxi_D = Sxi_D * J_0xi.inverse(); //Adjust the shape function derivative matrix to account for the potentially distorted reference configuration
+    Sxi_D = Sxi_D * J_0xi.inverse();  // Adjust the shape function derivative matrix to account for the potentially
+                                      // distorted reference configuration
 
-    Matrix3xN e_bar; //Element coordinates in matrix form
+    Matrix3xN e_bar;  // Element coordinates in matrix form
     CalcCoordMatrix(e_bar);
 
     // Calculate the Deformation Gradient at the current point
@@ -159,9 +163,8 @@ void ChElementShellANCF_3443<NP, NT>::GetGreenLagrangeStrain(const double xi, co
 
     ChMatrix33<> I3x3;
     I3x3.setIdentity();
-    E = 0.5*(F.transpose()*F - I3x3);
+    E = 0.5 * (F.transpose() * F - I3x3);
 }
-
 
 // -----------------------------------------------------------------------------
 // Interface to ChElementBase base class
@@ -169,7 +172,7 @@ void ChElementShellANCF_3443<NP, NT>::GetGreenLagrangeStrain(const double xi, co
 
 // Initial element setup.
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::SetupInitial(ChSystem* system) {
+void ChElementShellANCF_3443<NP, NT>::SetupInitial(ChSystem* system) {
     // Store the initial nodal coordinates. These values define the reference configuration of the element.
     CalcCoordMatrix(m_ebar0);
 
@@ -206,7 +209,7 @@ void ChElementShellANCF_3443<NP, NT>::GetStateBlock(ChVectorDynamic<>& mD) {
 
 // State update.
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::Update() {
+void ChElementShellANCF_3443<NP, NT>::Update() {
     ChElementGeneric::Update();
 }
 
@@ -215,8 +218,8 @@ template <int NP, int NT>
 void ChElementShellANCF_3443<NP, NT>::ComputeMmatrixGlobal(ChMatrixRef M) {
     M.setZero();
 
-    //Mass Matrix is Stored in Compact Upper Triangular Form
-    //Expand it out into its Full Sparse Symmetric Form
+    // Mass Matrix is Stored in Compact Upper Triangular Form
+    // Expand it out into its Full Sparse Symmetric Form
     unsigned int idx = 0;
     for (unsigned int i = 0; i < NSF; i++) {
         for (unsigned int j = i; j < NSF; j++) {
@@ -250,12 +253,10 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalForces(ChVectorDynamic<>& F
     if (m_method == ContInt) {
         if (m_damping_enabled) {  // If linear Kelvin-Voigt viscoelastic material model is enabled
             ComputeInternalForcesContIntDamping(Fi);
-        }
-        else {
+        } else {
             ComputeInternalForcesContIntNoDamping(Fi);
         }
-    }
-    else {
+    } else {
         ComputeInternalForcesContIntPreInt(Fi);
     }
 
@@ -263,7 +264,6 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalForces(ChVectorDynamic<>& F
         Fi += m_GravForce;
     }
 }
-
 
 // Calculate the global matrix H as a linear combination of K, R, and M:
 //   H = Mfactor * [M] + Kfactor * [K] + Rfactor * [R]
@@ -284,8 +284,8 @@ void ChElementShellANCF_3443<NP, NT>::ComputeKRMmatricesGlobal(ChMatrixRef H,
         ComputeInternalJacobianPreInt(H, Kfactor, Rfactor);
     }
 
-    //Add in the Mass Matrix Which is Stored in Compact Upper Triangular Form
-    ChVectorN<double, (NSF*(NSF + 1)) / 2> ScaledMassMatrix = Mfactor * m_MassMatrix;
+    // Add in the Mass Matrix Which is Stored in Compact Upper Triangular Form
+    ChVectorN<double, (NSF * (NSF + 1)) / 2> ScaledMassMatrix = Mfactor * m_MassMatrix;
     unsigned int idx = 0;
     for (unsigned int i = 0; i < NSF; i++) {
         for (unsigned int j = i; j < NSF; j++) {
@@ -302,14 +302,15 @@ void ChElementShellANCF_3443<NP, NT>::ComputeKRMmatricesGlobal(ChMatrixRef H,
     }
 }
 
-
 // -----------------------------------------------------------------------------
 // Interface to ChElementShell base class
 // -----------------------------------------------------------------------------
 
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP, NT>::EvaluateSectionFrame(const double xi, const double eta, ChVector<>& point, ChQuaternion<>& rot) {
-
+void ChElementShellANCF_3443<NP, NT>::EvaluateSectionFrame(const double xi,
+                                                           const double eta,
+                                                           ChVector<>& point,
+                                                           ChQuaternion<>& rot) {
     VectorN Sxi_compact;
     Calc_Sxi_compact(Sxi_compact, xi, eta, 0, m_thicknessZ, 0);
     VectorN Sxi_xi_compact;
@@ -321,11 +322,11 @@ void ChElementShellANCF_3443<NP, NT>::EvaluateSectionFrame(const double xi, cons
     CalcCoordMatrix(e_bar);
 
     // r = S*e written in compact form
-    point = e_bar* Sxi_compact;
+    point = e_bar * Sxi_compact;
 
     // Since ANCF does not use rotations, calculate an approximate
     // rotation based off the position vector gradients
-    ChVector<double> MidsurfaceX = e_bar* Sxi_xi_compact;
+    ChVector<double> MidsurfaceX = e_bar * Sxi_xi_compact;
     ChVector<double> MidsurfaceY = e_bar * Sxi_eta_compact;
 
     // Since the position vector gradients are not in general orthogonal,
@@ -417,10 +418,10 @@ void ChElementShellANCF_3443<NP, NT>::LoadableGetStateBlock_w(int block_offset, 
 /// Increment all DOFs using a delta.
 template <int NP, int NT>
 void ChElementShellANCF_3443<NP, NT>::LoadableStateIncrement(const unsigned int off_x,
-    ChState& x_new,
-    const ChState& x,
-    const unsigned int off_v,
-    const ChStateDelta& Dv) {
+                                                             ChState& x_new,
+                                                             const ChState& x,
+                                                             const unsigned int off_v,
+                                                             const ChStateDelta& Dv) {
     m_nodes[0]->NodeIntStateIncrement(off_x, x_new, x, off_v, Dv);
     m_nodes[1]->NodeIntStateIncrement(off_x + 12, x_new, x, off_v + 12, Dv);
     m_nodes[2]->NodeIntStateIncrement(off_x + 24, x_new, x, off_v + 24, Dv);
@@ -442,8 +443,8 @@ void ChElementShellANCF_3443<NP, NT>::LoadableGetVariables(std::vector<ChVariabl
 // This calculation takes a slightly form for ANCF elements
 template <int NP, int NT>
 void ChElementShellANCF_3443<NP, NT>::ComputeNF(
-    const double xi,              // parametric coordinate in surface
-    const double eta,              // parametric coordinate in surface
+    const double xi,             // parametric coordinate in surface
+    const double eta,            // parametric coordinate in surface
     ChVectorDynamic<>& Qi,       // Return result of Q = N'*F  here
     double& detJ,                // Return det[J] here
     const ChVectorDynamic<>& F,  // Input F vector, size is =n. field coords.
@@ -457,9 +458,9 @@ void ChElementShellANCF_3443<NP, NT>::ComputeNF(
 // This calculation takes a slightly form for ANCF elements
 template <int NP, int NT>
 void ChElementShellANCF_3443<NP, NT>::ComputeNF(
-    const double xi,              // parametric coordinate in volume
-    const double eta,              // parametric coordinate in volume
-    const double zeta,              // parametric coordinate in volume
+    const double xi,             // parametric coordinate in volume
+    const double eta,            // parametric coordinate in volume
+    const double zeta,           // parametric coordinate in volume
     ChVectorDynamic<>& Qi,       // Return result of N'*F  here, maybe with offset block_offset
     double& detJ,                // Return det[J] here
     const ChVectorDynamic<>& F,  // Input F vector, size is = n.field coords.
@@ -477,7 +478,6 @@ void ChElementShellANCF_3443<NP, NT>::ComputeNF(
 
     Eigen::Map<Vector3N> QiReshaped(QiCompact.data(), QiCompact.size());
     Qi = QiReshaped;
-
 
     // Compute the generalized force vector for the applied moment component
     // See: Antonio M Recuero, Javier F Aceituno, Jose L Escalona, and Ahmed A Shabana.
@@ -498,11 +498,11 @@ void ChElementShellANCF_3443<NP, NT>::ComputeNF(
 
     // Compute the unique pieces that make up the moment projection matrix "G"
     VectorN G_A = Sxi_D.col(0).transpose() * J_Cxi_Inv(0, 0) + Sxi_D.col(1).transpose() * J_Cxi_Inv(1, 0) +
-        Sxi_D.col(2).transpose() * J_Cxi_Inv(2, 0);
+                  Sxi_D.col(2).transpose() * J_Cxi_Inv(2, 0);
     VectorN G_B = Sxi_D.col(0).transpose() * J_Cxi_Inv(0, 1) + Sxi_D.col(1).transpose() * J_Cxi_Inv(1, 1) +
-        Sxi_D.col(2).transpose() * J_Cxi_Inv(2, 1);
+                  Sxi_D.col(2).transpose() * J_Cxi_Inv(2, 1);
     VectorN G_C = Sxi_D.col(0).transpose() * J_Cxi_Inv(0, 2) + Sxi_D.col(1).transpose() * J_Cxi_Inv(1, 2) +
-        Sxi_D.col(2).transpose() * J_Cxi_Inv(2, 2);
+                  Sxi_D.col(2).transpose() * J_Cxi_Inv(2, 2);
 
     ChVectorN<double, 3> M_scaled = 0.5 * F.segment(3, 3);
 
@@ -540,19 +540,17 @@ ChVector<> ChElementShellANCF_3443<NP, NT>::ComputeNormal(const double xi, const
     Matrix3xN e_bar;
     CalcCoordMatrix(e_bar);
 
-    //Calculate the position vector gradient with respect to zeta at the current point (whose length may not equal 1)
+    // Calculate the position vector gradient with respect to zeta at the current point (whose length may not equal 1)
     ChVector<> r_zeta = e_bar * Sxi_zeta_compact;
 
     return r_zeta.GetNormalized();
 }
 
-
-
 // -----------------------------------------------------------------------------
 // Mass Matrix & Generalized Force Due to Gravity Calculation
 // -----------------------------------------------------------------------------
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::ComputeMassMatrixAndGravityForce(const ChVector<>& g_acc) {
+void ChElementShellANCF_3443<NP, NT>::ComputeMassMatrixAndGravityForce(const ChVector<>& g_acc) {
     // For this element, the mass matrix integrand is of order 12 in xi, 12 in eta, and 4 in zeta.
     // 7 GQ Points are needed in the xi & eta directions  and 3 GQ Points are needed in the eta & zeta directions for
     // exact integration of the element's mass matrix, even if the reference configuration is not straight Since the
@@ -563,9 +561,10 @@ void ChElementShellANCF_3443<NP,NT>::ComputeMassMatrixAndGravityForce(const ChVe
     unsigned int GQ_idx_xi_eta = 6;  // 7 Point Gauss-Quadrature;
     unsigned int GQ_idx_zeta = 2;    // 3 Point Gauss-Quadrature;
 
-    //Mass Matrix in its compact matrix form.  Since the mass matrix is symmetric, just the upper diagonal entries will be stored.
-    ChMatrixNM<double, NSF, NSF> MassMatrixCompactSquare; 
-    
+    // Mass Matrix in its compact matrix form.  Since the mass matrix is symmetric, just the upper diagonal entries will
+    // be stored.
+    ChMatrixNM<double, NSF, NSF> MassMatrixCompactSquare;
+
     // Set these to zeros since they will be incremented as the vector/matrix is calculated
     MassMatrixCompactSquare.setZero();
     m_GravForce.setZero();
@@ -575,21 +574,23 @@ void ChElementShellANCF_3443<NP,NT>::ComputeMassMatrixAndGravityForce(const ChVe
         double thickness = m_layers[kl].Get_thickness();
         double zoffset = m_layer_zoffsets[kl];
 
-        //Sum the contribution to the mass matrix and generalized force due to gravity at the current point
+        // Sum the contribution to the mass matrix and generalized force due to gravity at the current point
         for (unsigned int it_xi = 0; it_xi < GQTable->Lroots[GQ_idx_xi_eta].size(); it_xi++) {
             for (unsigned int it_eta = 0; it_eta < GQTable->Lroots[GQ_idx_xi_eta].size(); it_eta++) {
                 for (unsigned int it_zeta = 0; it_zeta < GQTable->Lroots[GQ_idx_zeta].size(); it_zeta++) {
                     double GQ_weight = GQTable->Weight[GQ_idx_xi_eta][it_xi] * GQTable->Weight[GQ_idx_xi_eta][it_eta] *
-                        GQTable->Weight[GQ_idx_zeta][it_zeta];
+                                       GQTable->Weight[GQ_idx_zeta][it_zeta];
                     double xi = GQTable->Lroots[GQ_idx_xi_eta][it_xi];
                     double eta = GQTable->Lroots[GQ_idx_xi_eta][it_eta];
                     double zeta = GQTable->Lroots[GQ_idx_zeta][it_zeta];
-                    double det_J_0xi = Calc_det_J_0xi(xi, eta, zeta, thickness, zoffset);  // determinate of the element Jacobian (volume ratio)
-                    
+                    double det_J_0xi = Calc_det_J_0xi(xi, eta, zeta, thickness,
+                                                      zoffset);  // determinate of the element Jacobian (volume ratio)
+
                     VectorN Sxi_compact;  // Vector of the Unique Normalized Shape Functions
                     Calc_Sxi_compact(Sxi_compact, xi, eta, zeta, thickness, zoffset);
 
-                    ChMatrixNM<double, 3, 3 * NSF> Sxi;       // Normalized Shape Function Matrix in expanded full (sparse) form
+                    ChMatrixNM<double, 3, 3 * NSF>
+                        Sxi;  // Normalized Shape Function Matrix in expanded full (sparse) form
                     Sxi.setZero();
                     for (unsigned int s = 0; s < Sxi_compact.size(); s++) {
                         Sxi(0, 0 + (3 * s)) = Sxi_compact(s);
@@ -604,8 +605,8 @@ void ChElementShellANCF_3443<NP,NT>::ComputeMassMatrixAndGravityForce(const ChVe
         }
     }
 
-    //Store just the unique entries in the Mass Matrix in Compact Upper Triangular Form
-    //since the full Mass Matrix is both sparse and symmetric
+    // Store just the unique entries in the Mass Matrix in Compact Upper Triangular Form
+    // since the full Mass Matrix is both sparse and symmetric
     unsigned int idx = 0;
     for (unsigned int i = 0; i < NSF; i++) {
         for (unsigned int j = i; j < NSF; j++) {
@@ -626,10 +627,10 @@ void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeights() {
 
 // Precalculate constant matrices for the internal force calculations using the "Continuous Integration" style method
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::PrecomputeInternalForceMatricesWeightsContInt() {
+void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeightsContInt() {
     ChQuadratureTables* GQTable = GetStaticGQTables();
-    unsigned int GQ_idx_xi_eta = NP-1;    // Gauss-Quadrature table index for xi and eta
-    unsigned int GQ_idx_zeta = NT-1;      // Gauss-Quadrature table index for zeta
+    unsigned int GQ_idx_xi_eta = NP - 1;  // Gauss-Quadrature table index for xi and eta
+    unsigned int GQ_idx_zeta = NT - 1;    // Gauss-Quadrature table index for zeta
 
     m_SD.resize(NSF, 3 * m_numLayers * NIP);
     m_kGQ.resize(m_numLayers * NIP, 1);
@@ -644,24 +645,24 @@ void ChElementShellANCF_3443<NP,NT>::PrecomputeInternalForceMatricesWeightsContI
             for (unsigned int it_eta = 0; it_eta < GQTable->Lroots[GQ_idx_xi_eta].size(); it_eta++) {
                 for (unsigned int it_zeta = 0; it_zeta < GQTable->Lroots[GQ_idx_zeta].size(); it_zeta++) {
                     double GQ_weight = GQTable->Weight[GQ_idx_xi_eta][it_xi] * GQTable->Weight[GQ_idx_xi_eta][it_eta] *
-                        GQTable->Weight[GQ_idx_zeta][it_zeta];
+                                       GQTable->Weight[GQ_idx_zeta][it_zeta];
                     double xi = GQTable->Lroots[GQ_idx_xi_eta][it_xi];
                     double eta = GQTable->Lroots[GQ_idx_xi_eta][it_eta];
                     double zeta = GQTable->Lroots[GQ_idx_zeta][it_zeta];
                     auto index = it_zeta + it_eta * GQTable->Lroots[GQ_idx_zeta].size() +
-                        it_xi * GQTable->Lroots[GQ_idx_zeta].size() * GQTable->Lroots[GQ_idx_xi_eta].size();
+                                 it_xi * GQTable->Lroots[GQ_idx_zeta].size() * GQTable->Lroots[GQ_idx_xi_eta].size();
                     ChMatrix33<double>
                         J_0xi;  // Element Jacobian between the reference configuration and normalized configuration
                     MatrixNx3c Sxi_D;  // Matrix of normalized shape function derivatives
 
                     Calc_Sxi_D(Sxi_D, xi, eta, zeta, thickness, zoffset);
-                    J_0xi.noalias() = m_ebar0 * Sxi_D;  
+                    J_0xi.noalias() = m_ebar0 * Sxi_D;
 
-                    //Adjust the shape function derivative matrix to account for a potentially deformed reference state
+                    // Adjust the shape function derivative matrix to account for a potentially deformed reference state
                     SD_precompute_D = Sxi_D * J_0xi.inverse();
                     m_kGQ(index) = -J_0xi.determinant() * GQ_weight;
 
-                    //Group all of the columns together in blocks, and then layer by layer across the entire element
+                    // Group all of the columns together in blocks, and then layer by layer across the entire element
                     m_SD.col((3 * kl * NIP) + index) = SD_precompute_D.col(0);
                     m_SD.col((3 * kl * NIP) + index + NIP) = SD_precompute_D.col(1);
                     m_SD.col((3 * kl * NIP) + index + 2 * NIP) = SD_precompute_D.col(2);
@@ -673,15 +674,16 @@ void ChElementShellANCF_3443<NP,NT>::PrecomputeInternalForceMatricesWeightsContI
     }
 }
 
-// Precalculate constant matrices for the internal force calculations using the "Pre-Integration Integration" style method
+// Precalculate constant matrices for the internal force calculations using the "Pre-Integration Integration" style
+// method
 template <int NP, int NT>
 void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeightsPreInt() {
     ChQuadratureTables* GQTable = GetStaticGQTables();
-    unsigned int GQ_idx_xi_eta = NP - 1;    // Gauss-Quadrature table index for xi and eta
-    unsigned int GQ_idx_zeta = NT - 1;      // Gauss-Quadrature table index for zeta
+    unsigned int GQ_idx_xi_eta = NP - 1;  // Gauss-Quadrature table index for xi and eta
+    unsigned int GQ_idx_zeta = NT - 1;    // Gauss-Quadrature table index for zeta
 
-    m_O1.resize(NSF*NSF, NSF*NSF);
-    m_O2.resize(NSF*NSF, NSF*NSF);
+    m_O1.resize(NSF * NSF, NSF * NSF);
+    m_O2.resize(NSF * NSF, NSF * NSF);
     m_K3Compact.resize(NSF, NSF);
     m_K13Compact.resize(NSF, NSF);
 
@@ -702,9 +704,9 @@ void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeightsPreI
         ChMatrixNM<double, 6, 6> D = m_layers[kl].GetMaterial()->Get_E_eps();
         RotateReorderStiffnessMatrix(D, m_layers[kl].Get_theta());
 
-
         // =============================================================================
-        // Pull the required entries from the 4th order stiffness tensor that are needed for K3.  Note that D is written in Voigt notation rather than a 4th other tensor so the correct entries from that matrix need to be pulled.
+        // Pull the required entries from the 4th order stiffness tensor that are needed for K3.  Note that D is written
+        // in Voigt notation rather than a 4th other tensor so the correct entries from that matrix need to be pulled.
         // D11 = slice (matrix) of the 4th order tensor with last two subscripts = 1)
         // D22 = slice (matrix) of the 4th order tensor with last two subscripts = 2)
         // D33 = slice (matrix) of the 4th order tensor with last two subscripts = 3)
@@ -742,7 +744,7 @@ void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeightsPreI
         D33(2, 1) = D(3, 2);
         D33(1, 2) = D(3, 2);
 
-        //Setup the stiffness tensor in block matrix form to make it easier to iterate through all 4 subscripts
+        // Setup the stiffness tensor in block matrix form to make it easier to iterate through all 4 subscripts
         ChMatrixNM<double, 9, 9> D_block;
         D_block << D(0, 0), D(0, 5), D(0, 4), D(0, 5), D(0, 1), D(0, 3), D(0, 4), D(0, 3), D(0, 2), D(5, 0), D(5, 5),
             D(5, 4), D(5, 5), D(5, 1), D(5, 3), D(5, 4), D(5, 3), D(5, 2), D(4, 0), D(4, 5), D(4, 4), D(4, 5), D(4, 1),
@@ -752,12 +754,13 @@ void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeightsPreI
             D(4, 3), D(4, 4), D(4, 3), D(4, 2), D(3, 0), D(3, 5), D(3, 4), D(3, 5), D(3, 1), D(3, 3), D(3, 4), D(3, 3),
             D(3, 2), D(2, 0), D(2, 5), D(2, 4), D(2, 5), D(2, 1), D(2, 3), D(2, 4), D(2, 3), D(2, 2);
 
-        // Loop over each Gauss quadrature point and sum the contribution to each constant matrix that will be used for the internal force calculations
+        // Loop over each Gauss quadrature point and sum the contribution to each constant matrix that will be used for
+        // the internal force calculations
         for (unsigned int it_xi = 0; it_xi < GQTable->Lroots[GQ_idx_xi_eta].size(); it_xi++) {
             for (unsigned int it_eta = 0; it_eta < GQTable->Lroots[GQ_idx_xi_eta].size(); it_eta++) {
                 for (unsigned int it_zeta = 0; it_zeta < GQTable->Lroots[GQ_idx_zeta].size(); it_zeta++) {
                     double GQ_weight = GQTable->Weight[GQ_idx_xi_eta][it_xi] * GQTable->Weight[GQ_idx_xi_eta][it_eta] *
-                        GQTable->Weight[GQ_idx_zeta][it_zeta];
+                                       GQTable->Weight[GQ_idx_zeta][it_zeta];
                     double xi = GQTable->Lroots[GQ_idx_xi_eta][it_xi];
                     double eta = GQTable->Lroots[GQ_idx_xi_eta][it_eta];
                     double zeta = GQTable->Lroots[GQ_idx_zeta][it_zeta];
@@ -772,8 +775,9 @@ void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeightsPreI
                     MatrixNx3c Sxi_D_0xi = Sxi_D * J_0xi.inverse();
                     double GQWeight_det_J_0xi = -J_0xi.determinant() * GQ_weight;
 
-                    m_K3Compact += GQWeight_det_J_0xi * 0.5 * (Sxi_D_0xi*D11*Sxi_D_0xi.transpose() + Sxi_D_0xi *
-                        D22*Sxi_D_0xi.transpose() + Sxi_D_0xi * D33*Sxi_D_0xi.transpose());
+                    m_K3Compact += GQWeight_det_J_0xi * 0.5 *
+                                   (Sxi_D_0xi * D11 * Sxi_D_0xi.transpose() + Sxi_D_0xi * D22 * Sxi_D_0xi.transpose() +
+                                    Sxi_D_0xi * D33 * Sxi_D_0xi.transpose());
 
                     MatrixNxN scale;
                     for (unsigned int n = 0; n < 3; n++) {
@@ -782,10 +786,12 @@ void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeightsPreI
                             scale *= GQWeight_det_J_0xi;
 
                             MatrixNxN Sxi_D_0xi_n_Sxi_D_0xi_c_transpose =
-                                Sxi_D_0xi.template block<NSF, 1>(0, n) * Sxi_D_0xi.template block<NSF, 1>(0, c).transpose();
+                                Sxi_D_0xi.template block<NSF, 1>(0, n) *
+                                Sxi_D_0xi.template block<NSF, 1>(0, c).transpose();
                             for (unsigned int f = 0; f < NSF; f++) {
                                 for (unsigned int t = 0; t < NSF; t++) {
-                                    m_O1.block<NSF, NSF>(NSF * t, NSF * f) += scale(t, f) * Sxi_D_0xi_n_Sxi_D_0xi_c_transpose;
+                                    m_O1.block<NSF, NSF>(NSF * t, NSF * f) +=
+                                        scale(t, f) * Sxi_D_0xi_n_Sxi_D_0xi_c_transpose;
                                 }
                             }
                         }
@@ -795,7 +801,7 @@ void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeightsPreI
         }
     }
 
-    //Since O2 is just a reordered version of O1, wait until O1 is completely calculated and then generate O2 from it
+    // Since O2 is just a reordered version of O1, wait until O1 is completely calculated and then generate O2 from it
     for (unsigned int f = 0; f < NSF; f++) {
         for (unsigned int t = 0; t < NSF; t++) {
             m_O2.block<NSF, NSF>(NSF * t, NSF * f) = m_O1.block<NSF, NSF>(NSF * t, NSF * f).transpose();
@@ -825,7 +831,7 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalForcesContIntDamping(ChVect
     MatrixNx3 QiCompact;
     QiCompact.setZero();
 
-    //Loop over all of the layers summing the contribution to the generalized internal force vector from each layer
+    // Loop over all of the layers summing the contribution to the generalized internal force vector from each layer
     for (size_t kl = 0; kl < m_numLayers; kl++) {
         // =============================================================================
         // Calculate the deformation gradient and time derivative of the deformation gradient for all Gauss quadrature
@@ -1028,7 +1034,7 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalForcesContIntDamping(ChVect
 }
 
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::ComputeInternalForcesContIntNoDamping(ChVectorDynamic<>& Fi) {
+void ChElementShellANCF_3443<NP, NT>::ComputeInternalForcesContIntNoDamping(ChVectorDynamic<>& Fi) {
     // Calculate the generalize internal force vector using the "Continuous Integration" style of method assuming a
     // linear material model (no damping).  For this style of method, the generalized internal force vector is
     // integrated across the volume of the element every time this calculation is performed. For a small number of
@@ -1045,7 +1051,7 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalForcesContIntNoDamping(ChVec
     MatrixNx3 QiCompact;
     QiCompact.setZero();
 
-    //Loop over all of the layers summing the contribution to the generalized internal force vector from each layer
+    // Loop over all of the layers summing the contribution to the generalized internal force vector from each layer
     for (size_t kl = 0; kl < m_numLayers; kl++) {
         // =============================================================================
         // Calculate the deformation gradient for all Gauss quadrature points in a single matrix multiplication.  Note
@@ -1072,21 +1078,21 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalForcesContIntNoDamping(ChVec
                              FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(0, 1)) +
                              FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(0, 2));
         E1_Block.array() -= 1;
-        E1_Block.array() *= 0.5*m_kGQ.array();
+        E1_Block.array() *= 0.5 * m_kGQ.array();
 
         // Each entry in E2 = kGQ*E22 = kGQ*1/2*(F12*F12+F22*F22+F32*F32-1)
         VectorNIP E2_Block = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 0)) +
                              FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 1)) +
                              FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 2));
         E2_Block.array() -= 1;
-        E2_Block.array() *= 0.5*m_kGQ.array();
+        E2_Block.array() *= 0.5 * m_kGQ.array();
 
         // Each entry in E3 = kGQ*E33 = kGQ*1/2*(F13*F13+F23*F23+F33*F33-1)
         VectorNIP E3_Block = FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0)) +
                              FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1)) +
                              FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
         E3_Block.array() -= 1;
-        E3_Block.array() *= 0.5*m_kGQ.array();
+        E3_Block.array() *= 0.5 * m_kGQ.array();
 
         // Each entry in E4 = kGQ*2*E23 = kGQ*(F12*F13+F22*F23+F32*F33)
         VectorNIP E4_Block = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0)) +
@@ -1105,7 +1111,6 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalForcesContIntNoDamping(ChVec
                              FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 1)) +
                              FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 2));
         E6_Block.array() *= m_kGQ.array();
-
 
         // =============================================================================
         // Get the stiffness tensor in 6x6 matrix form for the current layer at rotate it in the midsurface according to
@@ -1226,7 +1231,7 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalForcesContIntPreInt(ChVecto
     }
 
     MatrixNxN K1_matrix;
-    
+
     // Setup the reshaped/reinterpreted/mapped forms of PI1 and K1 to make the calculation of K1 simpler
     Eigen::Map<ChVectorN<double, NSF * NSF>> PI1(PI1_matrix.data(), PI1_matrix.size());
     Eigen::Map<ChVectorN<double, NSF * NSF>> K1_vec(K1_matrix.data(), K1_matrix.size());
@@ -1254,19 +1259,19 @@ template <int NP, int NT>
 void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianContIntDamping(ChMatrixRef& H,
                                                                             double Kfactor,
                                                                             double Rfactor) {
-    // Calculate the Jacobian of the generalize internal force vector using the "Continuous Integration" style of method assuming a
-    // linear viscoelastic material model (single term damping model).  For this style of method, the Jacobian of the generalized
-    // internal force vector is integrated across the volume of the element every time this calculation is performed.
-    // For a small number of layers this method can be more efficient than the "Pre-Integration" style calculation
-    // method.
+    // Calculate the Jacobian of the generalize internal force vector using the "Continuous Integration" style of method
+    // assuming a linear viscoelastic material model (single term damping model).  For this style of method, the
+    // Jacobian of the generalized internal force vector is integrated across the volume of the element every time this
+    // calculation is performed. For a small number of layers this method can be more efficient than the
+    // "Pre-Integration" style calculation method.
 
     MatrixNx6 ebar_ebardot;
     CalcCombinedCoordMatrix(ebar_ebardot);
 
-    //Zero out the Jacobian matrix since the results from each layer will be added to this value
+    // Zero out the Jacobian matrix since the results from each layer will be added to this value
     H.setZero();
 
-    //Sum the contribution to the Jacobian matrix layer by layer
+    // Sum the contribution to the Jacobian matrix layer by layer
     for (int kl = 0; kl < m_numLayers; kl++) {
         // No values from the generalized internal force vector are cached for reuse in the Jacobian.  Instead these
         // quantities are recalculated again during the Jacobian calculations.  This both simplifies the code and speeds
@@ -1285,8 +1290,7 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianContIntDamping(ChMa
         //      [F13  F23  F33  F13dot  F23dot  F33dot ]
         // =============================================================================
 
-        ChMatrixNMc<double, 3*NIP, 6> FC = m_SD.block<NSF, 3*NIP>(0, 3*NIP*kl).transpose() * ebar_ebardot;
-
+        ChMatrixNMc<double, 3 * NIP, 6> FC = m_SD.block<NSF, 3 * NIP>(0, 3 * NIP * kl).transpose() * ebar_ebardot;
 
         //==============================================================================
         //==============================================================================
@@ -1298,7 +1302,7 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianContIntDamping(ChMa
         // Calculate the partial derivative of the Green-Largrange strains with respect to the nodal coordinates
         // (transposed).  This calculation is performed in blocks across all the Gauss quadrature points at the same
         // time.  This value should be store in row major memory layout to align with the access patterns for
-        // calculating this matrix. 
+        // calculating this matrix.
         // PE = [(d epsilon1/d e)GQPnt1' (d epsilon1/d e)GQPnt2' ... (d epsilon1/d e)GQPntNIP'...
         //       (d epsilon2/d e)GQPnt1' (d epsilon2/d e)GQPnt2' ... (d epsilon2/d e)GQPntNIP'...
         //       (d epsilon3/d e)GQPnt1' (d epsilon3/d e)GQPnt2' ... (d epsilon3/d e)GQPntNIP'...
@@ -1310,38 +1314,65 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianContIntDamping(ChMa
         // =============================================================================
 
         Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> PE;
-        PE.resize(3*NSF, 6*NIP);
+        PE.resize(3 * NSF, 6 * NIP);
 
         for (auto i = 0; i < NSF; i++) {
-            PE.block<1, NIP>(3 * i, 0*NIP) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(0*NIP, 0).transpose());
-            PE.block<1, NIP>(3 * i, 1*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(1*NIP, 0).transpose());
-            PE.block<1, NIP>(3 * i, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 0).transpose());
-            PE.block<1, NIP>(3 * i, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(1*NIP, 0).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 0).transpose());
-            PE.block<1, NIP>(3 * i, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(0*NIP, 0).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 0).transpose());
-            PE.block<1, NIP>(3 * i, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(0*NIP, 0).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(1*NIP, 0).transpose());
+            PE.block<1, NIP>(3 * i, 0 * NIP) = m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                                                   .cwiseProduct(FC.template block<NIP, 1>(0 * NIP, 0).transpose());
+            PE.block<1, NIP>(3 * i, 1 * NIP) = m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                                                   .cwiseProduct(FC.template block<NIP, 1>(1 * NIP, 0).transpose());
+            PE.block<1, NIP>(3 * i, 2 * NIP) = m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                                                   .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0).transpose());
+            PE.block<1, NIP>(3 * i, 3 * NIP) = m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                                                   .cwiseProduct(FC.template block<NIP, 1>(1 * NIP, 0).transpose()) +
+                                               m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                                                   .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0).transpose());
+            PE.block<1, NIP>(3 * i, 4 * NIP) = m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                                                   .cwiseProduct(FC.template block<NIP, 1>(0 * NIP, 0).transpose()) +
+                                               m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                                                   .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0).transpose());
+            PE.block<1, NIP>(3 * i, 5 * NIP) = m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                                                   .cwiseProduct(FC.template block<NIP, 1>(0 * NIP, 0).transpose()) +
+                                               m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                                                   .cwiseProduct(FC.template block<NIP, 1>(1 * NIP, 0).transpose());
 
-            PE.block<1, NIP>((3 * i) + 1, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose());
-            PE.block<1, NIP>((3 * i) + 1, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose());
-            PE.block<1, NIP>((3 * i) + 1, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 1).transpose());
-            PE.block<1, NIP>((3 * i) + 1, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 1).transpose());
-            PE.block<1, NIP>((3 * i) + 1, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 1).transpose());
-            PE.block<1, NIP>((3 * i) + 1, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose());
+            PE.block<1, NIP>((3 * i) + 1, 0) =
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose());
+            PE.block<1, NIP>((3 * i) + 1, NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose());
+            PE.block<1, NIP>((3 * i) + 1, 2 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1).transpose());
+            PE.block<1, NIP>((3 * i) + 1, 3 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1).transpose());
+            PE.block<1, NIP>((3 * i) + 1, 4 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1).transpose());
+            PE.block<1, NIP>((3 * i) + 1, 5 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose());
 
-            PE.block<1, NIP>((3 * i) + 2, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose());
-            PE.block<1, NIP>((3 * i) + 2, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose());
-            PE.block<1, NIP>((3 * i) + 2, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 2).transpose());
-            PE.block<1, NIP>((3 * i) + 2, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 2).transpose());
-            PE.block<1, NIP>((3 * i) + 2, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 2).transpose());
-            PE.block<1, NIP>((3 * i) + 2, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose());
+            PE.block<1, NIP>((3 * i) + 2, 0) =
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose());
+            PE.block<1, NIP>((3 * i) + 2, NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose());
+            PE.block<1, NIP>((3 * i) + 2, 2 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2).transpose());
+            PE.block<1, NIP>((3 * i) + 2, 3 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2).transpose());
+            PE.block<1, NIP>((3 * i) + 2, 4 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2).transpose());
+            PE.block<1, NIP>((3 * i) + 2, 5 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose());
         }
 
         // =============================================================================
@@ -1356,13 +1387,13 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianContIntDamping(ChMa
         //            [kGQ*(Kfactor+alpha*Rfactor)*F13+alpha*Rfactor*F13dot ... similar for F23 & F33 blocks]
         // =============================================================================
 
-        ChMatrixNMc<double, 3*NIP, 3> FCscaled = (Kfactor + m_Alpha * Rfactor) * FC.template block<3*NIP, 3>(0, 0) +
-                (m_Alpha * Kfactor) * FC.template block<3*NIP, 3>(0, 3);
+        ChMatrixNMc<double, 3 * NIP, 3> FCscaled = (Kfactor + m_Alpha * Rfactor) * FC.template block<3 * NIP, 3>(0, 0) +
+                                                   (m_Alpha * Kfactor) * FC.template block<3 * NIP, 3>(0, 3);
 
         for (auto i = 0; i < 3; i++) {
             FCscaled.template block<NIP, 1>(0, i).array() *= m_kGQ.array();
             FCscaled.template block<NIP, 1>(NIP, i).array() *= m_kGQ.array();
-            FCscaled.template block<NIP, 1>(2*NIP, i).array() *= m_kGQ.array();
+            FCscaled.template block<NIP, 1>(2 * NIP, i).array() *= m_kGQ.array();
         }
 
         // =============================================================================
@@ -1376,38 +1407,83 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianContIntDamping(ChMa
         // =============================================================================
 
         Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Scaled_Combined_PE;
-        Scaled_Combined_PE.resize(3*NSF, 6*NIP);
+        Scaled_Combined_PE.resize(3 * NSF, 6 * NIP);
 
         for (auto i = 0; i < NSF; i++) {
-            Scaled_Combined_PE.block<1, NIP>(3 * i, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 0).transpose());
-            Scaled_Combined_PE.block<1, NIP>(3 * i, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 0).transpose());
-            Scaled_Combined_PE.block<1, NIP>(3 * i, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 0).transpose());
-            Scaled_Combined_PE.block<1, NIP>(3 * i, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 0).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 0).transpose());
-            Scaled_Combined_PE.block<1, NIP>(3 * i, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 0).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 0).transpose());
-            Scaled_Combined_PE.block<1, NIP>(3 * i, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 0).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 0).transpose());
+            Scaled_Combined_PE.block<1, NIP>(3 * i, 0) =
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 0).transpose());
+            Scaled_Combined_PE.block<1, NIP>(3 * i, NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 0).transpose());
+            Scaled_Combined_PE.block<1, NIP>(3 * i, 2 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 0).transpose());
+            Scaled_Combined_PE.block<1, NIP>(3 * i, 3 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 0).transpose());
+            Scaled_Combined_PE.block<1, NIP>(3 * i, 4 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 0).transpose());
+            Scaled_Combined_PE.block<1, NIP>(3 * i, 5 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 0).transpose());
 
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 1).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 1).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 1).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 1).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 1).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 1).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 1).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 1).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 1).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 0) =
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 1).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 1).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 2 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 1).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 3 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 1).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 4 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 1).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 5 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 1).transpose());
 
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 2).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 2).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 2).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 2).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 2).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 2).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 2).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 2).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 2).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 0) =
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 2).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 2).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 2 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 2).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 3 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 2).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 4 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 2).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 5 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 2).transpose());
         }
 
         // =============================================================================
@@ -1425,14 +1501,50 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianContIntDamping(ChMa
         // =============================================================================
 
         Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> DScaled_Combined_PE;
-        DScaled_Combined_PE.resize(3*NSF, 6*NIP);
+        DScaled_Combined_PE.resize(3 * NSF, 6 * NIP);
 
-        DScaled_Combined_PE.template block<3*NSF, NIP>(0, 0) = D(0, 0)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 0) + D(0, 1)*Scaled_Combined_PE.block<3*NSF, NIP>(0, NIP) + D(0, 2)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 2*NIP) + D(0, 3)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 3*NIP) + D(0, 4)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 4*NIP) + D(0, 5)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 5*NIP);
-        DScaled_Combined_PE.template block<3*NSF, NIP>(0, NIP) = D(1, 0)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 0) + D(1, 1)*Scaled_Combined_PE.block<3*NSF, NIP>(0, NIP) + D(1, 2)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 2*NIP) + D(1, 3)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 3*NIP) + D(1, 4)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 4*NIP) + D(1, 5)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 5*NIP);
-        DScaled_Combined_PE.template block<3*NSF, NIP>(0, 2*NIP) = D(2, 0)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 0) + D(2, 1)*Scaled_Combined_PE.block<3*NSF, NIP>(0, NIP) + D(2, 2)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 2*NIP) + D(2, 3)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 3*NIP) + D(2, 4)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 4*NIP) + D(2, 5)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 5*NIP);
-        DScaled_Combined_PE.template block<3*NSF, NIP>(0, 3*NIP) = D(3, 0)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 0) + D(3, 1)*Scaled_Combined_PE.block<3*NSF, NIP>(0, NIP) + D(3, 2)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 2*NIP) + D(3, 3)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 3*NIP) + D(3, 4)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 4*NIP) + D(3, 5)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 5*NIP);
-        DScaled_Combined_PE.template block<3*NSF, NIP>(0, 4*NIP) = D(4, 0)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 0) + D(4, 1)*Scaled_Combined_PE.block<3*NSF, NIP>(0, NIP) + D(4, 2)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 2*NIP) + D(4, 3)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 3*NIP) + D(4, 4)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 4*NIP) + D(4, 5)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 5*NIP);
-        DScaled_Combined_PE.template block<3*NSF, NIP>(0, 5*NIP) = D(5, 0)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 0) + D(5, 1)*Scaled_Combined_PE.block<3*NSF, NIP>(0, NIP) + D(5, 2)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 2*NIP) + D(5, 3)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 3*NIP) + D(5, 4)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 4*NIP) + D(5, 5)*Scaled_Combined_PE.block<3*NSF, NIP>(0, 5*NIP);
+        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 0) =
+            D(0, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
+            D(0, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
+            D(0, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
+            D(0, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
+            D(0, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
+            D(0, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
+        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, NIP) =
+            D(1, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
+            D(1, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
+            D(1, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
+            D(1, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
+            D(1, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
+            D(1, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
+        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 2 * NIP) =
+            D(2, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
+            D(2, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
+            D(2, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
+            D(2, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
+            D(2, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
+            D(2, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
+        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 3 * NIP) =
+            D(3, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
+            D(3, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
+            D(3, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
+            D(3, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
+            D(3, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
+            D(3, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
+        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 4 * NIP) =
+            D(4, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
+            D(4, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
+            D(4, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
+            D(4, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
+            D(4, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
+            D(4, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
+        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 5 * NIP) =
+            D(5, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
+            D(5, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
+            D(5, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
+            D(5, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
+            D(5, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
+            D(5, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
 
         // =============================================================================
         // Multiply the partial derivative block matrix by the final scaled and combined partial derivative block matrix
@@ -1440,7 +1552,6 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianContIntDamping(ChMa
         // =============================================================================
 
         H.noalias() += PE * DScaled_Combined_PE.transpose();
-
 
         //==============================================================================
         //==============================================================================
@@ -1552,35 +1663,41 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianContIntDamping(ChMa
         //  kGQ*SPK2 = kGQ*[SPK2_11,SPK2_22,SPK2_33,SPK2_23,SPK2_13,SPK2_12] = D * E_Combined
         // =============================================================================
 
-        VectorNIP SPK2_1_Block = D(0, 0)*E1_Block + D(0, 1)*E2_Block + D(0, 2)*E3_Block + D(0, 3)*E4_Block + D(0, 4)*E5_Block + D(0, 5)*E6_Block;
-        VectorNIP SPK2_2_Block = D(1, 0)*E1_Block + D(1, 1)*E2_Block + D(1, 2)*E3_Block + D(1, 3)*E4_Block + D(1, 4)*E5_Block + D(1, 5)*E6_Block;
-        VectorNIP SPK2_3_Block = D(2, 0)*E1_Block + D(2, 1)*E2_Block + D(2, 2)*E3_Block + D(2, 3)*E4_Block + D(2, 4)*E5_Block + D(2, 5)*E6_Block;
-        VectorNIP SPK2_4_Block = D(3, 0)*E1_Block + D(3, 1)*E2_Block + D(3, 2)*E3_Block + D(3, 3)*E4_Block + D(3, 4)*E5_Block + D(3, 5)*E6_Block;
-        VectorNIP SPK2_5_Block = D(4, 0)*E1_Block + D(4, 1)*E2_Block + D(4, 2)*E3_Block + D(4, 3)*E4_Block + D(4, 4)*E5_Block + D(4, 5)*E6_Block;
-        VectorNIP SPK2_6_Block = D(5, 0)*E1_Block + D(5, 1)*E2_Block + D(5, 2)*E3_Block + D(5, 3)*E4_Block + D(5, 4)*E5_Block + D(5, 5)*E6_Block;
-
+        VectorNIP SPK2_1_Block = D(0, 0) * E1_Block + D(0, 1) * E2_Block + D(0, 2) * E3_Block + D(0, 3) * E4_Block +
+                                 D(0, 4) * E5_Block + D(0, 5) * E6_Block;
+        VectorNIP SPK2_2_Block = D(1, 0) * E1_Block + D(1, 1) * E2_Block + D(1, 2) * E3_Block + D(1, 3) * E4_Block +
+                                 D(1, 4) * E5_Block + D(1, 5) * E6_Block;
+        VectorNIP SPK2_3_Block = D(2, 0) * E1_Block + D(2, 1) * E2_Block + D(2, 2) * E3_Block + D(2, 3) * E4_Block +
+                                 D(2, 4) * E5_Block + D(2, 5) * E6_Block;
+        VectorNIP SPK2_4_Block = D(3, 0) * E1_Block + D(3, 1) * E2_Block + D(3, 2) * E3_Block + D(3, 3) * E4_Block +
+                                 D(3, 4) * E5_Block + D(3, 5) * E6_Block;
+        VectorNIP SPK2_5_Block = D(4, 0) * E1_Block + D(4, 1) * E2_Block + D(4, 2) * E3_Block + D(4, 3) * E4_Block +
+                                 D(4, 4) * E5_Block + D(4, 5) * E6_Block;
+        VectorNIP SPK2_6_Block = D(5, 0) * E1_Block + D(5, 1) * E2_Block + D(5, 2) * E3_Block + D(5, 3) * E4_Block +
+                                 D(5, 4) * E5_Block + D(5, 5) * E6_Block;
 
         // =============================================================================
-        // Multiply the shape function derivative matrix by the 2nd Piola-Kirchoff stresses for each corresponding Gauss quadrature point
+        // Multiply the shape function derivative matrix by the 2nd Piola-Kirchoff stresses for each corresponding Gauss
+        // quadrature point
         // =============================================================================
 
-        ChMatrixNM<double, NSF, 3*NIP> S_scaled_SD;
+        ChMatrixNM<double, NSF, 3 * NIP> S_scaled_SD;
 
         for (auto i = 0; i < NSF; i++) {
             S_scaled_SD.template block<1, NIP>(i, 0) =
-                SPK2_1_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+0)*NIP)) +
-                SPK2_6_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+1)*NIP)) +
-                SPK2_5_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+2)*NIP));
+                SPK2_1_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)) +
+                SPK2_6_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)) +
+                SPK2_5_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP));
 
             S_scaled_SD.template block<1, NIP>(i, NIP) =
-                SPK2_6_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+0)*NIP)) +
-                SPK2_2_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+1)*NIP)) +
-                SPK2_4_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+2)*NIP));
+                SPK2_6_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)) +
+                SPK2_2_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)) +
+                SPK2_4_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP));
 
-            S_scaled_SD.template block<1, NIP>(i, 2*NIP) =
-                SPK2_5_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+0)*NIP)) +
-                SPK2_4_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+1)*NIP)) +
-                SPK2_3_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+2)*NIP));
+            S_scaled_SD.template block<1, NIP>(i, 2 * NIP) =
+                SPK2_5_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)) +
+                SPK2_4_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)) +
+                SPK2_3_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP));
         }
 
         // =============================================================================
@@ -1591,7 +1708,8 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianContIntDamping(ChMa
         unsigned int idx = 0;
         for (unsigned int i = 0; i < NSF; i++) {
             for (unsigned int j = i; j < NSF; j++) {
-                double d = Kfactor * m_SD.block<1, 3*NIP>(i, 3 * kl * NIP) * S_scaled_SD.template block<1, 3*NIP>(j, 0).transpose();
+                double d = Kfactor * m_SD.block<1, 3 * NIP>(i, 3 * kl * NIP) *
+                           S_scaled_SD.template block<1, 3 * NIP>(j, 0).transpose();
 
                 H(3 * i, 3 * j) += d;
                 H(3 * i + 1, 3 * j + 1) += d;
@@ -1608,7 +1726,7 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianContIntDamping(ChMa
 }
 
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::ComputeInternalJacobianContIntNoDamping(ChMatrixRef& H, double Kfactor) {
+void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianContIntNoDamping(ChMatrixRef& H, double Kfactor) {
     // Calculate the Jacobian of the generalize internal force vector using the "Continuous Integration" style of method
     // assuming a linear material model (no damping).  For this style of method, the Jacobian of the generalized
     // internal force vector is integrated across the volume of the element every time this calculation is performed.
@@ -1618,10 +1736,10 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalJacobianContIntNoDamping(ChM
     Matrix3xN e_bar;
     CalcCoordMatrix(e_bar);
 
-    //Zero out the Jacobian matrix since the results from each layer will be added to this value
+    // Zero out the Jacobian matrix since the results from each layer will be added to this value
     H.setZero();
 
-    //Sum the contribution to the Jacobian matrix layer by layer
+    // Sum the contribution to the Jacobian matrix layer by layer
     for (int kl = 0; kl < m_numLayers; kl++) {
         // No values from the generalized internal force vector are cached for reuse in the Jacobian.  Instead these
         // quantities are recalculated again during the Jacobian calculations.  This both simplifies the code and speeds
@@ -1639,8 +1757,7 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalJacobianContIntNoDamping(ChM
         // FC = [F12  F22  F32 ]
         //      [F13  F23  F33 ]
         // =============================================================================
-        ChMatrixNMc<double, 3*NIP, 3>  FC = m_SD.block<NSF, 3*NIP>(0, 3*NIP * kl).transpose() * e_bar.transpose();
-
+        ChMatrixNMc<double, 3 * NIP, 3> FC = m_SD.block<NSF, 3 * NIP>(0, 3 * NIP * kl).transpose() * e_bar.transpose();
 
         //==============================================================================
         //==============================================================================
@@ -1652,7 +1769,7 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalJacobianContIntNoDamping(ChM
         // Calculate the partial derivative of the Green-Largrange strains with respect to the nodal coordinates
         // (transposed).  This calculation is performed in blocks across all the Gauss quadrature points at the same
         // time.  This value should be store in row major memory layout to align with the access patterns for
-        // calculating this matrix. 
+        // calculating this matrix.
         // PE = [(d epsilon1/d e)GQPnt1' (d epsilon1/d e)GQPnt2' ... (d epsilon1/d e)GQPntNIP'...
         //       (d epsilon2/d e)GQPnt1' (d epsilon2/d e)GQPnt2' ... (d epsilon2/d e)GQPntNIP'...
         //       (d epsilon3/d e)GQPnt1' (d epsilon3/d e)GQPnt2' ... (d epsilon3/d e)GQPntNIP'...
@@ -1663,50 +1780,76 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalJacobianContIntNoDamping(ChM
         // The explanation of the calculation above is just too long to write it all on a single line.
         // =============================================================================
         Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> PE;
-        PE.resize(3*NSF, 6*NIP);
+        PE.resize(3 * NSF, 6 * NIP);
 
         for (auto i = 0; i < NSF; i++) {
-            PE.block<1, NIP>(3 * i, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 0).transpose());
-            PE.block<1, NIP>(3 * i, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 0).transpose());
-            PE.block<1, NIP>(3 * i, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 0).transpose());
-            PE.block<1, NIP>(3 * i, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 0).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 0).transpose());
-            PE.block<1, NIP>(3 * i, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 0).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 0).transpose());
-            PE.block<1, NIP>(3 * i, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 0).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 0).transpose());
+            PE.block<1, NIP>(3 * i, 0) =
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 0).transpose());
+            PE.block<1, NIP>(3 * i, NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 0).transpose());
+            PE.block<1, NIP>(3 * i, 2 * NIP) = m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                                                   .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0).transpose());
+            PE.block<1, NIP>(3 * i, 3 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0).transpose());
+            PE.block<1, NIP>(3 * i, 4 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0).transpose());
+            PE.block<1, NIP>(3 * i, 5 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 0).transpose());
 
-            PE.block<1, NIP>((3 * i) + 1, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose());
-            PE.block<1, NIP>((3 * i) + 1, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose());
-            PE.block<1, NIP>((3 * i) + 1, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 1).transpose());
-            PE.block<1, NIP>((3 * i) + 1, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 1).transpose());
-            PE.block<1, NIP>((3 * i) + 1, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 1).transpose());
-            PE.block<1, NIP>((3 * i) + 1, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose());
+            PE.block<1, NIP>((3 * i) + 1, 0) =
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose());
+            PE.block<1, NIP>((3 * i) + 1, NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose());
+            PE.block<1, NIP>((3 * i) + 1, 2 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1).transpose());
+            PE.block<1, NIP>((3 * i) + 1, 3 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1).transpose());
+            PE.block<1, NIP>((3 * i) + 1, 4 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1).transpose());
+            PE.block<1, NIP>((3 * i) + 1, 5 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose());
 
-            PE.block<1, NIP>((3 * i) + 2, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose());
-            PE.block<1, NIP>((3 * i) + 2, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose());
-            PE.block<1, NIP>((3 * i) + 2, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 2).transpose());
-            PE.block<1, NIP>((3 * i) + 2, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 2).transpose());
-            PE.block<1, NIP>((3 * i) + 2, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(2*NIP, 2).transpose());
-            PE.block<1, NIP>((3 * i) + 2, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose());
+            PE.block<1, NIP>((3 * i) + 2, 0) =
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose());
+            PE.block<1, NIP>((3 * i) + 2, NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose());
+            PE.block<1, NIP>((3 * i) + 2, 2 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2).transpose());
+            PE.block<1, NIP>((3 * i) + 2, 3 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2).transpose());
+            PE.block<1, NIP>((3 * i) + 2, 4 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2).transpose());
+            PE.block<1, NIP>((3 * i) + 2, 5 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose());
         }
 
         // =============================================================================
         // Scale the block deformation gradient matrix by the Kfactor weighting factor for the Jacobian and multiply
         // each Gauss quadrature component by its Gauss quadrature weight times the element Jacobian (kGQ)
         // =============================================================================
-        ChMatrixNMc<double, 3*NIP, 3> FCscaled = Kfactor * FC;
+        ChMatrixNMc<double, 3 * NIP, 3> FCscaled = Kfactor * FC;
 
         for (auto i = 0; i < 3; i++) {
             FCscaled.template block<NIP, 1>(0, i).array() *= m_kGQ.array();
             FCscaled.template block<NIP, 1>(NIP, i).array() *= m_kGQ.array();
-            FCscaled.template block<NIP, 1>(2*NIP, i).array() *= m_kGQ.array();
+            FCscaled.template block<NIP, 1>(2 * NIP, i).array() *= m_kGQ.array();
         }
 
         // =============================================================================
@@ -1717,38 +1860,83 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalJacobianContIntNoDamping(ChM
         // =============================================================================
 
         Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Scaled_Combined_PE;
-        Scaled_Combined_PE.resize(3*NSF, 6*NIP);
+        Scaled_Combined_PE.resize(3 * NSF, 6 * NIP);
 
         for (auto i = 0; i < NSF; i++) {
-            Scaled_Combined_PE.block<1, NIP>(3 * i, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 0).transpose());
-            Scaled_Combined_PE.block<1, NIP>(3 * i, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 0).transpose());
-            Scaled_Combined_PE.block<1, NIP>(3 * i, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 0).transpose());
-            Scaled_Combined_PE.block<1, NIP>(3 * i, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 0).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 0).transpose());
-            Scaled_Combined_PE.block<1, NIP>(3 * i, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 0).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 0).transpose());
-            Scaled_Combined_PE.block<1, NIP>(3 * i, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 0).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 0).transpose());
+            Scaled_Combined_PE.block<1, NIP>(3 * i, 0) =
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 0).transpose());
+            Scaled_Combined_PE.block<1, NIP>(3 * i, NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 0).transpose());
+            Scaled_Combined_PE.block<1, NIP>(3 * i, 2 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 0).transpose());
+            Scaled_Combined_PE.block<1, NIP>(3 * i, 3 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 0).transpose());
+            Scaled_Combined_PE.block<1, NIP>(3 * i, 4 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 0).transpose());
+            Scaled_Combined_PE.block<1, NIP>(3 * i, 5 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 0).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 0).transpose());
 
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 1).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 1).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 1).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 1).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 1).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 1).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 1).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 1).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 1).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 0) =
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 1).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 1).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 2 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 1).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 3 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 1).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 4 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 1).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 5 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 1).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 1).transpose());
 
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 0) = m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 2).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 2).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 2*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 2).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 3*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 2).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 2).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 4*NIP) = m_SD.block<1, NIP>(i, (3*kl+2)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 2).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2*NIP, 2).transpose());
-            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 5*NIP) = m_SD.block<1, NIP>(i, (3*kl+1)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 2).transpose()) +
-                m_SD.block<1, NIP>(i, (3*kl+0)*NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 2).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 0) =
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 2).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 2).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 2 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 2).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 3 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 2).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 4 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 2).transpose());
+            Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 5 * NIP) =
+                m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(0, 2).transpose()) +
+                m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)
+                    .cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 2).transpose());
         }
 
         // =============================================================================
@@ -1765,14 +1953,44 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalJacobianContIntNoDamping(ChM
         // Gauss quadrature point
         // =============================================================================
         Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> DScaled_Combined_PE;
-        DScaled_Combined_PE.resize(3*NSF, 6*NIP);
+        DScaled_Combined_PE.resize(3 * NSF, 6 * NIP);
 
-        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 0) = D(0, 0)*Scaled_Combined_PE.block<48, NIP>(0, 0) + D(0, 1)*Scaled_Combined_PE.block<48, NIP>(0, NIP) + D(0, 2)*Scaled_Combined_PE.block<48, NIP>(0, 2*NIP) + D(0, 3)*Scaled_Combined_PE.block<48, NIP>(0, 3*NIP) + D(0, 4)*Scaled_Combined_PE.block<48, NIP>(0, 4*NIP) + D(0, 5)*Scaled_Combined_PE.block<48, NIP>(0, 5*NIP);
-        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, NIP) = D(1, 0)*Scaled_Combined_PE.block<48, NIP>(0, 0) + D(1, 1)*Scaled_Combined_PE.block<48, NIP>(0, NIP) + D(1, 2)*Scaled_Combined_PE.block<48, NIP>(0, 2*NIP) + D(1, 3)*Scaled_Combined_PE.block<48, NIP>(0, 3*NIP) + D(1, 4)*Scaled_Combined_PE.block<48, NIP>(0, 4*NIP) + D(1, 5)*Scaled_Combined_PE.block<48, NIP>(0, 5*NIP);
-        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 2*NIP) = D(2, 0)*Scaled_Combined_PE.block<48, NIP>(0, 0) + D(2, 1)*Scaled_Combined_PE.block<48, NIP>(0, NIP) + D(2, 2)*Scaled_Combined_PE.block<48, NIP>(0, 2*NIP) + D(2, 3)*Scaled_Combined_PE.block<48, NIP>(0, 3*NIP) + D(2, 4)*Scaled_Combined_PE.block<48, NIP>(0, 4*NIP) + D(2, 5)*Scaled_Combined_PE.block<48, NIP>(0, 5*NIP);
-        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 3*NIP) = D(3, 0)*Scaled_Combined_PE.block<48, NIP>(0, 0) + D(3, 1)*Scaled_Combined_PE.block<48, NIP>(0, NIP) + D(3, 2)*Scaled_Combined_PE.block<48, NIP>(0, 2*NIP) + D(3, 3)*Scaled_Combined_PE.block<48, NIP>(0, 3*NIP) + D(3, 4)*Scaled_Combined_PE.block<48, NIP>(0, 4*NIP) + D(3, 5)*Scaled_Combined_PE.block<48, NIP>(0, 5*NIP);
-        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 4*NIP) = D(4, 0)*Scaled_Combined_PE.block<48, NIP>(0, 0) + D(4, 1)*Scaled_Combined_PE.block<48, NIP>(0, NIP) + D(4, 2)*Scaled_Combined_PE.block<48, NIP>(0, 2*NIP) + D(4, 3)*Scaled_Combined_PE.block<48, NIP>(0, 3*NIP) + D(4, 4)*Scaled_Combined_PE.block<48, NIP>(0, 4*NIP) + D(4, 5)*Scaled_Combined_PE.block<48, NIP>(0, 5*NIP);
-        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 5*NIP) = D(5, 0)*Scaled_Combined_PE.block<48, NIP>(0, 0) + D(5, 1)*Scaled_Combined_PE.block<48, NIP>(0, NIP) + D(5, 2)*Scaled_Combined_PE.block<48, NIP>(0, 2*NIP) + D(5, 3)*Scaled_Combined_PE.block<48, NIP>(0, 3*NIP) + D(5, 4)*Scaled_Combined_PE.block<48, NIP>(0, 4*NIP) + D(5, 5)*Scaled_Combined_PE.block<48, NIP>(0, 5*NIP);
+        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 0) =
+            D(0, 0) * Scaled_Combined_PE.block<48, NIP>(0, 0) + D(0, 1) * Scaled_Combined_PE.block<48, NIP>(0, NIP) +
+            D(0, 2) * Scaled_Combined_PE.block<48, NIP>(0, 2 * NIP) +
+            D(0, 3) * Scaled_Combined_PE.block<48, NIP>(0, 3 * NIP) +
+            D(0, 4) * Scaled_Combined_PE.block<48, NIP>(0, 4 * NIP) +
+            D(0, 5) * Scaled_Combined_PE.block<48, NIP>(0, 5 * NIP);
+        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, NIP) =
+            D(1, 0) * Scaled_Combined_PE.block<48, NIP>(0, 0) + D(1, 1) * Scaled_Combined_PE.block<48, NIP>(0, NIP) +
+            D(1, 2) * Scaled_Combined_PE.block<48, NIP>(0, 2 * NIP) +
+            D(1, 3) * Scaled_Combined_PE.block<48, NIP>(0, 3 * NIP) +
+            D(1, 4) * Scaled_Combined_PE.block<48, NIP>(0, 4 * NIP) +
+            D(1, 5) * Scaled_Combined_PE.block<48, NIP>(0, 5 * NIP);
+        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 2 * NIP) =
+            D(2, 0) * Scaled_Combined_PE.block<48, NIP>(0, 0) + D(2, 1) * Scaled_Combined_PE.block<48, NIP>(0, NIP) +
+            D(2, 2) * Scaled_Combined_PE.block<48, NIP>(0, 2 * NIP) +
+            D(2, 3) * Scaled_Combined_PE.block<48, NIP>(0, 3 * NIP) +
+            D(2, 4) * Scaled_Combined_PE.block<48, NIP>(0, 4 * NIP) +
+            D(2, 5) * Scaled_Combined_PE.block<48, NIP>(0, 5 * NIP);
+        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 3 * NIP) =
+            D(3, 0) * Scaled_Combined_PE.block<48, NIP>(0, 0) + D(3, 1) * Scaled_Combined_PE.block<48, NIP>(0, NIP) +
+            D(3, 2) * Scaled_Combined_PE.block<48, NIP>(0, 2 * NIP) +
+            D(3, 3) * Scaled_Combined_PE.block<48, NIP>(0, 3 * NIP) +
+            D(3, 4) * Scaled_Combined_PE.block<48, NIP>(0, 4 * NIP) +
+            D(3, 5) * Scaled_Combined_PE.block<48, NIP>(0, 5 * NIP);
+        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 4 * NIP) =
+            D(4, 0) * Scaled_Combined_PE.block<48, NIP>(0, 0) + D(4, 1) * Scaled_Combined_PE.block<48, NIP>(0, NIP) +
+            D(4, 2) * Scaled_Combined_PE.block<48, NIP>(0, 2 * NIP) +
+            D(4, 3) * Scaled_Combined_PE.block<48, NIP>(0, 3 * NIP) +
+            D(4, 4) * Scaled_Combined_PE.block<48, NIP>(0, 4 * NIP) +
+            D(4, 5) * Scaled_Combined_PE.block<48, NIP>(0, 5 * NIP);
+        DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 5 * NIP) =
+            D(5, 0) * Scaled_Combined_PE.block<48, NIP>(0, 0) + D(5, 1) * Scaled_Combined_PE.block<48, NIP>(0, NIP) +
+            D(5, 2) * Scaled_Combined_PE.block<48, NIP>(0, 2 * NIP) +
+            D(5, 3) * Scaled_Combined_PE.block<48, NIP>(0, 3 * NIP) +
+            D(5, 4) * Scaled_Combined_PE.block<48, NIP>(0, 4 * NIP) +
+            D(5, 5) * Scaled_Combined_PE.block<48, NIP>(0, 5 * NIP);
 
         // =============================================================================
         // Multiply the partial derivative block matrix by the final scaled and combined partial derivative block matrix
@@ -1780,7 +1998,6 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalJacobianContIntNoDamping(ChM
         // =============================================================================
 
         H.noalias() += PE * DScaled_Combined_PE.transpose();
-
 
         //==============================================================================
         //==============================================================================
@@ -1798,43 +2015,42 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalJacobianContIntNoDamping(ChM
 
         // Each entry in E1 = kGQ*E11 = kGQ*1/2*(F11*F11+F21*F21+F31*F31-1)
         VectorNIP E1_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(0, 0)) +
-            FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(0, 1)) +
-            FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(0, 2));
+                             FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(0, 1)) +
+                             FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(0, 2));
         E1_Block.array() -= 1;
-        E1_Block.array() *= 0.5*m_kGQ.array();
+        E1_Block.array() *= 0.5 * m_kGQ.array();
 
         // Each entry in E2 = kGQ*E22 = kGQ*1/2*(F12*F12+F22*F22+F32*F32-1)
         VectorNIP E2_Block = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 0)) +
-            FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 1)) +
-            FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 2));
+                             FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 1)) +
+                             FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 2));
         E2_Block.array() -= 1;
-        E2_Block.array() *= 0.5*m_kGQ.array();
+        E2_Block.array() *= 0.5 * m_kGQ.array();
 
         // Each entry in E3 = kGQ*E33 = kGQ*1/2*(F13*F13+F23*F23+F33*F33-1)
         VectorNIP E3_Block = FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0)) +
-            FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1)) +
-            FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
+                             FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1)) +
+                             FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
         E3_Block.array() -= 1;
-        E3_Block.array() *= 0.5*m_kGQ.array();
+        E3_Block.array() *= 0.5 * m_kGQ.array();
 
         // Each entry in E4 = kGQ*2*E23 = kGQ*(F12*F13+F22*F23+F32*F33)
         VectorNIP E4_Block = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0)) +
-            FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1)) +
-            FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
+                             FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1)) +
+                             FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
         E4_Block.array() *= m_kGQ.array();
 
         // Each entry in E5 = kGQ*2*E13 = kGQ*(F11*F13+F21*F23+F31*F33)
         VectorNIP E5_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0)) +
-            FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1)) +
-            FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
+                             FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1)) +
+                             FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
         E5_Block.array() *= m_kGQ.array();
 
         // Each entry in E6 = kGQ*2*E12 = (F11*F12+F21*F22+F31*F32)
         VectorNIP E6_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 0)) +
-            FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 1)) +
-            FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 2));
+                             FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 1)) +
+                             FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 2));
         E6_Block.array() *= m_kGQ.array();
-
 
         // =============================================================================
         // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Gauss quadrature points in the
@@ -1845,34 +2061,41 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalJacobianContIntNoDamping(ChM
         //  kGQ*SPK2 = kGQ*[SPK2_11,SPK2_22,SPK2_33,SPK2_23,SPK2_13,SPK2_12] = D * E_Combined
         // =============================================================================
 
-        VectorNIP SPK2_1_Block = D(0, 0)*E1_Block + D(0, 1)*E2_Block + D(0, 2)*E3_Block + D(0, 3)*E4_Block + D(0, 4)*E5_Block + D(0, 5)*E6_Block;
-        VectorNIP SPK2_2_Block = D(1, 0)*E1_Block + D(1, 1)*E2_Block + D(1, 2)*E3_Block + D(1, 3)*E4_Block + D(1, 4)*E5_Block + D(1, 5)*E6_Block;
-        VectorNIP SPK2_3_Block = D(2, 0)*E1_Block + D(2, 1)*E2_Block + D(2, 2)*E3_Block + D(2, 3)*E4_Block + D(2, 4)*E5_Block + D(2, 5)*E6_Block;
-        VectorNIP SPK2_4_Block = D(3, 0)*E1_Block + D(3, 1)*E2_Block + D(3, 2)*E3_Block + D(3, 3)*E4_Block + D(3, 4)*E5_Block + D(3, 5)*E6_Block;
-        VectorNIP SPK2_5_Block = D(4, 0)*E1_Block + D(4, 1)*E2_Block + D(4, 2)*E3_Block + D(4, 3)*E4_Block + D(4, 4)*E5_Block + D(4, 5)*E6_Block;
-        VectorNIP SPK2_6_Block = D(5, 0)*E1_Block + D(5, 1)*E2_Block + D(5, 2)*E3_Block + D(5, 3)*E4_Block + D(5, 4)*E5_Block + D(5, 5)*E6_Block;
+        VectorNIP SPK2_1_Block = D(0, 0) * E1_Block + D(0, 1) * E2_Block + D(0, 2) * E3_Block + D(0, 3) * E4_Block +
+                                 D(0, 4) * E5_Block + D(0, 5) * E6_Block;
+        VectorNIP SPK2_2_Block = D(1, 0) * E1_Block + D(1, 1) * E2_Block + D(1, 2) * E3_Block + D(1, 3) * E4_Block +
+                                 D(1, 4) * E5_Block + D(1, 5) * E6_Block;
+        VectorNIP SPK2_3_Block = D(2, 0) * E1_Block + D(2, 1) * E2_Block + D(2, 2) * E3_Block + D(2, 3) * E4_Block +
+                                 D(2, 4) * E5_Block + D(2, 5) * E6_Block;
+        VectorNIP SPK2_4_Block = D(3, 0) * E1_Block + D(3, 1) * E2_Block + D(3, 2) * E3_Block + D(3, 3) * E4_Block +
+                                 D(3, 4) * E5_Block + D(3, 5) * E6_Block;
+        VectorNIP SPK2_5_Block = D(4, 0) * E1_Block + D(4, 1) * E2_Block + D(4, 2) * E3_Block + D(4, 3) * E4_Block +
+                                 D(4, 4) * E5_Block + D(4, 5) * E6_Block;
+        VectorNIP SPK2_6_Block = D(5, 0) * E1_Block + D(5, 1) * E2_Block + D(5, 2) * E3_Block + D(5, 3) * E4_Block +
+                                 D(5, 4) * E5_Block + D(5, 5) * E6_Block;
 
         // =============================================================================
-        // Multiply the shape function derivative matrix by the 2nd Piola-Kirchoff stresses for each corresponding Gauss quadrature point
+        // Multiply the shape function derivative matrix by the 2nd Piola-Kirchoff stresses for each corresponding Gauss
+        // quadrature point
         // =============================================================================
 
-        ChMatrixNM<double, NSF, 3*NIP> S_scaled_SD;
+        ChMatrixNM<double, NSF, 3 * NIP> S_scaled_SD;
 
         for (auto i = 0; i < NSF; i++) {
             S_scaled_SD.template block<1, NIP>(i, 0) =
-                SPK2_1_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+0)*NIP)) +
-                SPK2_6_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+1)*NIP)) +
-                SPK2_5_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+2)*NIP));
+                SPK2_1_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)) +
+                SPK2_6_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)) +
+                SPK2_5_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP));
 
             S_scaled_SD.template block<1, NIP>(i, NIP) =
-                SPK2_6_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+0)*NIP)) +
-                SPK2_2_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+1)*NIP)) +
-                SPK2_4_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+2)*NIP));
+                SPK2_6_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)) +
+                SPK2_2_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)) +
+                SPK2_4_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP));
 
-            S_scaled_SD.template block<1, NIP>(i, 2*NIP) =
-                SPK2_5_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+0)*NIP)) +
-                SPK2_4_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+1)*NIP)) +
-                SPK2_3_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3*kl+2)*NIP));
+            S_scaled_SD.template block<1, NIP>(i, 2 * NIP) =
+                SPK2_5_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 0) * NIP)) +
+                SPK2_4_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 1) * NIP)) +
+                SPK2_3_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, (3 * kl + 2) * NIP));
         }
 
         // =============================================================================
@@ -1883,7 +2106,8 @@ void ChElementShellANCF_3443<NP,NT>::ComputeInternalJacobianContIntNoDamping(ChM
         unsigned int idx = 0;
         for (unsigned int i = 0; i < NSF; i++) {
             for (unsigned int j = i; j < NSF; j++) {
-                double d = Kfactor * m_SD.block<1, 3*NIP>(i, 3 * kl * NIP) * S_scaled_SD.template block<1, 3*NIP>(j, 0).transpose();
+                double d = Kfactor * m_SD.block<1, 3 * NIP>(i, 3 * kl * NIP) *
+                           S_scaled_SD.template block<1, 3 * NIP>(j, 0).transpose();
 
                 H(3 * i, 3 * j) += d;
                 H(3 * i + 1, 3 * j + 1) += d;
@@ -1960,107 +2184,132 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianPreInt(ChMatrixRef&
 // Nx1 Vector Form of the Normalized Shape Functions
 // [s1; s2; s3; ...]
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::Calc_Sxi_compact(VectorN& Sxi_compact, double xi, double eta, double zeta, double thickness, double zoffset) {
-    Sxi_compact(0) = -0.125 * (xi - 1) * (eta - 1)*(eta*eta + eta + xi * xi + xi - 2);
-    Sxi_compact(1) = -0.0625*m_lenX*(xi + 1)*(xi - 1)*(xi - 1)*(eta - 1);
-    Sxi_compact(2) = -0.0625*m_lenY*(eta + 1)*(eta - 1)*(eta - 1)*(xi - 1);
-    Sxi_compact(3) = -0.125*(xi - 1)*(eta - 1)*(m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+void ChElementShellANCF_3443<NP, NT>::Calc_Sxi_compact(VectorN& Sxi_compact,
+                                                       double xi,
+                                                       double eta,
+                                                       double zeta,
+                                                       double thickness,
+                                                       double zoffset) {
+    Sxi_compact(0) = -0.125 * (xi - 1) * (eta - 1) * (eta * eta + eta + xi * xi + xi - 2);
+    Sxi_compact(1) = -0.0625 * m_lenX * (xi + 1) * (xi - 1) * (xi - 1) * (eta - 1);
+    Sxi_compact(2) = -0.0625 * m_lenY * (eta + 1) * (eta - 1) * (eta - 1) * (xi - 1);
+    Sxi_compact(3) = -0.125 * (xi - 1) * (eta - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
 
-    Sxi_compact(4) = 0.125*(xi + 1)*(eta - 1)*(eta*eta + eta + xi * xi - xi - 2);
-    Sxi_compact(5) = -0.0625*m_lenX*(xi - 1)*(xi + 1)*(xi + 1)*(eta - 1);
-    Sxi_compact(6) = 0.0625*m_lenY*(eta + 1)*(eta - 1)*(eta - 1)*(xi + 1);
-    Sxi_compact(7) = 0.125*(xi + 1)*(eta - 1)*(m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+    Sxi_compact(4) = 0.125 * (xi + 1) * (eta - 1) * (eta * eta + eta + xi * xi - xi - 2);
+    Sxi_compact(5) = -0.0625 * m_lenX * (xi - 1) * (xi + 1) * (xi + 1) * (eta - 1);
+    Sxi_compact(6) = 0.0625 * m_lenY * (eta + 1) * (eta - 1) * (eta - 1) * (xi + 1);
+    Sxi_compact(7) = 0.125 * (xi + 1) * (eta - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
 
-    Sxi_compact(8) = -0.125 * (xi + 1)*(eta + 1)*(eta*eta - eta + xi * xi - xi - 2);
-    Sxi_compact(9) = 0.0625*m_lenX*(xi - 1)*(xi + 1)*(xi + 1)*(eta + 1);
-    Sxi_compact(10) = 0.0625*m_lenY*(eta - 1)*(eta + 1)*(eta + 1)*(xi + 1);
-    Sxi_compact(11) = -0.125*(xi + 1)*(eta + 1)*(m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+    Sxi_compact(8) = -0.125 * (xi + 1) * (eta + 1) * (eta * eta - eta + xi * xi - xi - 2);
+    Sxi_compact(9) = 0.0625 * m_lenX * (xi - 1) * (xi + 1) * (xi + 1) * (eta + 1);
+    Sxi_compact(10) = 0.0625 * m_lenY * (eta - 1) * (eta + 1) * (eta + 1) * (xi + 1);
+    Sxi_compact(11) = -0.125 * (xi + 1) * (eta + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
 
-    Sxi_compact(12) = 0.125 * (xi - 1)*(eta + 1)*(eta*eta - eta + xi * xi + xi - 2);
-    Sxi_compact(13) = 0.0625*m_lenX*(xi + 1)*(xi - 1)*(xi - 1)*(eta + 1);
-    Sxi_compact(14) = -0.0625*m_lenY*(eta - 1)*(eta + 1)*(eta + 1)*(xi - 1);
-    Sxi_compact(15) = 0.125*(xi - 1)*(eta + 1)*(m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+    Sxi_compact(12) = 0.125 * (xi - 1) * (eta + 1) * (eta * eta - eta + xi * xi + xi - 2);
+    Sxi_compact(13) = 0.0625 * m_lenX * (xi + 1) * (xi - 1) * (xi - 1) * (eta + 1);
+    Sxi_compact(14) = -0.0625 * m_lenY * (eta - 1) * (eta + 1) * (eta + 1) * (xi - 1);
+    Sxi_compact(15) = 0.125 * (xi - 1) * (eta + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
 }
 
 // Nx1 Vector Form of the partial derivatives of Normalized Shape Functions with respect to xi
 // [s1; s2; s3; ...]
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::Calc_Sxi_xi_compact(VectorN& Sxi_xi_compact, double xi, double eta, double zeta, double thickness, double zoffset) {
-    Sxi_xi_compact(0) = -0.125 * (eta - 1)*(eta*eta + eta + 3 * xi*xi - 3);
-    Sxi_xi_compact(1) = -0.0625*m_lenX*(3 * xi + 1)*(xi - 1)*(eta - 1);
-    Sxi_xi_compact(2) = -0.0625*m_lenY*(eta + 1)*(eta - 1)*(eta - 1);
-    Sxi_xi_compact(3) = -0.125*(eta - 1)*(m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+void ChElementShellANCF_3443<NP, NT>::Calc_Sxi_xi_compact(VectorN& Sxi_xi_compact,
+                                                          double xi,
+                                                          double eta,
+                                                          double zeta,
+                                                          double thickness,
+                                                          double zoffset) {
+    Sxi_xi_compact(0) = -0.125 * (eta - 1) * (eta * eta + eta + 3 * xi * xi - 3);
+    Sxi_xi_compact(1) = -0.0625 * m_lenX * (3 * xi + 1) * (xi - 1) * (eta - 1);
+    Sxi_xi_compact(2) = -0.0625 * m_lenY * (eta + 1) * (eta - 1) * (eta - 1);
+    Sxi_xi_compact(3) = -0.125 * (eta - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
 
-    Sxi_xi_compact(4) = 0.125 * (eta - 1)*(eta*eta + eta + 3 * xi*xi - 3);
-    Sxi_xi_compact(5) = -0.0625*m_lenX*(xi + 1)*(3 * xi - 1)*(eta - 1);
-    Sxi_xi_compact(6) = 0.0625*m_lenY*(eta + 1)*(eta - 1)*(eta - 1);
-    Sxi_xi_compact(7) = 0.125*(eta - 1)*(m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+    Sxi_xi_compact(4) = 0.125 * (eta - 1) * (eta * eta + eta + 3 * xi * xi - 3);
+    Sxi_xi_compact(5) = -0.0625 * m_lenX * (xi + 1) * (3 * xi - 1) * (eta - 1);
+    Sxi_xi_compact(6) = 0.0625 * m_lenY * (eta + 1) * (eta - 1) * (eta - 1);
+    Sxi_xi_compact(7) = 0.125 * (eta - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
 
-    Sxi_xi_compact(8) = -0.125 * (eta + 1)*(eta*eta - eta + 3 * xi*xi - 3);
-    Sxi_xi_compact(9) = 0.0625*m_lenX*(xi + 1)*(3 * xi - 1)*(eta + 1);
-    Sxi_xi_compact(10) = 0.0625*m_lenY*(eta - 1)*(eta + 1)*(eta + 1);
-    Sxi_xi_compact(11) = -0.125*(eta + 1)*(m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+    Sxi_xi_compact(8) = -0.125 * (eta + 1) * (eta * eta - eta + 3 * xi * xi - 3);
+    Sxi_xi_compact(9) = 0.0625 * m_lenX * (xi + 1) * (3 * xi - 1) * (eta + 1);
+    Sxi_xi_compact(10) = 0.0625 * m_lenY * (eta - 1) * (eta + 1) * (eta + 1);
+    Sxi_xi_compact(11) = -0.125 * (eta + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
 
-    Sxi_xi_compact(12) = 0.125 * (eta + 1)*(eta*eta - eta + 3 * xi*xi - 3);
-    Sxi_xi_compact(13) = 0.0625*m_lenX*(3 * xi + 1)*(xi - 1)*(eta + 1);
-    Sxi_xi_compact(14) = -0.0625*m_lenY*(eta - 1)*(eta + 1)*(eta + 1);
-    Sxi_xi_compact(15) = 0.125*(eta + 1)*(m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+    Sxi_xi_compact(12) = 0.125 * (eta + 1) * (eta * eta - eta + 3 * xi * xi - 3);
+    Sxi_xi_compact(13) = 0.0625 * m_lenX * (3 * xi + 1) * (xi - 1) * (eta + 1);
+    Sxi_xi_compact(14) = -0.0625 * m_lenY * (eta - 1) * (eta + 1) * (eta + 1);
+    Sxi_xi_compact(15) = 0.125 * (eta + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
 }
 
 // Nx1 Vector Form of the partial derivatives of Normalized Shape Functions with respect to eta
 // [s1; s2; s3; ...]
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::Calc_Sxi_eta_compact(VectorN& Sxi_eta_compact, double xi, double eta, double zeta, double thickness, double zoffset) {
-    Sxi_eta_compact(0) = -0.125 * (xi - 1)*(3 * eta*eta + xi * xi + xi - 3);
-    Sxi_eta_compact(1) = -0.0625*m_lenX*(xi + 1)*(xi - 1)*(xi - 1);
-    Sxi_eta_compact(2) = -0.0625*m_lenY*(3 * eta + 1)*(eta - 1)*(xi - 1);
-    Sxi_eta_compact(3) = -0.125*(xi - 1)*(m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+void ChElementShellANCF_3443<NP, NT>::Calc_Sxi_eta_compact(VectorN& Sxi_eta_compact,
+                                                           double xi,
+                                                           double eta,
+                                                           double zeta,
+                                                           double thickness,
+                                                           double zoffset) {
+    Sxi_eta_compact(0) = -0.125 * (xi - 1) * (3 * eta * eta + xi * xi + xi - 3);
+    Sxi_eta_compact(1) = -0.0625 * m_lenX * (xi + 1) * (xi - 1) * (xi - 1);
+    Sxi_eta_compact(2) = -0.0625 * m_lenY * (3 * eta + 1) * (eta - 1) * (xi - 1);
+    Sxi_eta_compact(3) = -0.125 * (xi - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
 
-    Sxi_eta_compact(4) = 0.125 * (xi + 1)*(3 * eta*eta + xi * xi - xi - 3);
-    Sxi_eta_compact(5) = -0.0625*m_lenX*(xi - 1)*(xi + 1)*(xi + 1);
-    Sxi_eta_compact(6) = 0.0625*m_lenY*(3 * eta + 1)*(eta - 1)*(xi + 1);
-    Sxi_eta_compact(7) = 0.125*(xi + 1)*(m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+    Sxi_eta_compact(4) = 0.125 * (xi + 1) * (3 * eta * eta + xi * xi - xi - 3);
+    Sxi_eta_compact(5) = -0.0625 * m_lenX * (xi - 1) * (xi + 1) * (xi + 1);
+    Sxi_eta_compact(6) = 0.0625 * m_lenY * (3 * eta + 1) * (eta - 1) * (xi + 1);
+    Sxi_eta_compact(7) = 0.125 * (xi + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
 
-    Sxi_eta_compact(8) = -0.125 * (xi + 1)*(3 * eta*eta + xi * xi - xi - 3);
-    Sxi_eta_compact(9) = 0.0625*m_lenX*(xi - 1)*(xi + 1)*(xi + 1);
-    Sxi_eta_compact(10) = 0.0625*m_lenY*(eta + 1)*(3 * eta - 1)*(xi + 1);
-    Sxi_eta_compact(11) = -0.125*(xi + 1)*(m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+    Sxi_eta_compact(8) = -0.125 * (xi + 1) * (3 * eta * eta + xi * xi - xi - 3);
+    Sxi_eta_compact(9) = 0.0625 * m_lenX * (xi - 1) * (xi + 1) * (xi + 1);
+    Sxi_eta_compact(10) = 0.0625 * m_lenY * (eta + 1) * (3 * eta - 1) * (xi + 1);
+    Sxi_eta_compact(11) = -0.125 * (xi + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
 
-    Sxi_eta_compact(12) = 0.125 * (xi - 1)*(3 * eta*eta + xi * xi + xi - 3);
-    Sxi_eta_compact(13) = 0.0625*m_lenX*(xi + 1)*(xi - 1)*(xi - 1);
-    Sxi_eta_compact(14) = -0.0625*m_lenY*(eta + 1)*(3 * eta - 1)*(xi - 1);
-    Sxi_eta_compact(15) = 0.125*(xi - 1)*(m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+    Sxi_eta_compact(12) = 0.125 * (xi - 1) * (3 * eta * eta + xi * xi + xi - 3);
+    Sxi_eta_compact(13) = 0.0625 * m_lenX * (xi + 1) * (xi - 1) * (xi - 1);
+    Sxi_eta_compact(14) = -0.0625 * m_lenY * (eta + 1) * (3 * eta - 1) * (xi - 1);
+    Sxi_eta_compact(15) = 0.125 * (xi - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
 }
 
 // Nx1 Vector Form of the partial derivatives of Normalized Shape Functions with respect to zeta
 // [s1; s2; s3; ...]
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::Calc_Sxi_zeta_compact(VectorN& Sxi_zeta_compact, double xi, double eta, double zeta, double thickness, double zoffset) {
+void ChElementShellANCF_3443<NP, NT>::Calc_Sxi_zeta_compact(VectorN& Sxi_zeta_compact,
+                                                            double xi,
+                                                            double eta,
+                                                            double zeta,
+                                                            double thickness,
+                                                            double zoffset) {
     Sxi_zeta_compact(0) = 0.0;
     Sxi_zeta_compact(1) = 0.0;
     Sxi_zeta_compact(2) = 0.0;
-    Sxi_zeta_compact(3) = 0.125*thickness*(xi - 1)*(eta - 1);
+    Sxi_zeta_compact(3) = 0.125 * thickness * (xi - 1) * (eta - 1);
 
     Sxi_zeta_compact(4) = 0.0;
     Sxi_zeta_compact(5) = 0.0;
     Sxi_zeta_compact(6) = 0.0;
-    Sxi_zeta_compact(7) = -0.125*thickness*(xi + 1)*(eta - 1);
+    Sxi_zeta_compact(7) = -0.125 * thickness * (xi + 1) * (eta - 1);
 
     Sxi_zeta_compact(8) = 0.0;
     Sxi_zeta_compact(9) = 0.0;
     Sxi_zeta_compact(10) = 0.0;
-    Sxi_zeta_compact(11) = 0.125*thickness*(xi + 1)*(eta + 1);
+    Sxi_zeta_compact(11) = 0.125 * thickness * (xi + 1) * (eta + 1);
 
     Sxi_zeta_compact(12) = 0.0;
     Sxi_zeta_compact(13) = 0.0;
     Sxi_zeta_compact(14) = 0.0;
-    Sxi_zeta_compact(15) = -0.125*thickness*(xi - 1)*(eta + 1);
+    Sxi_zeta_compact(15) = -0.125 * thickness * (xi - 1) * (eta + 1);
 }
 
-// Nx3 compact form of the partial derivatives of Normalized Shape Functions with respect to xi, eta, and zeta by columns
+// Nx3 compact form of the partial derivatives of Normalized Shape Functions with respect to xi, eta, and zeta by
+// columns
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::Calc_Sxi_D(MatrixNx3c& Sxi_D, double xi, double eta, double zeta, double thickness, double zoffset) {
-    
+void ChElementShellANCF_3443<NP, NT>::Calc_Sxi_D(MatrixNx3c& Sxi_D,
+                                                 double xi,
+                                                 double eta,
+                                                 double zeta,
+                                                 double thickness,
+                                                 double zoffset) {
     VectorN Sxi_D_col;
     Calc_Sxi_xi_compact(Sxi_D_col, xi, eta, zeta, thickness, zoffset);
     Sxi_D.col(0) = Sxi_D_col;
@@ -2070,7 +2319,6 @@ void ChElementShellANCF_3443<NP,NT>::Calc_Sxi_D(MatrixNx3c& Sxi_D, double xi, do
 
     Calc_Sxi_zeta_compact(Sxi_D_col, xi, eta, zeta, thickness, zoffset);
     Sxi_D.col(2) = Sxi_D_col;
-
 }
 
 // -----------------------------------------------------------------------------
@@ -2078,7 +2326,7 @@ void ChElementShellANCF_3443<NP,NT>::Calc_Sxi_D(MatrixNx3c& Sxi_D, double xi, do
 // -----------------------------------------------------------------------------
 
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::CalcCoordVector(Vector3N& e) {
+void ChElementShellANCF_3443<NP, NT>::CalcCoordVector(Vector3N& e) {
     e.segment(0, 3) = m_nodes[0]->GetPos().eigen();
     e.segment(3, 3) = m_nodes[0]->GetD().eigen();
     e.segment(6, 3) = m_nodes[0]->GetDD().eigen();
@@ -2101,7 +2349,7 @@ void ChElementShellANCF_3443<NP,NT>::CalcCoordVector(Vector3N& e) {
 }
 
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::CalcCoordMatrix(Matrix3xN& ebar) {
+void ChElementShellANCF_3443<NP, NT>::CalcCoordMatrix(Matrix3xN& ebar) {
     ebar.col(0) = m_nodes[0]->GetPos().eigen();
     ebar.col(1) = m_nodes[0]->GetD().eigen();
     ebar.col(2) = m_nodes[0]->GetDD().eigen();
@@ -2124,7 +2372,7 @@ void ChElementShellANCF_3443<NP,NT>::CalcCoordMatrix(Matrix3xN& ebar) {
 }
 
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::CalcCoordDerivVector(Vector3N& edot) {
+void ChElementShellANCF_3443<NP, NT>::CalcCoordDerivVector(Vector3N& edot) {
     edot.segment(0, 3) = m_nodes[0]->GetPos_dt().eigen();
     edot.segment(3, 3) = m_nodes[0]->GetD_dt().eigen();
     edot.segment(6, 3) = m_nodes[0]->GetDD_dt().eigen();
@@ -2147,7 +2395,7 @@ void ChElementShellANCF_3443<NP,NT>::CalcCoordDerivVector(Vector3N& edot) {
 }
 
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::CalcCoordDerivMatrix(Matrix3xN& ebardot) {
+void ChElementShellANCF_3443<NP, NT>::CalcCoordDerivMatrix(Matrix3xN& ebardot) {
     ebardot.col(0) = m_nodes[0]->GetPos_dt().eigen();
     ebardot.col(1) = m_nodes[0]->GetD_dt().eigen();
     ebardot.col(2) = m_nodes[0]->GetDD_dt().eigen();
@@ -2170,7 +2418,7 @@ void ChElementShellANCF_3443<NP,NT>::CalcCoordDerivMatrix(Matrix3xN& ebardot) {
 }
 
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::CalcCombinedCoordMatrix(MatrixNx6& ebar_ebardot) {
+void ChElementShellANCF_3443<NP, NT>::CalcCombinedCoordMatrix(MatrixNx6& ebar_ebardot) {
     ebar_ebardot.template block<1, 3>(0, 0) = m_nodes[0]->GetPos().eigen();
     ebar_ebardot.template block<1, 3>(0, 3) = m_nodes[0]->GetPos_dt().eigen();
     ebar_ebardot.template block<1, 3>(1, 0) = m_nodes[0]->GetD().eigen();
@@ -2210,7 +2458,12 @@ void ChElementShellANCF_3443<NP,NT>::CalcCombinedCoordMatrix(MatrixNx6& ebar_eba
 
 // Calculate the 3x3 Element Jacobian at the given point (xi,eta,zeta) in the element
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP,NT>::Calc_J_0xi(ChMatrix33<double>& J_0xi, double xi, double eta, double zeta, double thickness, double zoffset) {
+void ChElementShellANCF_3443<NP, NT>::Calc_J_0xi(ChMatrix33<double>& J_0xi,
+                                                 double xi,
+                                                 double eta,
+                                                 double zeta,
+                                                 double thickness,
+                                                 double zoffset) {
     MatrixNx3c Sxi_D;
     Calc_Sxi_D(Sxi_D, xi, eta, zeta, thickness, zoffset);
 
@@ -2219,7 +2472,11 @@ void ChElementShellANCF_3443<NP,NT>::Calc_J_0xi(ChMatrix33<double>& J_0xi, doubl
 
 // Calculate the determinate of the 3x3 Element Jacobian at the given point (xi,eta,zeta) in the element
 template <int NP, int NT>
-double ChElementShellANCF_3443<NP,NT>::Calc_det_J_0xi(double xi, double eta, double zeta, double thickness, double zoffset) {
+double ChElementShellANCF_3443<NP, NT>::Calc_det_J_0xi(double xi,
+                                                       double eta,
+                                                       double zeta,
+                                                       double thickness,
+                                                       double zoffset) {
     ChMatrix33<double> J_0xi;
     Calc_J_0xi(J_0xi, xi, eta, zeta, thickness, zoffset);
 
@@ -2228,7 +2485,6 @@ double ChElementShellANCF_3443<NP,NT>::Calc_det_J_0xi(double xi, double eta, dou
 
 template <int NP, int NT>
 void ChElementShellANCF_3443<NP, NT>::RotateReorderStiffnessMatrix(ChMatrixNM<double, 6, 6>& D, double theta) {
-
     // Reorder the stiffness matrix from the order assumed in ChMaterialShellANCF.h
     //  E = [E11,E22,2*E12,E33,2*E13,2*E23]
     // to the order assumed in this element formulation
@@ -2236,27 +2492,24 @@ void ChElementShellANCF_3443<NP, NT>::RotateReorderStiffnessMatrix(ChMatrixNM<do
     // Note that the 6x6 stiffness matrix is symmetric
 
     ChMatrixNM<double, 6, 6> D_Reordered;
-    D_Reordered << D(0, 0), D(0, 1), D(0, 3), D(0, 5), D(0, 4), D(0, 2),
-                   D(1, 0), D(1, 1), D(1, 3), D(1, 5), D(1, 4), D(1, 2),
-                   D(3, 0), D(3, 1), D(3, 3), D(3, 5), D(3, 4), D(3, 2),
-                   D(5, 0), D(5, 1), D(5, 3), D(5, 5), D(5, 4), D(5, 2),
-                   D(4, 0), D(4, 1), D(4, 3), D(4, 5), D(4, 4), D(4, 2),
-                   D(2, 0), D(2, 1), D(2, 3), D(2, 5), D(2, 4), D(2, 2);
+    D_Reordered << D(0, 0), D(0, 1), D(0, 3), D(0, 5), D(0, 4), D(0, 2), D(1, 0), D(1, 1), D(1, 3), D(1, 5), D(1, 4),
+        D(1, 2), D(3, 0), D(3, 1), D(3, 3), D(3, 5), D(3, 4), D(3, 2), D(5, 0), D(5, 1), D(5, 3), D(5, 5), D(5, 4),
+        D(5, 2), D(4, 0), D(4, 1), D(4, 3), D(4, 5), D(4, 4), D(4, 2), D(2, 0), D(2, 1), D(2, 3), D(2, 5), D(2, 4),
+        D(2, 2);
 
-    //Stiffness Tensor Rotation Matrix From:
-    //http://solidmechanics.org/text/Chapter3_2/Chapter3_2.htm
+    // Stiffness Tensor Rotation Matrix From:
+    // http://solidmechanics.org/text/Chapter3_2/Chapter3_2.htm
 
     ChMatrixNM<double, 6, 6> K;
-    K << std::cos(theta)*std::cos(theta), std::sin(theta)*std::sin(theta), 0, 0, 0, 2 * std::cos(theta)*std::sin(theta),
-        std::sin(theta)*std::sin(theta), std::cos(theta)*std::cos(theta), 0, 0, 0, -2 * std::cos(theta)*std::sin(theta),
-        0, 0, 1, 0, 0, 0,
-        0, 0, 0, std::cos(theta), std::sin(theta), 0,
-        0, 0, 0, -std::sin(theta), std::cos(theta), 0,
-        -std::cos(theta)*std::sin(theta), std::cos(theta)*std::sin(theta), 0, 0, 0, std::cos(theta)*std::cos(theta) - std::sin(theta)*std::sin(theta);
+    K << std::cos(theta) * std::cos(theta), std::sin(theta) * std::sin(theta), 0, 0, 0,
+        2 * std::cos(theta) * std::sin(theta), std::sin(theta) * std::sin(theta), std::cos(theta) * std::cos(theta), 0,
+        0, 0, -2 * std::cos(theta) * std::sin(theta), 0, 0, 1, 0, 0, 0, 0, 0, 0, std::cos(theta), std::sin(theta), 0, 0,
+        0, 0, -std::sin(theta), std::cos(theta), 0, -std::cos(theta) * std::sin(theta),
+        std::cos(theta) * std::sin(theta), 0, 0, 0,
+        std::cos(theta) * std::cos(theta) - std::sin(theta) * std::sin(theta);
 
     D = K * D_Reordered * K.transpose();
 }
-
 
 ////////////////////////////////////////////////////////////////
 
@@ -2266,7 +2519,7 @@ ChQuadratureTables static_tables_3443(1, CH_QUADRATURE_STATIC_TABLES);
 //#endif // !CH_QUADRATURE_STATIC_TABLES
 
 template <int NP, int NT>
-ChQuadratureTables* ChElementShellANCF_3443<NP,NT>::GetStaticGQTables() {
+ChQuadratureTables* ChElementShellANCF_3443<NP, NT>::GetStaticGQTables() {
     return &static_tables_3443;
 }
 
@@ -2278,7 +2531,7 @@ ChQuadratureTables* ChElementShellANCF_3443<NP,NT>::GetStaticGQTables() {
 
 // Private constructor (a layer can be created only by adding it to an element)
 template <int NP, int NT>
-ChElementShellANCF_3443<NP,NT>::Layer::Layer(double thickness,
-    double theta,
-    std::shared_ptr<ChMaterialShellANCF> material)
+ChElementShellANCF_3443<NP, NT>::Layer::Layer(double thickness,
+                                              double theta,
+                                              std::shared_ptr<ChMaterialShellANCF> material)
     : m_thickness(thickness), m_theta(theta), m_material(material) {}

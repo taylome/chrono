@@ -71,11 +71,11 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
   public:
     static const int NIP = NP * NP * NT;  ///< number of Gauss quadrature points
     static const int NSF = 16;            ///< number of shape functions
-    
-    //Short-cut for defining a column-major Eigen matrix instead of the typically used row-major format
+
+    // Short-cut for defining a column-major Eigen matrix instead of the typically used row-major format
     template <typename T, int M, int N>
     using ChMatrixNMc = Eigen::Matrix<T, M, N, Eigen::ColMajor>;
-	
+
     using VectorN = ChVectorN<double, NSF>;
     using Vector3N = ChVectorN<double, 3 * NSF>;
     using VectorNIP = ChVectorN<double, NIP>;
@@ -87,8 +87,8 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
 
     /// Internal force calculation method
     enum IntFrcMethod {
-        ContInt,   ///< "Continuous Integration" style method - Fastest for a small number of layers
-        PreInt     ///< "Pre-Integration" style method - Fastest for a large number of layers
+        ContInt,  ///< "Continuous Integration" style method - Fastest for a small number of layers
+        PreInt    ///< "Pre-Integration" style method - Fastest for a large number of layers
     };
 
     ChElementShellANCF_3443();
@@ -96,7 +96,7 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
 
     /// Definition of a layer
     class Layer {
-    public:
+      public:
         /// Return the layer thickness.
         double Get_thickness() const { return m_thickness; }
 
@@ -106,18 +106,18 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
         /// Return the layer material.
         std::shared_ptr<ChMaterialShellANCF> GetMaterial() const { return m_material; }
 
-    private:
+      private:
         /// Private constructor (a layer can be created only by adding it to an element)
         Layer(double thickness,                              ///< layer thickness
-            double theta,                                  ///< fiber angle
-            std::shared_ptr<ChMaterialShellANCF> material  ///< layer material
+              double theta,                                  ///< fiber angle
+              std::shared_ptr<ChMaterialShellANCF> material  ///< layer material
         );
 
         std::shared_ptr<ChMaterialShellANCF> m_material;  ///< layer material
         double m_thickness;                               ///< layer thickness
         double m_theta;                                   ///< fiber angle
 
-    public:
+      public:
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
         friend class ChElementShellANCF_3443;
@@ -160,9 +160,9 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
     std::shared_ptr<ChNodeFEAxyzDDD> GetNodeD() const { return m_nodes[3]; }
 
     /// Add a layer.
-    void AddLayer(double thickness,                    ///< layer thickness
-        double theta,                                  ///< fiber angle (radians)
-        std::shared_ptr<ChMaterialShellANCF> material  ///< layer material
+    void AddLayer(double thickness,                              ///< layer thickness
+                  double theta,                                  ///< fiber angle (radians)
+                  std::shared_ptr<ChMaterialShellANCF> material  ///< layer material
     );
 
     /// Get the number of layers.
@@ -190,7 +190,8 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
     /// be set prior to the call to SetupInitial since can be a significant amount of pre-calculation overhead required.
     void SetIntFrcCalcMethod(IntFrcMethod method);
 
-    /// Get the Green-Lagrange strain tensor at the normalized element coordinates (xi, eta, zeta) in the current state of the element
+    /// Get the Green-Lagrange strain tensor at the normalized element coordinates (xi, eta, zeta) in the current state
+    /// of the element
     void GetGreenLagrangeStrain(const double xi, const double eta, const double zeta, ChMatrix33<>& E);
 
   public:
@@ -211,7 +212,8 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
     /// Add contribution of element inertia to total nodal masses
     virtual void ComputeNodalMass() override;
 
-    /// Compute the generalized internal force vector for the current nodal coordinates as set the value in the Fi vector.
+    /// Compute the generalized internal force vector for the current nodal coordinates as set the value in the Fi
+    /// vector.
     virtual void ComputeInternalForces(ChVectorDynamic<>& Fi) override;
 
     /// Set H as a linear combination of M, K, and R.
@@ -227,7 +229,10 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
 
     /// Gets the xyz displacement of a point on the shell midsurface,
     /// and the rotation RxRyRz of section plane, at abscissa '(xi,eta,0)'.
-    virtual void EvaluateSectionDisplacement(const double xi, const double eta, ChVector<>& u_displ, ChVector<>& u_rotaz) override {}
+    virtual void EvaluateSectionDisplacement(const double xi,
+                                             const double eta,
+                                             ChVector<>& u_displ,
+                                             ChVector<>& u_rotaz) override {}
 
     /// Gets the absolute xyz position of a point on the shell midsurface,
     /// and the absolute rotation of section plane, at abscissa '(xi,eta,0)'.
@@ -235,7 +240,10 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
     /// Note, nodeB = (xi=1, eta=-1)
     /// Note, nodeC = (xi=1, eta=1)
     /// Note, nodeD = (xi=-1, eta=1)
-    virtual void EvaluateSectionFrame(const double xi, const double eta, ChVector<>& point, ChQuaternion<>& rot) override;
+    virtual void EvaluateSectionFrame(const double xi,
+                                      const double eta,
+                                      ChVector<>& point,
+                                      ChQuaternion<>& rot) override;
 
     /// Gets the absolute xyz position of a point on the shell midsurface specified in normalized coordinates
     virtual void EvaluateSectionPoint(const double xi, const double eta, ChVector<>& point) override;
@@ -328,7 +336,8 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
     /// Note: in this implementation, a constant density material is assumed
     void ComputeMassMatrixAndGravityForce(const ChVector<>& g_acc);
 
-    /// Precalculate constant matrices and scalars for the internal force calculations.  This selects and calls the method for the style of internal force calculations that is currently selected.
+    /// Precalculate constant matrices and scalars for the internal force calculations.  This selects and calls the
+    /// method for the style of internal force calculations that is currently selected.
     void PrecomputeInternalForceMatricesWeights();
 
     /// Precalculate constant matrices and scalars for the "Continuous Integration" style method
@@ -337,33 +346,39 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
     /// Precalculate constant matrices and scalars for the "Pre-Integration" style method
     void PrecomputeInternalForceMatricesWeightsPreInt();
 
-    /// Calculate the generalized internal force for the element at the current nodal coordinates and time derivatives of the nodal coordinates using the "Continuous Integration" style method assuming damping is included
+    /// Calculate the generalized internal force for the element at the current nodal coordinates and time derivatives
+    /// of the nodal coordinates using the "Continuous Integration" style method assuming damping is included
     void ComputeInternalForcesContIntDamping(ChVectorDynamic<>& Fi);
 
-    /// Calculate the generalized internal force for the element at the current nodal coordinates and time derivatives of the nodal coordinates using the "Continuous Integration" style method assuming no damping
+    /// Calculate the generalized internal force for the element at the current nodal coordinates and time derivatives
+    /// of the nodal coordinates using the "Continuous Integration" style method assuming no damping
     void ComputeInternalForcesContIntNoDamping(ChVectorDynamic<>& Fi);
 
-    /// Calculate the generalized internal force for the element at the current nodal coordinates and time derivatives of the nodal coordinates using the "Pre-Integration" style method assuming damping (works well for the case of no damping as well)
+    /// Calculate the generalized internal force for the element at the current nodal coordinates and time derivatives
+    /// of the nodal coordinates using the "Pre-Integration" style method assuming damping (works well for the case of
+    /// no damping as well)
     void ComputeInternalForcesContIntPreInt(ChVectorDynamic<>& Fi);
 
-    /// Calculate the calculate the Jacobian of the internal force integrand using the "Continuous Integration" style method assuming damping is included
-    /// This function calculates a linear combination of the stiffness (K) and damping (R) matrices,
+    /// Calculate the calculate the Jacobian of the internal force integrand using the "Continuous Integration" style
+    /// method assuming damping is included This function calculates a linear combination of the stiffness (K) and
+    /// damping (R) matrices,
     ///     J = Kfactor * K + Rfactor * R
     /// for given coefficients Kfactor and Rfactor.
     /// This Jacobian will be further combined with the global mass matrix M and included in the global
     /// stiffness matrix H in the function ComputeKRMmatricesGlobal().
     void ComputeInternalJacobianContIntDamping(ChMatrixRef& H, double Kfactor, double Rfactor);
 
-    /// Calculate the calculate the Jacobian of the internal force integrand using the "Continuous Integration" style method assuming damping is not included
-    /// This function calculates just the stiffness (K) matrix,
+    /// Calculate the calculate the Jacobian of the internal force integrand using the "Continuous Integration" style
+    /// method assuming damping is not included This function calculates just the stiffness (K) matrix,
     ///     J = Kfactor * K
     /// for the given coefficient Kfactor
     /// This Jacobian will be further combined with the global mass matrix M and included in the global
     /// stiffness matrix H in the function ComputeKRMmatricesGlobal().
     void ComputeInternalJacobianContIntNoDamping(ChMatrixRef& H, double Kfactor);
 
-    /// Calculate the calculate the Jacobian of the internal force integrand using the "Pre-Integration" style method assuming damping is included
-    /// This function calculates a linear combination of the stiffness (K) and damping (R) matrices,
+    /// Calculate the calculate the Jacobian of the internal force integrand using the "Pre-Integration" style method
+    /// assuming damping is included This function calculates a linear combination of the stiffness (K) and damping (R)
+    /// matrices,
     ///     J = Kfactor * K + Rfactor * R
     /// for given coefficients Kfactor and Rfactor.
     /// This Jacobian will be further combined with the global mass matrix M and included in the global
@@ -382,20 +397,36 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
     /// Calculate the current 3xN matrix of nodal coordinate time derivatives.
     void CalcCoordDerivMatrix(Matrix3xN& ebardot);
 
-    /// Calculate the current Nx6 matrix of the transpose of the nodal coordinates and nodal coordinate time derivatives.
+    /// Calculate the current Nx6 matrix of the transpose of the nodal coordinates and nodal coordinate time
+    /// derivatives.
     void CalcCombinedCoordMatrix(MatrixNx6& ebar_ebardot);
 
     /// Calculate the Nx1 Compact Vector of the Normalized Shape Functions (just the unique values)
     void Calc_Sxi_compact(VectorN& Sxi_compact, double xi, double eta, double zeta, double thickness, double zoffset);
 
     /// Calculate the Nx1 Compact Vector of the Derivative of the Normalized Shape Functions with respect to xi
-    void Calc_Sxi_xi_compact(VectorN& Sxi_xi_compact, double xi, double eta, double zeta, double thickness, double zoffset);
+    void Calc_Sxi_xi_compact(VectorN& Sxi_xi_compact,
+                             double xi,
+                             double eta,
+                             double zeta,
+                             double thickness,
+                             double zoffset);
 
     /// Calculate the Nx1 Compact Vector of the Derivative of the Normalized Shape Functions with respect to eta
-    void Calc_Sxi_eta_compact(VectorN& Sxi_eta_compact, double xi, double eta, double zeta, double thickness, double zoffset);
+    void Calc_Sxi_eta_compact(VectorN& Sxi_eta_compact,
+                              double xi,
+                              double eta,
+                              double zeta,
+                              double thickness,
+                              double zoffset);
 
     /// Calculate the Nx1 Compact Vector of the Derivative of the Normalized Shape Functions with respect to zeta
-    void Calc_Sxi_zeta_compact(VectorN& Sxi_zeta_compact, double xi, double eta, double zeta, double thickness, double zoffset);
+    void Calc_Sxi_zeta_compact(VectorN& Sxi_zeta_compact,
+                               double xi,
+                               double eta,
+                               double zeta,
+                               double thickness,
+                               double zoffset);
 
     /// Calculate the Nx3 Compact Matrix of the Derivatives of the Normalized Shape Functions with respect to xi, eta,
     /// and then zeta
@@ -408,7 +439,8 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
     /// configuration
     double Calc_det_J_0xi(double xi, double eta, double zeta, double thickness, double zoffset);
 
-    /// Calculate the rotated 6x6 stiffness matrix and reorder it to match the Voigt notation order used with this element
+    /// Calculate the rotated 6x6 stiffness matrix and reorder it to match the Voigt notation order used with this
+    /// element
     void RotateReorderStiffnessMatrix(ChMatrixNM<double, 6, 6>& D, double theta);
 
     /// Access a statically-allocated set of tables, from 0 to a 10th order, with precomputed tables.
@@ -418,25 +450,36 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
     std::vector<std::shared_ptr<ChNodeFEAxyzDDD>> m_nodes;         ///< element nodes
     std::vector<Layer, Eigen::aligned_allocator<Layer>> m_layers;  ///< element layers
     std::vector<double, Eigen::aligned_allocator<double>>
-        m_layer_zoffsets;           ///< Offsets of Bottom of Layers to the Bottom of the Element
-    int m_numLayers;                ///< number of layers for this element
-    double m_lenX;                  ///< total element length along X
-    double m_lenY;                  ///< total element length along Y
-    double m_thicknessZ;            ///< total element thickness along Z
-    double m_Alpha;                 ///< structural damping
-    bool m_damping_enabled;         ///< Flag to run internal force damping calculations
-    bool m_gravity_on;              ///< enable/disable gravity calculation
-    Vector3N m_GravForce;           ///< Gravity Force
-    Matrix3xN m_ebar0;              ///< Element Position Coordinate Vector for the Reference Configuration
+        m_layer_zoffsets;    ///< Offsets of Bottom of Layers to the Bottom of the Element
+    int m_numLayers;         ///< number of layers for this element
+    double m_lenX;           ///< total element length along X
+    double m_lenY;           ///< total element length along Y
+    double m_thicknessZ;     ///< total element thickness along Z
+    double m_Alpha;          ///< structural damping
+    bool m_damping_enabled;  ///< Flag to run internal force damping calculations
+    bool m_gravity_on;       ///< enable/disable gravity calculation
+    Vector3N m_GravForce;    ///< Gravity Force
+    Matrix3xN m_ebar0;       ///< Element Position Coordinate Vector for the Reference Configuration
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
-        m_SD;  ///< Precomputed corrected normalized shape function derivative matrices ordered by columns instead of by Gauss quadrature points used for the "Continuous Integration" style method
+        m_SD;  ///< Precomputed corrected normalized shape function derivative matrices ordered by columns instead of by
+               ///< Gauss quadrature points used for the "Continuous Integration" style method
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>
-        m_kGQ;           ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale factors used for the "Continuous Integration" style method
-    ChVectorN<double, (NSF*(NSF+1))/2> m_MassMatrix;  /// Mass Matrix in extra compact form (Upper Triangular Part only)
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> m_O1; ///< Precomputed Matrix combined with the nodal coordinates used for the "Pre-Integration" style method internal force calculation
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> m_O2; ///< Precomputed Matrix combined with the nodal coordinates used for the "Pre-Integration" style method Jacobian calculation
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> m_K3Compact; ///< Precomputed Matrix combined with the nodal coordinates used for the "Pre-Integration" style method internal force calculation
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> m_K13Compact; ///< Saved results from the generalized internal force calculation that are reused for the Jacobian calculations for the "Pre-Integration" style method 
+        m_kGQ;  ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale factors used for the "Continuous
+                ///< Integration" style method
+    ChVectorN<double, (NSF * (NSF + 1)) / 2>
+        m_MassMatrix;  /// Mass Matrix in extra compact form (Upper Triangular Part only)
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>
+        m_O1;  ///< Precomputed Matrix combined with the nodal coordinates used for the "Pre-Integration" style method
+               ///< internal force calculation
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>
+        m_O2;  ///< Precomputed Matrix combined with the nodal coordinates used for the "Pre-Integration" style method
+               ///< Jacobian calculation
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>
+        m_K3Compact;  ///< Precomputed Matrix combined with the nodal coordinates used for the "Pre-Integration" style
+                      ///< method internal force calculation
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>
+        m_K13Compact;  ///< Saved results from the generalized internal force calculation that are reused for the
+                       ///< Jacobian calculations for the "Pre-Integration" style method
 
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
