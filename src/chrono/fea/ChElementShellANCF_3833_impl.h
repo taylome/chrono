@@ -2201,7 +2201,8 @@ void ChElementShellANCF_3833<NP, NT>::ComputeInternalJacobianPreInt(ChMatrixRef&
     ChMatrixNM<double, 1, NSF> tempRow0 = temp.template block<1, NSF>(0, 0);
     ChMatrixNM<double, 1, NSF> tempRow1 = temp.template block<1, NSF>(1, 0);
     ChMatrixNM<double, 1, NSF> tempRow2 = temp.template block<1, NSF>(2, 0);
-    ChMatrixNMc<double, 9, NSF * NSF> PI2;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> PI2;
+    PI2.resize(9, NSF * NSF);
 
     for (unsigned int v = 0; v < NSF; v++) {
         PI2.template block<3, NSF>(0, NSF * v) = e_bar.template block<3, 1>(0, v) * tempRow0;
@@ -2211,7 +2212,7 @@ void ChElementShellANCF_3833<NP, NT>::ComputeInternalJacobianPreInt(ChMatrixRef&
 
     // Calculate the matrix containing the dense part of the Jacobian matrix in a reordered form. This is then reordered
     // from its [9 x NSF^2] form into its required [3*NSF x 3*NSF] form
-    ChMatrixNM<double, 9, NSF* NSF> K2 = -PI2 * m_O2;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> K2 = -PI2 * m_O2;
 
     for (unsigned int k = 0; k < NSF; k++) {
         for (unsigned int f = 0; f < NSF; f++) {
