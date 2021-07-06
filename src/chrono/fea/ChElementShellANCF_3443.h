@@ -133,10 +133,10 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
     virtual int GetNodeNdofs(int n) override { return 12; }
 
     /// Specify the nodes of this element.
-    void SetNodes(std::shared_ptr<ChNodeFEAxyzDDD> nodeA,   //
-                  std::shared_ptr<ChNodeFEAxyzDDD> nodeB,   //
-                  std::shared_ptr<ChNodeFEAxyzDDD> nodeC,   //
-                  std::shared_ptr<ChNodeFEAxyzDDD> nodeD);  //
+    void SetNodes(std::shared_ptr<ChNodeFEAxyzDDD> nodeA,   
+                  std::shared_ptr<ChNodeFEAxyzDDD> nodeB,   
+                  std::shared_ptr<ChNodeFEAxyzDDD> nodeC,   
+                  std::shared_ptr<ChNodeFEAxyzDDD> nodeD);  
 
     /// Specify the element dimensions.
     void SetDimensions(double lenX, double lenY) {
@@ -153,10 +153,10 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
     /// Get a handle to the second node of this element.
     std::shared_ptr<ChNodeFEAxyzDDD> GetNodeB() const { return m_nodes[1]; }
 
-    /// Get a handle to the second node of this element.
+    /// Get a handle to the third node of this element.
     std::shared_ptr<ChNodeFEAxyzDDD> GetNodeC() const { return m_nodes[2]; }
 
-    /// Get a handle to the second node of this element.
+    /// Get a handle to the fourth node of this element.
     std::shared_ptr<ChNodeFEAxyzDDD> GetNodeD() const { return m_nodes[3]; }
 
     /// Add a layer.

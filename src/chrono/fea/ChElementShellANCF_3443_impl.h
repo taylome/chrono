@@ -552,7 +552,7 @@ ChVector<> ChElementShellANCF_3443<NP, NT>::ComputeNormal(const double xi, const
 template <int NP, int NT>
 void ChElementShellANCF_3443<NP, NT>::ComputeMassMatrixAndGravityForce(const ChVector<>& g_acc) {
     // For this element, the mass matrix integrand is of order 12 in xi, 12 in eta, and 4 in zeta.
-    // 7 GQ Points are needed in the xi & eta directions  and 3 GQ Points are needed in the eta & zeta directions for
+    // 7 GQ Points are needed in the xi & eta directions and 3 GQ Points are needed in the zeta direction for
     // exact integration of the element's mass matrix, even if the reference configuration is not straight Since the
     // major pieces of the generalized force due to gravity can also be used to calculate the mass matrix, these
     // calculations are performed at the same time.
@@ -821,9 +821,9 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalForcesContIntDamping(ChVect
     // For a small number of layers this method can be more efficient than the "Pre-Integration" style calculation
     // method.  Note that the integrand for the generalize internal force vector for a straight and normalized element
     // is of order : 12 in xi, 12 in eta, and 4 in zeta. This requires GQ 7 points along the xi and eta directions and 3
-    // points along zeta directions for "Full Integration". However, very similar results can be obtained with fewer GQ
-    // point in each direction, resulting in significantly fewer calculations.  Based on testing, this could be as low
-    // as 4x4x2 or 3x3x2
+    // points along the zeta direction for "Full Integration". However, very similar results can be obtained with fewer
+    // GQ point in each direction, resulting in significantly fewer calculations.  Based on testing, this could be as
+    // low as 4x4x2 or 3x3x2
 
     MatrixNx6 ebar_ebardot;
     CalcCombinedCoordMatrix(ebar_ebardot);
@@ -1040,8 +1040,8 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalForcesContIntNoDamping(ChVe
     // integrated across the volume of the element every time this calculation is performed. For a small number of
     // layers this method can be more efficient than the "Pre-Integration" style calculation method.  Note that the
     // integrand for the generalize internal force vector for a straight and normalized element is of order : 12 in xi,
-    // 12 in eta, and 4 in zeta. This requires GQ 7 points along the xi and eta directions and 3 points along zeta
-    // directions for "Full Integration". However, very similar results can be obtained with fewer GQ point in each
+    // 12 in eta, and 4 in zeta. This requires GQ 7 points along the xi and eta directions and 3 points along the zeta
+    // direction for "Full Integration". However, very similar results can be obtained with fewer GQ point in each
     // direction, resulting in significantly fewer calculations.  Based on testing, this could be as low as 4x4x2 or
     // 3x3x2
 
@@ -1956,41 +1956,47 @@ void ChElementShellANCF_3443<NP, NT>::ComputeInternalJacobianContIntNoDamping(Ch
         DScaled_Combined_PE.resize(3 * NSF, 6 * NIP);
 
         DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 0) =
-            D(0, 0) * Scaled_Combined_PE.block<48, NIP>(0, 0) + D(0, 1) * Scaled_Combined_PE.block<48, NIP>(0, NIP) +
-            D(0, 2) * Scaled_Combined_PE.block<48, NIP>(0, 2 * NIP) +
-            D(0, 3) * Scaled_Combined_PE.block<48, NIP>(0, 3 * NIP) +
-            D(0, 4) * Scaled_Combined_PE.block<48, NIP>(0, 4 * NIP) +
-            D(0, 5) * Scaled_Combined_PE.block<48, NIP>(0, 5 * NIP);
+            D(0, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
+            D(0, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
+            D(0, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
+            D(0, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
+            D(0, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
+            D(0, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
         DScaled_Combined_PE.template block<3 * NSF, NIP>(0, NIP) =
-            D(1, 0) * Scaled_Combined_PE.block<48, NIP>(0, 0) + D(1, 1) * Scaled_Combined_PE.block<48, NIP>(0, NIP) +
-            D(1, 2) * Scaled_Combined_PE.block<48, NIP>(0, 2 * NIP) +
-            D(1, 3) * Scaled_Combined_PE.block<48, NIP>(0, 3 * NIP) +
-            D(1, 4) * Scaled_Combined_PE.block<48, NIP>(0, 4 * NIP) +
-            D(1, 5) * Scaled_Combined_PE.block<48, NIP>(0, 5 * NIP);
+            D(1, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
+            D(1, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
+            D(1, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
+            D(1, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
+            D(1, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
+            D(1, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
         DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 2 * NIP) =
-            D(2, 0) * Scaled_Combined_PE.block<48, NIP>(0, 0) + D(2, 1) * Scaled_Combined_PE.block<48, NIP>(0, NIP) +
-            D(2, 2) * Scaled_Combined_PE.block<48, NIP>(0, 2 * NIP) +
-            D(2, 3) * Scaled_Combined_PE.block<48, NIP>(0, 3 * NIP) +
-            D(2, 4) * Scaled_Combined_PE.block<48, NIP>(0, 4 * NIP) +
-            D(2, 5) * Scaled_Combined_PE.block<48, NIP>(0, 5 * NIP);
+            D(2, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
+            D(2, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
+            D(2, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
+            D(2, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
+            D(2, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
+            D(2, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
         DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 3 * NIP) =
-            D(3, 0) * Scaled_Combined_PE.block<48, NIP>(0, 0) + D(3, 1) * Scaled_Combined_PE.block<48, NIP>(0, NIP) +
-            D(3, 2) * Scaled_Combined_PE.block<48, NIP>(0, 2 * NIP) +
-            D(3, 3) * Scaled_Combined_PE.block<48, NIP>(0, 3 * NIP) +
-            D(3, 4) * Scaled_Combined_PE.block<48, NIP>(0, 4 * NIP) +
-            D(3, 5) * Scaled_Combined_PE.block<48, NIP>(0, 5 * NIP);
+            D(3, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
+            D(3, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
+            D(3, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
+            D(3, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
+            D(3, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
+            D(3, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
         DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 4 * NIP) =
-            D(4, 0) * Scaled_Combined_PE.block<48, NIP>(0, 0) + D(4, 1) * Scaled_Combined_PE.block<48, NIP>(0, NIP) +
-            D(4, 2) * Scaled_Combined_PE.block<48, NIP>(0, 2 * NIP) +
-            D(4, 3) * Scaled_Combined_PE.block<48, NIP>(0, 3 * NIP) +
-            D(4, 4) * Scaled_Combined_PE.block<48, NIP>(0, 4 * NIP) +
-            D(4, 5) * Scaled_Combined_PE.block<48, NIP>(0, 5 * NIP);
+            D(4, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
+            D(4, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
+            D(4, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
+            D(4, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
+            D(4, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
+            D(4, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
         DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 5 * NIP) =
-            D(5, 0) * Scaled_Combined_PE.block<48, NIP>(0, 0) + D(5, 1) * Scaled_Combined_PE.block<48, NIP>(0, NIP) +
-            D(5, 2) * Scaled_Combined_PE.block<48, NIP>(0, 2 * NIP) +
-            D(5, 3) * Scaled_Combined_PE.block<48, NIP>(0, 3 * NIP) +
-            D(5, 4) * Scaled_Combined_PE.block<48, NIP>(0, 4 * NIP) +
-            D(5, 5) * Scaled_Combined_PE.block<48, NIP>(0, 5 * NIP);
+            D(5, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
+            D(5, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
+            D(5, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
+            D(5, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
+            D(5, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
+            D(5, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
 
         // =============================================================================
         // Multiply the partial derivative block matrix by the final scaled and combined partial derivative block matrix
