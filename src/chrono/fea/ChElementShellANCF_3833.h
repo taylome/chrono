@@ -87,7 +87,7 @@ class ChElementShellANCF_3833 : public ChElementShell, public ChLoadableUV, publ
     using MatrixNxN = ChMatrixNM<double, NSF, NSF>;
 
     /// Internal force calculation method
-    enum IntFrcMethod {
+    enum class IntFrcMethod {
         ContInt,  ///< "Continuous Integration" style method - Fastest for a small number of layers
         PreInt    ///< "Pre-Integration" style method - Fastest for a large number of layers
     };
@@ -176,7 +176,8 @@ class ChElementShellANCF_3833 : public ChElementShell, public ChLoadableUV, publ
     /// Get a handle to the 8th node of this element.
     std::shared_ptr<ChNodeFEAxyzDD> GetNodeH() const { return m_nodes[7]; }
 
-    /// Add a layer.
+    /// Add a layer.  Layers should be added prior to the start of the simulation since can be a significant amount of
+    /// pre-calculation overhead required.
     void AddLayer(double thickness,                              ///< layer thickness
                   double theta,                                  ///< fiber angle (radians)
                   std::shared_ptr<ChMaterialShellANCF> material  ///< layer material
@@ -187,6 +188,10 @@ class ChElementShellANCF_3833 : public ChElementShell, public ChLoadableUV, publ
 
     /// Get a handle to the specified layer.
     const Layer& GetLayer(size_t i) const { return m_layers[i]; }
+
+    /// Offset the midsurface of the composite shell element.  A positive value shifts the element's midsurface upward
+    /// along the elements zeta direction.  The offset should be provided in model units.
+    void SetMidsurfaceOffset(const double offset);
 
     /// Turn gravity on/off.
     void SetGravityOn(bool val) { m_gravity_on = val; }
@@ -204,12 +209,27 @@ class ChElementShellANCF_3833 : public ChElementShell, public ChLoadableUV, publ
     double GetThicknessZ() { return m_thicknessZ; }
 
     /// Set the calculation method to use for the generalized internal force and its Jacobian calculations.  This should
-    /// be set prior to the call to SetupInitial since can be a significant amount of pre-calculation overhead required.
+    /// be set prior to the start of the simulation since can be a significant amount of pre-calculation overhead
+    /// required.
     void SetIntFrcCalcMethod(IntFrcMethod method);
 
-    /// Get the Green-Lagrange strain tensor at the normalized element coordinates (xi, eta, zeta) in the current state
-    /// of the element
+    /// Get the Green-Lagrange strain tensor at the normalized element coordinates (xi, eta, zeta) at the current state
+    /// of the element.  Normalized element coordinates span from -1 to 1.
     void GetGreenLagrangeStrain(const double xi, const double eta, const double zeta, ChMatrix33<>& E);
+
+    /// Get the 2nd Piola-Kirchoff stress tensor at the normalized **layer** coordinates (xi, eta, layer_zeta) at the
+    /// current state of the element for the specified layer number (0 indexed) since the stress can be discontinuous at
+    /// the layer boundary.   "layer_zeta" spans -1 to 1 from the bottom surface to the top surface
+    void GetPK2Stress(const double layer,
+                      const double xi,
+                      const double eta,
+                      const double layer_zeta,
+                      ChMatrix33<>& SPK2);
+
+    /// Get the von Mises stress value at the normalized **layer** coordinates (xi, eta, layer_zeta) at the current
+    /// state of the element for the specified layer number (0 indexed) since the stress can be discontinuous at the
+    /// layer boundary.  "layer_zeta" spans -1 to 1 from the bottom surface to the top surface
+    double GetVonMissesStress(const double layer, const double xi, const double eta, const double layer_zeta);
 
   public:
     // Interface to ChElementBase base class
@@ -217,12 +237,12 @@ class ChElementShellANCF_3833 : public ChElementShell, public ChLoadableUV, publ
 
     /// Fill the D vector (column matrix) with the current field values at the nodes of the element, with proper
     /// ordering. If the D vector has not the size of this->GetNdofs(), it will be resized.
-    ///  {Pos_a Dw_a DDw_a 
-    ///   Pos_b Dw_b DDw_b 
+    ///  {Pos_a Dw_a DDw_a
+    ///   Pos_b Dw_b DDw_b
     ///   Pos_c Dw_c DDw_c
     ///   Pos_d Dw_d DDw_d
-    ///   Pos_e Dw_e DDw_e 
-    ///   Pos_f Dw_f DDw_f 
+    ///   Pos_e Dw_e DDw_e
+    ///   Pos_f Dw_f DDw_f
     ///   Pos_g Dw_g DDw_g
     ///   Pos_h Dw_h DDw_h}
 
@@ -471,7 +491,7 @@ class ChElementShellANCF_3833 : public ChElementShell, public ChLoadableUV, publ
     /// Access a statically-allocated set of tables, from 0 to a 10th order, with precomputed tables.
     static ChQuadratureTables* GetStaticGQTables();
 
-    IntFrcMethod m_method = ContInt;  ///< Generalized internal force and Jacobian calculation method
+    IntFrcMethod m_method;  ///< Generalized internal force and Jacobian calculation method
     std::vector<std::shared_ptr<ChNodeFEAxyzDD>> m_nodes;          ///< element nodes
     std::vector<Layer, Eigen::aligned_allocator<Layer>> m_layers;  ///< element layers
     std::vector<double, Eigen::aligned_allocator<double>>
@@ -480,6 +500,7 @@ class ChElementShellANCF_3833 : public ChElementShell, public ChLoadableUV, publ
     double m_lenX;           ///< total element length along X
     double m_lenY;           ///< total element length along Y
     double m_thicknessZ;     ///< total element thickness along Z
+    double m_midsurfoffset;  ///< Offset of the midsurface along Z
     double m_Alpha;          ///< structural damping
     bool m_damping_enabled;  ///< Flag to run internal force damping calculations
     bool m_gravity_on;       ///< enable/disable gravity calculation

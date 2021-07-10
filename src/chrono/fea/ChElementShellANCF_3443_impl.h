@@ -40,7 +40,15 @@
 // ------------------------------------------------------------------------------
 template <int NP, int NT>
 ChElementShellANCF_3443<NP, NT>::ChElementShellANCF_3443()
-    : m_gravity_on(false), m_numLayers(0), m_lenX(0), m_lenY(0), m_thicknessZ(0), m_Alpha(0), m_damping_enabled(false) {
+    : m_method(IntFrcMethod::ContInt),
+      m_gravity_on(false),
+      m_numLayers(0),
+      m_lenX(0),
+      m_lenY(0),
+      m_thicknessZ(0),
+      m_midsurfoffset(0),
+      m_Alpha(0),
+      m_damping_enabled(false) {
     m_nodes.resize(4);
 }
 
@@ -85,6 +93,13 @@ void ChElementShellANCF_3443<NP, NT>::SetNodes(std::shared_ptr<ChNodeFEAxyzDDD> 
     // Initial positions and slopes of the element nodes
     // These values define the reference configuration of the element
     CalcCoordMatrix(m_ebar0);
+
+    // Check to see if SetupInitial has already been called (i.e. at least one set of precomputed matrices has been
+    // populated).  If so, the precomputed matrices will need to be re-generated.  If not, this will be handled once
+    // SetupInitial is called.
+    if (m_SD.size() + m_O1.size() > 0) {
+        PrecomputeInternalForceMatricesWeights();
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -98,11 +113,32 @@ void ChElementShellANCF_3443<NP, NT>::AddLayer(double thickness,
     m_layer_zoffsets.push_back(m_thicknessZ);
     m_numLayers += 1;
     m_thicknessZ += thickness;
+
+    // Check to see if SetupInitial has already been called (i.e. at least one set of precomputed matrices has been
+    // populated).  If so, the precomputed matrices will need to be re-generated.  If not, this will be handled once
+    // SetupInitial is called.
+    if (m_SD.size() + m_O1.size() > 0) {
+        PrecomputeInternalForceMatricesWeights();
+    }
 }
 
 // -----------------------------------------------------------------------------
 // Element Settings
 // -----------------------------------------------------------------------------
+
+// Offset the midsurface of the composite shell element.  A positive value shifts the element's midsurface upward
+// along the elements zeta direction.  The offset should be provided in model units.
+template <int NP, int NT>
+void ChElementShellANCF_3443<NP, NT>::SetMidsurfaceOffset(const double offset) {
+    m_midsurfoffset = offset;
+
+    // Check to see if SetupInitial has already been called (i.e. at least one set of precomputed matrices has been
+    // populated).  If so, the precomputed matrices will need to be re-generated.  If not, this will be handled once
+    // SetupInitial is called.
+    if (m_SD.size() + m_O1.size() > 0) {
+        PrecomputeInternalForceMatricesWeights();
+    }
+}
 
 // Set the value for the single term structural damping coefficient.
 template <int NP, int NT>
@@ -114,7 +150,7 @@ void ChElementShellANCF_3443<NP, NT>::SetAlphaDamp(double a) {
         m_damping_enabled = false;
 }
 
-// Change the method used to computer the generalized internal force vector and its Jacobian.
+// Change the method used to compute the generalized internal force vector and its Jacobian.
 template <int NP, int NT>
 void ChElementShellANCF_3443<NP, NT>::SetIntFrcCalcMethod(IntFrcMethod method) {
     m_method = method;
@@ -123,12 +159,12 @@ void ChElementShellANCF_3443<NP, NT>::SetIntFrcCalcMethod(IntFrcMethod method) {
     // populated).  If so, the precomputed matrices will need to be generated if they do not already exist.  If not,
     // this will be handled once SetupInitial is called.
     if (m_SD.size() + m_O1.size() > 0) {
-        if (method == ContInt) {
+        if (method == IntFrcMethod::ContInt) {
             if (m_SD.size() == 0) {
                 PrecomputeInternalForceMatricesWeights();
             }
         }
-        if (method == PreInt) {
+        if (method == IntFrcMethod::PreInt) {
             if (m_O1.size() == 0) {
                 PrecomputeInternalForceMatricesWeights();
             }
@@ -137,17 +173,21 @@ void ChElementShellANCF_3443<NP, NT>::SetIntFrcCalcMethod(IntFrcMethod method) {
 }
 
 // -----------------------------------------------------------------------------
-// Evaluate Green-Lagrange Strain Tensor
+// Evaluate Strains and Stresses
+// -----------------------------------------------------------------------------
+// These functions are designed for single function calls.  If these values are needed at the same points in the element
+// through out the simulation, then the adjusted normalized shape function derivative matrix (Sxi_D) for each query
+// point should be cached and saved to increase the execution speed
 // -----------------------------------------------------------------------------
 
-// Get the Green-Lagrange strain tensor at the normalized element coordinates (xi, eta, zeta)
+// Get the Green-Lagrange strain tensor at the normalized element coordinates (xi, eta, zeta) [-1...1]
 template <int NP, int NT>
 void ChElementShellANCF_3443<NP, NT>::GetGreenLagrangeStrain(const double xi,
                                                              const double eta,
                                                              const double zeta,
                                                              ChMatrix33<>& E) {
     MatrixNx3c Sxi_D;  // Matrix of normalized shape function derivatives
-    Calc_Sxi_D(Sxi_D, xi, eta, zeta, m_thicknessZ, 0);
+    Calc_Sxi_D(Sxi_D, xi, eta, zeta, m_thicknessZ, m_midsurfoffset);
 
     ChMatrix33<double> J_0xi;  // Element Jacobian between the reference configuration and normalized configuration
     J_0xi.noalias() = m_ebar0 * Sxi_D;
@@ -164,6 +204,159 @@ void ChElementShellANCF_3443<NP, NT>::GetGreenLagrangeStrain(const double xi,
     ChMatrix33<> I3x3;
     I3x3.setIdentity();
     E = 0.5 * (F.transpose() * F - I3x3);
+}
+
+// Get the 2nd Piola-Kirchoff stress tensor at the normalized **layer** coordinates (xi, eta, layer_zeta) at the current
+// state of the element for the specified layer number (0 indexed) since the stress can be discontinuous at the layer
+// boundary.   "layer_zeta" spans -1 to 1 from the bottom surface to the top surface
+template <int NP, int NT>
+void ChElementShellANCF_3443<NP, NT>::GetPK2Stress(const double layer,
+                                                   const double xi,
+                                                   const double eta,
+                                                   const double layer_zeta,
+                                                   ChMatrix33<>& SPK2) {
+    MatrixNx3c Sxi_D;  // Matrix of normalized shape function derivatives
+    double layer_midsurface_offset =
+        -m_thicknessZ / 2 + m_layer_zoffsets[layer] + m_layers[layer].Get_thickness() / 2 + m_midsurfoffset;
+    Calc_Sxi_D(Sxi_D, xi, eta, layer_zeta, m_layers[layer].Get_thickness(), layer_midsurface_offset);
+
+    ChMatrix33<double> J_0xi;  // Element Jacobian between the reference configuration and normalized configuration
+    J_0xi.noalias() = m_ebar0 * Sxi_D;
+
+    Sxi_D = Sxi_D * J_0xi.inverse();  // Adjust the shape function derivative matrix to account for the potentially
+                                      // distorted reference configuration
+
+    Matrix3xN e_bar;  // Element coordinates in matrix form
+    CalcCoordMatrix(e_bar);
+
+    // Calculate the Deformation Gradient at the current point
+    ChMatrixNMc<double, 3, 3> F = e_bar * Sxi_D;
+
+    // Calculate the Green-Lagrange strain tensor at the current point in Voigt notation
+    ChVectorN<double, 6> epsilon_combined;
+    epsilon_combined(0) = 0.5 * (F.col(0).dot(F.col(0)) - 1);
+    epsilon_combined(1) = 0.5 * (F.col(1).dot(F.col(1)) - 1);
+    epsilon_combined(2) = 0.5 * (F.col(2).dot(F.col(2)) - 1);
+    epsilon_combined(3) = F.col(1).dot(F.col(2));
+    epsilon_combined(4) = F.col(0).dot(F.col(2));
+    epsilon_combined(5) = F.col(0).dot(F.col(1));
+
+    if (m_damping_enabled) {
+        Matrix3xN ebardot;  // Element coordinate time derivatives in matrix form
+        CalcCoordDerivMatrix(ebardot);
+
+        // Calculate the time derivative of the Deformation Gradient at the current point
+        ChMatrixNMc<double, 3, 3> Fdot = ebardot * Sxi_D;
+
+        // Calculate the time derivative of the Green-Lagrange strain tensor in Voigt notation
+        // and combine it with epsilon assuming a Linear Kelvin-Voigt Viscoelastic material model
+        epsilon_combined(0) += m_Alpha * F.col(0).dot(Fdot.col(0));
+        epsilon_combined(1) += m_Alpha * F.col(1).dot(Fdot.col(1));
+        epsilon_combined(2) += m_Alpha * F.col(2).dot(Fdot.col(2));
+        epsilon_combined(3) += m_Alpha * (F.col(1).dot(Fdot.col(2)) + Fdot.col(1).dot(F.col(2)));
+        epsilon_combined(4) += m_Alpha * (F.col(0).dot(Fdot.col(2)) + Fdot.col(0).dot(F.col(2)));
+        epsilon_combined(5) += m_Alpha * (F.col(0).dot(Fdot.col(1)) + Fdot.col(0).dot(F.col(1)));
+    }
+
+    // Get the stiffness tensor in 6x6 matrix form for the current layer and rotate it in the midsurface according
+    // to the user specified angle.  Note that the matrix is reordered as well to match the Voigt notation used in
+    // this element compared to what is used in ChMaterialShellANCF
+
+    ChMatrixNM<double, 6, 6> D = m_layers[layer].GetMaterial()->Get_E_eps();
+    RotateReorderStiffnessMatrix(D, m_layers[layer].Get_theta());
+
+    ChVectorN<double, 6> sigmaPK2 = D * epsilon_combined;  // 2nd Piola Kirchhoff Stress tensor in Voigt notation
+
+    SPK2(0, 0) = sigmaPK2(0);
+    SPK2(1, 1) = sigmaPK2(1);
+    SPK2(2, 2) = sigmaPK2(2);
+    SPK2(1, 2) = sigmaPK2(3);
+    SPK2(2, 1) = sigmaPK2(3);
+    SPK2(0, 2) = sigmaPK2(4);
+    SPK2(2, 0) = sigmaPK2(4);
+    SPK2(0, 1) = sigmaPK2(5);
+    SPK2(1, 0) = sigmaPK2(5);
+}
+
+// Get the von Mises stress value at the normalized **layer** coordinates (xi, eta, layer_zeta) at the current state
+// of the element for the specified layer number (0 indexed) since the stress can be discontinuous at the layer
+// boundary.  "layer_zeta" spans -1 to 1 from the bottom surface to the top surface
+template <int NP, int NT>
+double ChElementShellANCF_3443<NP, NT>::GetVonMissesStress(const double layer,
+                                                           const double xi,
+                                                           const double eta,
+                                                           const double layer_zeta) {
+    MatrixNx3c Sxi_D;  // Matrix of normalized shape function derivatives
+    double layer_midsurface_offset =
+        -m_thicknessZ / 2 + m_layer_zoffsets[layer] + m_layers[layer].Get_thickness() / 2 + m_midsurfoffset;
+    Calc_Sxi_D(Sxi_D, xi, eta, layer_zeta, m_layers[layer].Get_thickness(), layer_midsurface_offset);
+
+    ChMatrix33<double> J_0xi;  // Element Jacobian between the reference configuration and normalized configuration
+    J_0xi.noalias() = m_ebar0 * Sxi_D;
+
+    Sxi_D = Sxi_D * J_0xi.inverse();  // Adjust the shape function derivative matrix to account for the potentially
+                                      // distorted reference configuration
+
+    Matrix3xN e_bar;  // Element coordinates in matrix form
+    CalcCoordMatrix(e_bar);
+
+    // Calculate the Deformation Gradient at the current point
+    ChMatrixNMc<double, 3, 3> F = e_bar * Sxi_D;
+
+    // Calculate the Green-Lagrange strain tensor at the current point in Voigt notation
+    ChVectorN<double, 6> epsilon_combined;
+    epsilon_combined(0) = 0.5 * (F.col(0).dot(F.col(0)) - 1);
+    epsilon_combined(1) = 0.5 * (F.col(1).dot(F.col(1)) - 1);
+    epsilon_combined(2) = 0.5 * (F.col(2).dot(F.col(2)) - 1);
+    epsilon_combined(3) = F.col(1).dot(F.col(2));
+    epsilon_combined(4) = F.col(0).dot(F.col(2));
+    epsilon_combined(5) = F.col(0).dot(F.col(1));
+
+    if (m_damping_enabled) {
+        Matrix3xN ebardot;  // Element coordinate time derivatives in matrix form
+        CalcCoordDerivMatrix(ebardot);
+
+        // Calculate the time derivative of the Deformation Gradient at the current point
+        ChMatrixNMc<double, 3, 3> Fdot = ebardot * Sxi_D;
+
+        // Calculate the time derivative of the Green-Lagrange strain tensor in Voigt notation
+        // and combine it with epsilon assuming a Linear Kelvin-Voigt Viscoelastic material model
+        epsilon_combined(0) += m_Alpha * F.col(0).dot(Fdot.col(0));
+        epsilon_combined(1) += m_Alpha * F.col(1).dot(Fdot.col(1));
+        epsilon_combined(2) += m_Alpha * F.col(2).dot(Fdot.col(2));
+        epsilon_combined(3) += m_Alpha * (F.col(1).dot(Fdot.col(2)) + Fdot.col(1).dot(F.col(2)));
+        epsilon_combined(4) += m_Alpha * (F.col(0).dot(Fdot.col(2)) + Fdot.col(0).dot(F.col(2)));
+        epsilon_combined(5) += m_Alpha * (F.col(0).dot(Fdot.col(1)) + Fdot.col(0).dot(F.col(1)));
+    }
+
+    // Get the stiffness tensor in 6x6 matrix form for the current layer and rotate it in the midsurface according
+    // to the user specified angle.  Note that the matrix is reordered as well to match the Voigt notation used in
+    // this element compared to what is used in ChMaterialShellANCF
+
+    ChMatrixNM<double, 6, 6> D = m_layers[layer].GetMaterial()->Get_E_eps();
+    RotateReorderStiffnessMatrix(D, m_layers[layer].Get_theta());
+
+    ChVectorN<double, 6> sigmaPK2 = D * epsilon_combined;  // 2nd Piola Kirchhoff Stress tensor in Voigt notation
+
+    ChMatrixNM<double, 3, 3> SPK2;  // 2nd Piola Kirchhoff Stress tensor
+    SPK2(0, 0) = sigmaPK2(0);
+    SPK2(1, 1) = sigmaPK2(1);
+    SPK2(2, 2) = sigmaPK2(2);
+    SPK2(1, 2) = sigmaPK2(3);
+    SPK2(2, 1) = sigmaPK2(3);
+    SPK2(0, 2) = sigmaPK2(4);
+    SPK2(2, 0) = sigmaPK2(4);
+    SPK2(0, 1) = sigmaPK2(5);
+    SPK2(1, 0) = sigmaPK2(5);
+
+    // Convert from 2ndPK Stress to Cauchy Stress
+    ChMatrix33<double> S = (F * SPK2 * F.transpose()) / F.determinant();
+    double SVonMises =
+        sqrt(0.5 * ((S(0, 0) - S(1, 1)) * (S(0, 0) - S(1, 1)) + (S(1, 1) - S(2, 2)) * (S(1, 1) - S(2, 2)) +
+                    (S(2, 2) - S(0, 0)) * (S(2, 2) - S(0, 0))) +
+             3 * (S(1, 2) * S(1, 2) + S(2, 0) * S(2, 0) + S(0, 1) * S(0, 1)));
+
+    return (SVonMises);
 }
 
 // -----------------------------------------------------------------------------
@@ -250,7 +443,7 @@ template <int NP, int NT>
 void ChElementShellANCF_3443<NP, NT>::ComputeInternalForces(ChVectorDynamic<>& Fi) {
     assert(Fi.size() == 3 * NSF);
 
-    if (m_method == ContInt) {
+    if (m_method == IntFrcMethod::ContInt) {
         if (m_damping_enabled) {  // If linear Kelvin-Voigt viscoelastic material model is enabled
             ComputeInternalForcesContIntDamping(Fi);
         } else {
@@ -274,7 +467,7 @@ void ChElementShellANCF_3443<NP, NT>::ComputeKRMmatricesGlobal(ChMatrixRef H,
                                                                double Mfactor) {
     assert((H.rows() == 3 * NSF) && (H.cols() == 3 * NSF));
 
-    if (m_method == ContInt) {
+    if (m_method == IntFrcMethod::ContInt) {
         if (m_damping_enabled) {  // If linear Kelvin-Voigt viscoelastic material model is enabled
             ComputeInternalJacobianContIntDamping(H, -Kfactor, -Rfactor);
         } else {
@@ -312,11 +505,11 @@ void ChElementShellANCF_3443<NP, NT>::EvaluateSectionFrame(const double xi,
                                                            ChVector<>& point,
                                                            ChQuaternion<>& rot) {
     VectorN Sxi_compact;
-    Calc_Sxi_compact(Sxi_compact, xi, eta, 0, m_thicknessZ, 0);
+    Calc_Sxi_compact(Sxi_compact, xi, eta, 0, m_thicknessZ, m_midsurfoffset);
     VectorN Sxi_xi_compact;
-    Calc_Sxi_xi_compact(Sxi_xi_compact, xi, eta, 0, m_thicknessZ, 0);
+    Calc_Sxi_xi_compact(Sxi_xi_compact, xi, eta, 0, m_thicknessZ, m_midsurfoffset);
     VectorN Sxi_eta_compact;
-    Calc_Sxi_eta_compact(Sxi_eta_compact, xi, eta, 0, m_thicknessZ, 0);
+    Calc_Sxi_eta_compact(Sxi_eta_compact, xi, eta, 0, m_thicknessZ, m_midsurfoffset);
 
     Matrix3xN e_bar;
     CalcCoordMatrix(e_bar);
@@ -342,7 +535,7 @@ void ChElementShellANCF_3443<NP, NT>::EvaluateSectionFrame(const double xi,
 template <int NP, int NT>
 void ChElementShellANCF_3443<NP, NT>::EvaluateSectionPoint(const double xi, const double eta, ChVector<>& point) {
     VectorN Sxi_compact;
-    Calc_Sxi_compact(Sxi_compact, xi, eta, 0, m_thicknessZ, 0);
+    Calc_Sxi_compact(Sxi_compact, xi, eta, 0, m_thicknessZ, m_midsurfoffset);
 
     Matrix3xN e_bar;
     CalcCoordMatrix(e_bar);
@@ -354,7 +547,7 @@ void ChElementShellANCF_3443<NP, NT>::EvaluateSectionPoint(const double xi, cons
 template <int NP, int NT>
 void ChElementShellANCF_3443<NP, NT>::EvaluateSectionVelNorm(double xi, double eta, ChVector<>& Result) {
     VectorN Sxi_compact;
-    Calc_Sxi_compact(Sxi_compact, xi, eta, 0, m_thicknessZ, 0);
+    Calc_Sxi_compact(Sxi_compact, xi, eta, 0, m_thicknessZ, m_midsurfoffset);
 
     Matrix3xN e_bardot;
     CalcCoordDerivMatrix(e_bardot);
@@ -471,7 +664,7 @@ void ChElementShellANCF_3443<NP, NT>::ComputeNF(
     // functions.  This requires a reshaping of the calculated matrix to get it into the correct vector order (just a
     // reinterpretation of the data since the matrix is in row-major format)
     VectorN Sxi_compact;
-    Calc_Sxi_compact(Sxi_compact, xi, eta, zeta, m_thicknessZ, 0);
+    Calc_Sxi_compact(Sxi_compact, xi, eta, zeta, m_thicknessZ, m_midsurfoffset);
     MatrixNx3 QiCompact;
 
     QiCompact = Sxi_compact * F.segment(0, 3).transpose();
@@ -488,7 +681,7 @@ void ChElementShellANCF_3443<NP, NT>::ComputeNF(
     CalcCoordMatrix(e_bar);
 
     MatrixNx3c Sxi_D;
-    Calc_Sxi_D(Sxi_D, xi, eta, zeta, m_thicknessZ, 0);
+    Calc_Sxi_D(Sxi_D, xi, eta, zeta, m_thicknessZ, m_midsurfoffset);
 
     ChMatrix33<double> J_Cxi;
     ChMatrix33<double> J_Cxi_Inv;
@@ -535,7 +728,7 @@ double ChElementShellANCF_3443<NP, NT>::GetDensity() {
 template <int NP, int NT>
 ChVector<> ChElementShellANCF_3443<NP, NT>::ComputeNormal(const double xi, const double eta) {
     VectorN Sxi_zeta_compact;
-    Calc_Sxi_zeta_compact(Sxi_zeta_compact, xi, eta, 0, m_thicknessZ, 0);
+    Calc_Sxi_zeta_compact(Sxi_zeta_compact, xi, eta, 0, m_thicknessZ, m_midsurfoffset);
 
     Matrix3xN e_bar;
     CalcCoordMatrix(e_bar);
@@ -573,6 +766,8 @@ void ChElementShellANCF_3443<NP, NT>::ComputeMassMatrixAndGravityForce(const ChV
         double rho = m_layers[kl].GetMaterial()->Get_rho();  // Density of the material for the current layer
         double thickness = m_layers[kl].Get_thickness();
         double zoffset = m_layer_zoffsets[kl];
+        double layer_midsurface_offset =
+            -m_thicknessZ / 2 + m_layer_zoffsets[kl] + m_layers[kl].Get_thickness() / 2 + m_midsurfoffset;
 
         // Sum the contribution to the mass matrix and generalized force due to gravity at the current point
         for (unsigned int it_xi = 0; it_xi < GQTable->Lroots[GQ_idx_xi_eta].size(); it_xi++) {
@@ -584,10 +779,10 @@ void ChElementShellANCF_3443<NP, NT>::ComputeMassMatrixAndGravityForce(const ChV
                     double eta = GQTable->Lroots[GQ_idx_xi_eta][it_eta];
                     double zeta = GQTable->Lroots[GQ_idx_zeta][it_zeta];
                     double det_J_0xi = Calc_det_J_0xi(xi, eta, zeta, thickness,
-                                                      zoffset);  // determinate of the element Jacobian (volume ratio)
+                                                      zoffset);  // determinant of the element Jacobian (volume ratio)
 
                     VectorN Sxi_compact;  // Vector of the Unique Normalized Shape Functions
-                    Calc_Sxi_compact(Sxi_compact, xi, eta, zeta, thickness, zoffset);
+                    Calc_Sxi_compact(Sxi_compact, xi, eta, zeta, thickness, layer_midsurface_offset);
 
                     ChMatrixNM<double, 3, 3 * NSF>
                         Sxi;  // Normalized Shape Function Matrix in expanded full (sparse) form
@@ -619,7 +814,7 @@ void ChElementShellANCF_3443<NP, NT>::ComputeMassMatrixAndGravityForce(const ChV
 // Precalculate constant matrices and scalars for the internal force calculations
 template <int NP, int NT>
 void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeights() {
-    if (m_method == ContInt)
+    if (m_method == IntFrcMethod::ContInt)
         PrecomputeInternalForceMatricesWeightsContInt();
     else
         PrecomputeInternalForceMatricesWeightsPreInt();
@@ -640,6 +835,8 @@ void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeightsCont
     for (size_t kl = 0; kl < m_numLayers; kl++) {
         double thickness = m_layers[kl].Get_thickness();
         double zoffset = m_layer_zoffsets[kl];
+        double layer_midsurface_offset =
+            -m_thicknessZ / 2 + m_layer_zoffsets[kl] + m_layers[kl].Get_thickness() / 2 + m_midsurfoffset;
 
         for (unsigned int it_xi = 0; it_xi < GQTable->Lroots[GQ_idx_xi_eta].size(); it_xi++) {
             for (unsigned int it_eta = 0; it_eta < GQTable->Lroots[GQ_idx_xi_eta].size(); it_eta++) {
@@ -655,7 +852,7 @@ void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeightsCont
                         J_0xi;  // Element Jacobian between the reference configuration and normalized configuration
                     MatrixNx3c Sxi_D;  // Matrix of normalized shape function derivatives
 
-                    Calc_Sxi_D(Sxi_D, xi, eta, zeta, thickness, zoffset);
+                    Calc_Sxi_D(Sxi_D, xi, eta, zeta, thickness, layer_midsurface_offset);
                     J_0xi.noalias() = m_ebar0 * Sxi_D;
 
                     // Adjust the shape function derivative matrix to account for a potentially deformed reference state
@@ -693,7 +890,8 @@ void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeightsPreI
 
     for (size_t kl = 0; kl < m_numLayers; kl++) {
         double thickness = m_layers[kl].Get_thickness();
-        double zoffset = m_layer_zoffsets[kl];
+        double layer_midsurface_offset =
+            -m_thicknessZ / 2 + m_layer_zoffsets[kl] + m_layers[kl].Get_thickness() / 2 + m_midsurfoffset;
 
         // =============================================================================
         // Get the stiffness tensor in 6x6 matrix form for the current layer and rotate it in the midsurface according
@@ -769,7 +967,7 @@ void ChElementShellANCF_3443<NP, NT>::PrecomputeInternalForceMatricesWeightsPreI
                         J_0xi;  // Element Jacobian between the reference configuration and normalized configuration
                     MatrixNx3c Sxi_D;  // Matrix of normalized shape function derivatives
 
-                    Calc_Sxi_D(Sxi_D, xi, eta, zeta, thickness, zoffset);
+                    Calc_Sxi_D(Sxi_D, xi, eta, zeta, thickness, layer_midsurface_offset);
                     J_0xi.noalias() = m_ebar0 * Sxi_D;
 
                     MatrixNx3c Sxi_D_0xi = Sxi_D * J_0xi.inverse();
@@ -2476,7 +2674,7 @@ void ChElementShellANCF_3443<NP, NT>::Calc_J_0xi(ChMatrix33<double>& J_0xi,
     J_0xi = m_ebar0 * Sxi_D;
 }
 
-// Calculate the determinate of the 3x3 Element Jacobian at the given point (xi,eta,zeta) in the element
+// Calculate the determinant of the 3x3 Element Jacobian at the given point (xi,eta,zeta) in the element
 template <int NP, int NT>
 double ChElementShellANCF_3443<NP, NT>::Calc_det_J_0xi(double xi,
                                                        double eta,
