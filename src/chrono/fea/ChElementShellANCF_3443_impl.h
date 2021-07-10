@@ -126,6 +126,20 @@ void ChElementShellANCF_3443<NP, NT>::AddLayer(double thickness,
 // Element Settings
 // -----------------------------------------------------------------------------
 
+// Specify the element dimensions.
+template <int NP, int NT>
+void ChElementShellANCF_3443<NP, NT>::SetDimensions(double lenX, double lenY) {
+    m_lenX = lenX;
+    m_lenY = lenY;
+
+    // Check to see if SetupInitial has already been called (i.e. at least one set of precomputed matrices has been
+    // populated).  If so, the precomputed matrices will need to be re-generated.  If not, this will be handled once
+    // SetupInitial is called.
+    if (m_SD.size() + m_O1.size() > 0) {
+        PrecomputeInternalForceMatricesWeights();
+    }
+}
+
 // Offset the midsurface of the composite shell element.  A positive value shifts the element's midsurface upward
 // along the elements zeta direction.  The offset should be provided in model units.
 template <int NP, int NT>
@@ -545,7 +559,7 @@ void ChElementShellANCF_3443<NP, NT>::EvaluateSectionPoint(const double xi, cons
 }
 
 template <int NP, int NT>
-void ChElementShellANCF_3443<NP, NT>::EvaluateSectionVelNorm(double xi, double eta, ChVector<>& Result) {
+void ChElementShellANCF_3443<NP, NT>::EvaluateSectionVelNorm(const double xi, const double eta, ChVector<>& Result) {
     VectorN Sxi_compact;
     Calc_Sxi_compact(Sxi_compact, xi, eta, 0, m_thicknessZ, m_midsurfoffset);
 

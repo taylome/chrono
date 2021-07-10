@@ -144,10 +144,7 @@ class ChElementShellANCF_3833 : public ChElementShell, public ChLoadableUV, publ
                   std::shared_ptr<ChNodeFEAxyzDD> nodeH);
 
     /// Specify the element dimensions.
-    void SetDimensions(double lenX, double lenY) {
-        m_lenX = lenX;
-        m_lenY = lenY;
-    }
+    void SetDimensions(double lenX, double lenY);
 
     /// Access the n-th node of this element.
     virtual std::shared_ptr<ChNodeFEAbase> GetNodeN(int n) override { return m_nodes[n]; }
@@ -294,7 +291,7 @@ class ChElementShellANCF_3833 : public ChElementShell, public ChLoadableUV, publ
     virtual void EvaluateSectionPoint(const double xi, const double eta, ChVector<>& point) override;
 
     /// Gets the absolute xyz velocity of a point on the shell midsurface specified in normalized coordinates
-    virtual void EvaluateSectionVelNorm(double xi, double eta, ChVector<>& Result) override;
+    virtual void EvaluateSectionVelNorm(const double xi, const double eta, ChVector<>& Result) override;
 
     // Functions for ChLoadable interface
     // ----------------------------------
