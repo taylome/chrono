@@ -754,6 +754,8 @@ set(ChronoEngine_fea_elements_HEADERS
 	fea/ChElementShellANCF_3833ML_TR11s.h
     fea/ChElementShellReissner4.h
 	fea/ChElementShellBST.h
+	fea/ChElementBrickANCF_3843.h
+	fea/ChElementBrickANCF_3843_impl.h
 	fea/ChElementBrickANCF_3843_TR01.h
 	fea/ChElementBrickANCF_3843_TR02.h
 	fea/ChElementBrickANCF_3843_TR03.h
