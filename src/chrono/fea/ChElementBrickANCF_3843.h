@@ -99,8 +99,7 @@ class ChMaterialBrickANCF_3843 {
     const ChMatrixNM<double, 6, 6>& Get_D() const { return m_D; }
 
   private:
-    /// Calculate the matrix form of two stiffness tensors used by the ANCF shell for selective reduced integration of
-    /// the Poisson effect as well as the composite stiffness tensors.
+    /// Calculate the matrix form of 6x6 stiffness tensor
     void Calc_D(const ChVector<>& E, const ChVector<>& nu, const ChVector<>& G);
 
     double m_rho;                  ///< density
@@ -161,7 +160,7 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
     void SetDimensions(double lenX, double lenY, double lenZ);
 
     /// Specify the element material.
-    void SetMaterial(std::shared_ptr<ChMaterialBrickANCF_3843> brick_mat) { m_material = brick_mat; }
+    void SetMaterial(std::shared_ptr<ChMaterialBrickANCF_3843> brick_mat);
 
     /// Return the material.
     std::shared_ptr<ChMaterialBrickANCF_3843> GetMaterial() const { return m_material; }
@@ -213,6 +212,10 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
     /// required.
     void SetIntFrcCalcMethod(IntFrcMethod method);
 
+    /// Return the type of calculation method currently set for the generalized internal force and its Jacobian
+    /// calculations.
+    IntFrcMethod GetIntFrcCalcMethod() { return m_method; }
+
     /// Get the Green-Lagrange strain tensor at the normalized element coordinates (xi, eta, zeta) at the current state
     /// of the element.  Normalized element coordinates span from -1 to 1.
     void GetGreenLagrangeStrain(const double xi, const double eta, const double zeta, ChMatrix33<>& E);
@@ -255,7 +258,6 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
                                           double Rfactor = 0,
                                           double Mfactor = 0) override;
 
-    // Interface to ChElementShell base class
     // --------------------------------------
 
     /// Gets the xyz displacement of a point in the element, and the approximate rotation RxRyRz at that point
@@ -379,27 +381,24 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
     /// Calculate the calculate the Jacobian of the internal force integrand using the "Continuous Integration" style
     /// method assuming damping is included This function calculates a linear combination of the stiffness (K) and
     /// damping (R) matrices,
-    ///     J = Kfactor * K + Rfactor * R
-    /// for given coefficients Kfactor and Rfactor.
-    /// This Jacobian will be further combined with the global mass matrix M and included in the global
-    /// stiffness matrix H in the function ComputeKRMmatricesGlobal().
+    ///     J = Kfactor * K + Rfactor * R + Mfactor * M
+    /// for given coefficients Kfactor, Rfactor, and Mfactor.
+    /// This Jacobian includes the global mass matrix M with the global stiffness and damping matrix in H.
     void ComputeInternalJacobianContIntDamping(ChMatrixRef& H, double Kfactor, double Rfactor, double Mfactor);
 
     /// Calculate the calculate the Jacobian of the internal force integrand using the "Continuous Integration" style
     /// method assuming damping is not included This function calculates just the stiffness (K) matrix,
-    ///     J = Kfactor * K
-    /// for the given coefficient Kfactor
-    /// This Jacobian will be further combined with the global mass matrix M and included in the global
-    /// stiffness matrix H in the function ComputeKRMmatricesGlobal().
+///     J = Kfactor * K + Mfactor * M
+    /// for given coefficients Kfactor and Mfactor.
+    /// This Jacobian includes the global mass matrix M with the global stiffness in H.
     void ComputeInternalJacobianContIntNoDamping(ChMatrixRef& H, double Kfactor, double Mfactor);
 
     /// Calculate the calculate the Jacobian of the internal force integrand using the "Pre-Integration" style method
     /// assuming damping is included This function calculates a linear combination of the stiffness (K) and damping (R)
     /// matrices,
-    ///     J = Kfactor * K + Rfactor * R
-    /// for given coefficients Kfactor and Rfactor.
-    /// This Jacobian will be further combined with the global mass matrix M and included in the global
-    /// stiffness matrix H in the function ComputeKRMmatricesGlobal().
+    ///     J = Kfactor * K + Rfactor * R + Mfactor * M
+    /// for given coefficients Kfactor, Rfactor, and Mfactor.
+    /// This Jacobian includes the global mass matrix M with the global stiffness and damping matrix in H.
     void ComputeInternalJacobianPreInt(ChMatrixRef& H, double Kfactor, double Rfactor, double Mfactor);
 
     /// Calculate the current 3Nx1 vector of nodal coordinates.

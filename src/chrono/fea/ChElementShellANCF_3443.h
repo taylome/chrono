@@ -193,6 +193,10 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
     /// required.
     void SetIntFrcCalcMethod(IntFrcMethod method);
 
+    /// Return the type of calculation method currently set for the generalized internal force and its Jacobian
+    /// calculations.
+    IntFrcMethod GetIntFrcCalcMethod() { return m_method; }
+
     /// Get the Green-Lagrange strain tensor at the normalized element coordinates (xi, eta, zeta) at the current state
     /// of the element.  Normalized element coordinates span from -1 to 1.
     void GetGreenLagrangeStrain(const double xi, const double eta, const double zeta, ChMatrix33<>& E);

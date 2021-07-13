@@ -146,6 +146,21 @@ void ChElementBrickANCF_3843<NP>::SetDimensions(double lenX, double lenY, double
     }
 }
 
+// Specify the element material.
+template <int NP>
+void ChElementBrickANCF_3843<NP>::SetMaterial(std::shared_ptr<ChMaterialBrickANCF_3843> brick_mat) {
+    m_material = brick_mat;
+
+    // Check to see if the Pre-Integration method is selected and if the precomputed matrices have already been
+    // generated and thus need to be regenerated.  The Continuous Integration precomputed matrices do not include any
+    // material properties.
+    if (m_method == IntFrcMethod::PreInt) {
+        if (m_O1.size() > 0) {
+            PrecomputeInternalForceMatricesWeights();
+        }
+    }
+}
+
 // Set the value for the single term structural damping coefficient.
 template <int NP>
 void ChElementBrickANCF_3843<NP>::SetAlphaDamp(double a) {
@@ -162,19 +177,10 @@ void ChElementBrickANCF_3843<NP>::SetIntFrcCalcMethod(IntFrcMethod method) {
     m_method = method;
 
     // Check to see if SetupInitial has already been called (i.e. at least one set of precomputed matrices has been
-    // populated).  If so, the precomputed matrices will need to be generated if they do not already exist.  If not,
-    // this will be handled once SetupInitial is called.
+    // populated).  If so, the precomputed matrices will need to be generated if they do not already exist or
+    // regenerated if they have to ensure they are in sync with any other element changes.
     if (m_SD.size() + m_O1.size() > 0) {
-        if (method == IntFrcMethod::ContInt) {
-            if (m_SD.size() == 0) {
-                PrecomputeInternalForceMatricesWeights();
-            }
-        }
-        if (method == IntFrcMethod::PreInt) {
-            if (m_O1.size() == 0) {
-                PrecomputeInternalForceMatricesWeights();
-            }
-        }
+        PrecomputeInternalForceMatricesWeights();
     }
 }
 
@@ -212,9 +218,8 @@ void ChElementBrickANCF_3843<NP>::GetGreenLagrangeStrain(const double xi,
     E = 0.5 * (F.transpose() * F - I3x3);
 }
 
-// Get the 2nd Piola-Kirchoff stress tensor at the normalized **layer** coordinates (xi, eta, layer_zeta) at the current
-// state of the element for the specified layer number (0 indexed) since the stress can be discontinuous at the layer
-// boundary.   "layer_zeta" spans -1 to 1 from the bottom surface to the top surface
+// Get the 2nd Piola-Kirchoff stress tensor at the normalized element coordinates (xi, eta, zeta) [-1...1] at the current
+// state of the element.
 template <int NP>
 void ChElementBrickANCF_3843<NP>::GetPK2Stress(const double xi,
                                                const double eta,
@@ -276,9 +281,8 @@ void ChElementBrickANCF_3843<NP>::GetPK2Stress(const double xi,
     SPK2(1, 0) = sigmaPK2(5);
 }
 
-// Get the von Mises stress value at the normalized **layer** coordinates (xi, eta, layer_zeta) at the current state
-// of the element for the specified layer number (0 indexed) since the stress can be discontinuous at the layer
-// boundary.  "layer_zeta" spans -1 to 1 from the bottom surface to the top surface
+// Get the von Mises stress value at the normalized element coordinates (xi, eta, zeta) [-1...1] at the current
+// state of the element.
 template <int NP>
 double ChElementBrickANCF_3843<NP>::GetVonMissesStress(const double xi, const double eta, const double zeta) {
     MatrixNx3c Sxi_D;  // Matrix of normalized shape function derivatives
@@ -747,7 +751,7 @@ void ChElementBrickANCF_3843<NP>::ComputeNF(
     detJ = J_Cxi.determinant();
 }
 
-// Calculate the average element density (needed for ChLoaderVolumeGravity).
+// Return the element density (needed for ChLoaderVolumeGravity).
 template <int NP>
 double ChElementBrickANCF_3843<NP>::GetDensity() {
     return GetMaterial()->Get_rho();
@@ -2764,12 +2768,11 @@ ChMaterialBrickANCF_3843::ChMaterialBrickANCF_3843(double rho,  // material dens
 }
 
 // Construct a (possibly) orthotropic material.
-ChMaterialBrickANCF_3843::ChMaterialBrickANCF_3843(
-    double rho,            // material density
-    const ChVector<>& E,   // elasticity moduli (E_x, E_y, E_z)
-    const ChVector<>& nu,  // Poisson ratios (nu_xy, nu_xz, nu_yz)
-    const ChVector<>& G    // shear moduli (G_xy, G_xz, G_yz)
-    )
+ChMaterialBrickANCF_3843::ChMaterialBrickANCF_3843(double rho,            // material density
+                                                   const ChVector<>& E,   // elasticity moduli (E_x, E_y, E_z)
+                                                   const ChVector<>& nu,  // Poisson ratios (nu_xy, nu_xz, nu_yz)
+                                                   const ChVector<>& G    // shear moduli (G_xy, G_xz, G_yz)
+                                                   )
     : m_rho(rho) {
     Calc_D(E, nu, G);
 }

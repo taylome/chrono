@@ -191,19 +191,10 @@ void ChElementShellANCF_3833<NP, NT>::SetIntFrcCalcMethod(IntFrcMethod method) {
     m_method = method;
 
     // Check to see if SetupInitial has already been called (i.e. at least one set of precomputed matrices has been
-    // populated).  If so, the precomputed matrices will need to be generated if they do not already exist.  If not,
-    // this will be handled once SetupInitial is called.
+    // populated).  If so, the precomputed matrices will need to be generated if they do not already exist or
+    // regenerated if they have to ensure they are in sync with any other element changes.
     if (m_SD.size() + m_O1.size() > 0) {
-        if (method == IntFrcMethod::ContInt) {
-            if (m_SD.size() == 0) {
-                PrecomputeInternalForceMatricesWeights();
-            }
-        }
-        if (method == IntFrcMethod::PreInt) {
-            if (m_O1.size() == 0) {
-                PrecomputeInternalForceMatricesWeights();
-            }
-        }
+        PrecomputeInternalForceMatricesWeights();
     }
 }
 
