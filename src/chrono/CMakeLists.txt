@@ -642,6 +642,8 @@ set(ChronoEngine_fea_elements_HEADERS
 	fea/ChElementBeamANCF_3333_TR10.h
 	fea/ChElementBeamANCF_3333_TR11.h
 	fea/ChElementBeamANCF_3333_TR11s.h
+	fea/ChElementBeamANCF_3243.h
+	fea/ChElementBeamANCF_3243_impl.h
 	fea/ChElementBeamANCF_3243_TR01.h
 	fea/ChElementBeamANCF_3243_TR02.h
 	fea/ChElementBeamANCF_3243_TR03.h
