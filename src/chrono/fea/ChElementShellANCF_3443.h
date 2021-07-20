@@ -338,7 +338,7 @@ class ChElementShellANCF_3443 : public ChElementShell, public ChLoadableUV, publ
                            ) override;
 
     /// This is needed so that it can be accessed by ChLoaderVolumeGravity.
-    /// Density is mass per unit surface.
+    /// Density is the average mass per unit volume for the entire shell in the reference state of the element.
     virtual double GetDensity() override;
 
     /// Gets the normal to the surface at the parametric coordinate xi,eta.

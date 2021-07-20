@@ -86,7 +86,7 @@ void ChElementBeamANCF_3243<NP, NT>::SetNodes(std::shared_ptr<ChNodeFEAxyzDDD> n
     // Check to see if SetupInitial has already been called (i.e. at least one set of precomputed matrices has been
     // populated).  If so, the precomputed matrices will need to be re-generated.  If not, this will be handled once
     // SetupInitial is called.
-    if (m_SD_Dv.size() + m_O1.size() > 0) {
+    if (m_SD.size() + m_O1.size() > 0) {
         PrecomputeInternalForceMatricesWeights();
     }
 }
@@ -95,7 +95,7 @@ void ChElementBeamANCF_3243<NP, NT>::SetNodes(std::shared_ptr<ChNodeFEAxyzDDD> n
 // Element Settings
 // -----------------------------------------------------------------------------
 
-// Specify the element dimensions.
+// Specify the element dimensions (in the undeformed state).
 template <int NP, int NT>
 void ChElementBeamANCF_3243<NP, NT>::SetDimensions(double lenX, double thicknessY, double thicknessZ) {
     m_lenX = lenX;
@@ -105,14 +105,14 @@ void ChElementBeamANCF_3243<NP, NT>::SetDimensions(double lenX, double thickness
     // Check to see if SetupInitial has already been called (i.e. at least one set of precomputed matrices has been
     // populated).  If so, the precomputed matrices will need to be re-generated.  If not, this will be handled once
     // SetupInitial is called.
-    if (m_SD_Dv.size() + m_O1.size() > 0) {
+    if (m_SD.size() + m_O1.size() > 0) {
         PrecomputeInternalForceMatricesWeights();
     }
 }
 
 // Specify the element material.
 template <int NP, int NT>
-void ChElementBeamANCF_3243<NP, NT>::SetMaterial(std::shared_ptr<ChMaterialBeamANCF_3243> beam_mat) {
+void ChElementBeamANCF_3243<NP, NT>::SetMaterial(std::shared_ptr<ChMaterialBeamANCF> beam_mat) {
     m_material = beam_mat;
 
     // Check to see if the Pre-Integration method is selected and if the precomputed matrices have already been
@@ -143,7 +143,7 @@ void ChElementBeamANCF_3243<NP, NT>::SetIntFrcCalcMethod(IntFrcMethod method) {
     // Check to see if SetupInitial has already been called (i.e. at least one set of precomputed matrices has been
     // populated).  If so, the precomputed matrices will need to be generated if they do not already exist or
     // regenerated if they have to ensure they are in sync with any other element changes.
-    if (m_SD_Dv.size() + m_O1.size() > 0) {
+    if (m_SD.size() + m_O1.size() > 0) {
         PrecomputeInternalForceMatricesWeights();
     }
 }
@@ -230,7 +230,8 @@ void ChElementBeamANCF_3243<NP, NT>::GetPK2Stress(const double xi,
         epsilon_combined(5) += m_Alpha * (F.col(0).dot(Fdot.col(1)) + Fdot.col(0).dot(F.col(1)));
     }
 
-    const ChMatrixNM<double, 6, 6>& D = GetMaterial()->Get_D();
+    ChMatrixNM<double, 6, 6> D;
+    GetMaterial()->Get_D(D);
 
     ChVectorN<double, 6> sigmaPK2 = D * epsilon_combined;  // 2nd Piola Kirchhoff Stress tensor in Voigt notation
 
@@ -290,7 +291,8 @@ double ChElementBeamANCF_3243<NP, NT>::GetVonMissesStress(const double xi, const
         epsilon_combined(5) += m_Alpha * (F.col(0).dot(Fdot.col(1)) + Fdot.col(0).dot(F.col(1)));
     }
 
-    const ChMatrixNM<double, 6, 6>& D = GetMaterial()->Get_D();
+    ChMatrixNM<double, 6, 6> D;
+    GetMaterial()->Get_D(D);
 
     ChVectorN<double, 6> sigmaPK2 = D * epsilon_combined;  // 2nd Piola Kirchhoff Stress tensor in Voigt notation
 
@@ -715,9 +717,8 @@ void ChElementBeamANCF_3243<NP, NT>::PrecomputeInternalForceMatricesWeightsContI
     unsigned int GQ_idx_xi = NP - 1;        // Gauss-Quadrature table index for xi
     unsigned int GQ_idx_eta_zeta = NT - 1;  // Gauss-Quadrature table index for eta and zeta
 
-    m_SD_D0.resize(NSF, 3 * NIP_D0);
+    m_SD.resize(NSF, 3 * NIP);
     m_kGQ_D0.resize(NIP_D0, 1);
-    m_SD_Dv.resize(NSF, 3 * NIP_Dv);
     m_kGQ_Dv.resize(NIP_Dv, 1);
 
     ChMatrixNM<double, NSF, 3> SD_precompute_D;
@@ -746,10 +747,11 @@ void ChElementBeamANCF_3243<NP, NT>::PrecomputeInternalForceMatricesWeightsContI
                 SD_precompute_D = Sxi_D * J_0xi.inverse();
                 m_kGQ_D0(index) = -J_0xi.determinant() * GQ_weight;
 
-                // Group all of the columns together in blocks, and then layer by layer across the entire element
-                m_SD_D0.col(index) = SD_precompute_D.col(0);
-                m_SD_D0.col(index + NIP_D0) = SD_precompute_D.col(1);
-                m_SD_D0.col(index + 2 * NIP_D0) = SD_precompute_D.col(2);
+                // Group all of the columns together in blocks with the shape function derivatives for the section that
+                // does not include the Poisson effect at the beginning
+                m_SD.col(index) = SD_precompute_D.col(0);
+                m_SD.col(index + NIP_D0) = SD_precompute_D.col(1);
+                m_SD.col(index + 2 * NIP_D0) = SD_precompute_D.col(2);
 
                 index++;
             }
@@ -774,10 +776,11 @@ void ChElementBeamANCF_3243<NP, NT>::PrecomputeInternalForceMatricesWeightsContI
         SD_precompute_D = Sxi_D * J_0xi.inverse();
         m_kGQ_Dv(it_xi) = -J_0xi.determinant() * GQ_weight;
 
-        // Group all of the columns together in blocks, and then layer by layer across the entire element
-        m_SD_Dv.col(it_xi) = SD_precompute_D.col(0);
-        m_SD_Dv.col(it_xi + NIP_Dv) = SD_precompute_D.col(1);
-        m_SD_Dv.col(it_xi + 2 * NIP_Dv) = SD_precompute_D.col(2);
+        // Group all of the columns together in blocks with the shape function derivative for the Poisson effect at the
+        // end
+        m_SD.col(3 * NIP_D0 + it_xi) = SD_precompute_D.col(0);
+        m_SD.col(3 * NIP_D0 + NIP_Dv + it_xi) = SD_precompute_D.col(1);
+        m_SD.col(3 * NIP_D0 + 2 * NIP_Dv + it_xi) = SD_precompute_D.col(2);
     }
 }
 
@@ -1000,6 +1003,21 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntDamping(ChVecto
     CalcCombinedCoordMatrix(ebar_ebardot);
 
     // =============================================================================
+    // Calculate the deformation gradient and time derivative of the deformation gradient for all Gauss quadrature
+    // points in a single matrix multiplication.  Note that since the shape function derivative matrix is ordered by
+    // columns, the resulting deformation gradient will be ordered by block matrix (column vectors) components
+    // Note that the indices of the components are in transposed order
+    //      [F11  F21  F31  F11dot  F21dot  F31dot ] <-- D0 Block (No Poisson Effect)
+    //      [F12  F22  F32  F12dot  F22dot  F32dot ] <-- D0 Block (No Poisson Effect)
+    // FC = [F13  F23  F33  F13dot  F23dot  F33dot ] <-- D0 Block (No Poisson Effect)
+    //      [F11  F21  F31  F11dot  F21dot  F31dot ] <-- Dv Block (With Poisson Effect)
+    //      [F12  F22  F32  F12dot  F22dot  F32dot ] <-- Dv Block (With Poisson Effect)
+    //      [F13  F23  F33  F13dot  F23dot  F33dot ] <-- Dv Block (With Poisson Effect)
+    // =============================================================================
+
+    ChMatrixNMc<double, 3 * NIP, 6> FC = m_SD.transpose() * ebar_ebardot;
+
+    // =============================================================================
     // =============================================================================
     // Since the Enhanced Continuum Mechanics method is utilized for this element, first calculate the contribution to
     // the generalized internal force vector from the terms that do not include the Poisson effect.  This is integrated
@@ -1008,25 +1026,13 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntDamping(ChVecto
     // =============================================================================
 
     // =============================================================================
-    // Calculate the deformation gradient and time derivative of the deformation gradient for all Gauss quadrature
-    // points in a single matrix multiplication.  Note that since the shape function derivative matrix is ordered by
-    // columns, the resulting deformation gradient will be ordered by block matrix (column vectors) components
-    // Note that the indices of the components are in transposed order
-    //      [F11  F21  F31  F11dot  F21dot  F31dot ]
-    // FC = [F12  F22  F32  F12dot  F22dot  F32dot ]
-    //      [F13  F23  F33  F13dot  F23dot  F33dot ]
-    // =============================================================================
-
-    ChMatrixNMc<double, 3 * NIP_D0, 6> FC_D0 = m_SD_D0.transpose() * ebar_ebardot;
-
-    // =============================================================================
     // Get the diagonal terms of the 6x6 matrix (do not include the Poisson effect
     // =============================================================================
     const ChVectorN<double, 6>& D0 = GetMaterial()->Get_D0();
 
     // =============================================================================
     // Calculate each individual value of the Green-Lagrange strain component by component across all the
-    // Gauss-Quadrature points at a time for the current layer to better leverage vectorized CPU instructions.
+    // Gauss-Quadrature points at a time to better leverage vectorized CPU instructions.
     // Note that the scaled time derivatives of the Green-Lagrange strain are added to make the later calculation of
     // the 2nd Piola-Kirchoff stresses more efficient.  The combined result is then scaled by minus the Gauss
     // quadrature weight times the element Jacobian at the corresponding Gauss point (m_kGQ) again for efficiency.
@@ -1040,13 +1046,12 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntDamping(ChVecto
     // Each entry in SPK2_1 = D11*kGQ*(E11+alpha*E11dot)
     //     = D11*kGQ*(1/2*(F11*F11+F21*F21+F31*F31-1)+alpha*(F11*F11dot+F21*F21dot+F31*F31dot))
     VectorNIP_D0 E_BlockDamping_D0 =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 5));
-    VectorNIP_D0 SPK2_1_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 2));
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 3)) +
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(0, 4)) +
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(0, 5));
+    VectorNIP_D0 SPK2_1_Block_D0 = FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 0)) +
+                                   FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(0, 1)) +
+                                   FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(0, 2));
     SPK2_1_Block_D0.array() -= 1;
     SPK2_1_Block_D0 += (2 * m_Alpha) * E_BlockDamping_D0;
     SPK2_1_Block_D0.array() *= m_kGQ_D0.array();
@@ -1055,13 +1060,13 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntDamping(ChVecto
     // Each entry in SPK2_2 = D22*kGQ*(E22+alpha*E22dot)
     //     = D22*kGQ*(1/2*(F12*F12+F22*F22+F32*F32-1)+alpha*(F12*F12dot+F22*F22dot+F32*F32dot))
     E_BlockDamping_D0.noalias() =
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 5));
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 3)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 4)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 5));
     VectorNIP_D0 SPK2_2_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 2));
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 2));
     SPK2_2_Block_D0.array() -= 1;
     SPK2_2_Block_D0 += (2 * m_Alpha) * E_BlockDamping_D0;
     SPK2_2_Block_D0.array() *= m_kGQ_D0.array();
@@ -1070,13 +1075,13 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntDamping(ChVecto
     // Each entry in SPK2_3 = D33*kGQ*(E33+alpha*E33dot)
     //     = D33*kGQ*(1/2*(F13*F13+F23*F23+F33*F33-1)+alpha*(F13*F13dot+F23*F23dot+F33*F33dot))
     E_BlockDamping_D0.noalias() =
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 5));
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 3)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 4)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 5));
     VectorNIP_D0 SPK2_3_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2));
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2));
     SPK2_3_Block_D0.array() -= 1;
     SPK2_3_Block_D0 += (2 * m_Alpha) * E_BlockDamping_D0;
     SPK2_3_Block_D0.array() *= m_kGQ_D0.array();
@@ -1086,16 +1091,16 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntDamping(ChVecto
     //     = D44*kGQ*((F12*F13+F22*F23+F32*F33)
     //       +alpha*(F12dot*F13+F22dot*F23+F32dot*F33 + F12*F13dot+F22*F23dot+F32*F33dot))
     E_BlockDamping_D0.noalias() =
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 5)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 5));
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 3)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 4)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 5)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 3)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 4)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 5));
     VectorNIP_D0 SPK2_4_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2));
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2));
     SPK2_4_Block_D0 += m_Alpha * E_BlockDamping_D0;
     SPK2_4_Block_D0.array() *= m_kGQ_D0.array();
     SPK2_4_Block_D0 *= D0(3);
@@ -1104,16 +1109,16 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntDamping(ChVecto
     //     = D55*kGQ*((F11*F13+F21*F23+F31*F33)
     //       +alpha*(F11dot*F13+F21dot*F23+F31dot*F33 + F11*F13dot+F21*F23dot+F31*F33dot))
     E_BlockDamping_D0.noalias() =
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 5)) +
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 5));
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 3)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(0, 4)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(0, 5)) +
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 3)) +
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 4)) +
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 5));
     VectorNIP_D0 SPK2_5_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2));
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2));
     SPK2_5_Block_D0 += m_Alpha * E_BlockDamping_D0;
     SPK2_5_Block_D0.array() *= m_kGQ_D0.array();
     SPK2_5_Block_D0 *= D0(4);
@@ -1122,16 +1127,16 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntDamping(ChVecto
     //     = D66*kGQ*((F11*F12+F21*F22+F31*F32)
     //       +alpha*(F11dot*F12+F21dot*F22+F31dot*F32 + F11*F12dot+F21*F22dot+F31*F32dot))
     E_BlockDamping_D0.noalias() =
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 5)) +
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 5));
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 3)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(0, 4)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(0, 5)) +
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 3)) +
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 4)) +
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 5));
     VectorNIP_D0 SPK2_6_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 2));
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 2));
     SPK2_6_Block_D0 += m_Alpha * E_BlockDamping_D0;
     SPK2_6_Block_D0.array() *= m_kGQ_D0.array();
     SPK2_6_Block_D0 *= D0(5);
@@ -1141,59 +1146,51 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntDamping(ChVecto
     // scaled by minus the Gauss quadrature weight times the element Jacobian at the corresponding Gauss point.
     // The entries are grouped by component in block matrices (column vectors)
     // P_Block = kGQ*P_transpose = kGQ*SPK2*F_transpose
-    //           [kGQ*(P_transpose)_11  kGQ*(P_transpose)_12  kGQ*(P_transpose)_13 ]
-    //         = [kGQ*(P_transpose)_21  kGQ*(P_transpose)_22  kGQ*(P_transpose)_23 ]
-    //           [kGQ*(P_transpose)_31  kGQ*(P_transpose)_32  kGQ*(P_transpose)_33 ]
+    //           [kGQ*(P_transpose)_11  kGQ*(P_transpose)_12  kGQ*(P_transpose)_13 ] <-- D0 Block
+    //           [kGQ*(P_transpose)_21  kGQ*(P_transpose)_22  kGQ*(P_transpose)_23 ] <-- D0 Block
+    //         = [kGQ*(P_transpose)_31  kGQ*(P_transpose)_32  kGQ*(P_transpose)_33 ] <-- D0 Block
+    //           [kGQ*(P_transpose)_11  kGQ*(P_transpose)_12  kGQ*(P_transpose)_13 ] <-- Dv Block
+    //           [kGQ*(P_transpose)_21  kGQ*(P_transpose)_22  kGQ*(P_transpose)_23 ] <-- Dv Block
+    //           [kGQ*(P_transpose)_31  kGQ*(P_transpose)_32  kGQ*(P_transpose)_33 ] <-- Dv Block
     // =============================================================================
 
-    ChMatrixNMc<double, 3 * NIP_D0, 3> P_Block_D0;
+    ChMatrixNMc<double, 3 * NIP, 3> P_Block;
 
-    P_Block_D0.template block<NIP_D0, 1>(0, 0) =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(SPK2_1_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(SPK2_6_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(SPK2_5_Block_D0);
-    P_Block_D0.template block<NIP_D0, 1>(0, 1) =
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(SPK2_1_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(SPK2_6_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(SPK2_5_Block_D0);
-    P_Block_D0.template block<NIP_D0, 1>(0, 2) =
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(SPK2_1_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(SPK2_6_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(SPK2_5_Block_D0);
+    P_Block.template block<NIP_D0, 1>(0, 0) = FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(SPK2_1_Block_D0) +
+                                              FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(SPK2_6_Block_D0) +
+                                              FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(SPK2_5_Block_D0);
+    P_Block.template block<NIP_D0, 1>(0, 1) = FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(SPK2_1_Block_D0) +
+                                              FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(SPK2_6_Block_D0) +
+                                              FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(SPK2_5_Block_D0);
+    P_Block.template block<NIP_D0, 1>(0, 2) = FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(SPK2_1_Block_D0) +
+                                              FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(SPK2_6_Block_D0) +
+                                              FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(SPK2_5_Block_D0);
 
-    P_Block_D0.template block<NIP_D0, 1>(NIP_D0, 0) =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(SPK2_6_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(SPK2_2_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(SPK2_4_Block_D0);
-    P_Block_D0.template block<NIP_D0, 1>(NIP_D0, 1) =
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(SPK2_6_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(SPK2_2_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(SPK2_4_Block_D0);
-    P_Block_D0.template block<NIP_D0, 1>(NIP_D0, 2) =
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(SPK2_6_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(SPK2_2_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(SPK2_4_Block_D0);
+    P_Block.template block<NIP_D0, 1>(NIP_D0, 0) =
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(SPK2_6_Block_D0) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(SPK2_2_Block_D0) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(SPK2_4_Block_D0);
+    P_Block.template block<NIP_D0, 1>(NIP_D0, 1) =
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(SPK2_6_Block_D0) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(SPK2_2_Block_D0) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(SPK2_4_Block_D0);
+    P_Block.template block<NIP_D0, 1>(NIP_D0, 2) =
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(SPK2_6_Block_D0) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(SPK2_2_Block_D0) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(SPK2_4_Block_D0);
 
-    P_Block_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0) =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(SPK2_5_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(SPK2_4_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(SPK2_3_Block_D0);
-    P_Block_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1) =
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(SPK2_5_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(SPK2_4_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(SPK2_3_Block_D0);
-    P_Block_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2) =
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(SPK2_5_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(SPK2_4_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(SPK2_3_Block_D0);
-
-    // =============================================================================
-    // Multiply the scaled first Piola-Kirchoff stresses by the shape function derivative matrix for the current
-    // layer to get the generalized force vector in matrix form (in the correct order if its calculated in row-major
-    // memory layout)
-    // =============================================================================
-
-    MatrixNx3 QiCompact = m_SD_D0 * P_Block_D0;
+    P_Block.template block<NIP_D0, 1>(2 * NIP_D0, 0) =
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(SPK2_5_Block_D0) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(SPK2_4_Block_D0) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(SPK2_3_Block_D0);
+    P_Block.template block<NIP_D0, 1>(2 * NIP_D0, 1) =
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(SPK2_5_Block_D0) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(SPK2_4_Block_D0) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(SPK2_3_Block_D0);
+    P_Block.template block<NIP_D0, 1>(2 * NIP_D0, 2) =
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(SPK2_5_Block_D0) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(SPK2_4_Block_D0) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(SPK2_3_Block_D0);
 
     // =============================================================================
     // =============================================================================
@@ -1205,20 +1202,8 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntDamping(ChVecto
     // =============================================================================
 
     // =============================================================================
-    // Calculate the deformation gradient and time derivative of the deformation gradient for all Gauss quadrature
-    // points in a single matrix multiplication.  Note that since the shape function derivative matrix is ordered by
-    // columns, the resulting deformation gradient will be ordered by block matrix (column vectors) components
-    // Note that the indices of the components are in transposed order
-    //      [F11  F21  F31  F11dot  F21dot  F31dot ]
-    // FC = [F12  F22  F32  F12dot  F22dot  F32dot ]
-    //      [F13  F23  F33  F13dot  F23dot  F33dot ]
-    // =============================================================================
-
-    ChMatrixNMc<double, 3 * NIP_Dv, 6> FC_Dv = m_SD_Dv.transpose() * ebar_ebardot;
-
-    // =============================================================================
     // Calculate each individual value of the Green-Lagrange strain component by component across all the
-    // Gauss-Quadrature points at a time for the current layer to better leverage vectorized CPU instructions.
+    // Gauss-Quadrature points at a time to better leverage vectorized CPU instructions.
     // Note that the scaled time derivatives of the Green-Lagrange strain are added to make the later calculation of
     // the 2nd Piola-Kirchoff stresses more efficient.  The combined result is then scaled by minus the Gauss
     // quadrature weight times the element Jacobian at the corresponding Gauss point (m_kGQ) again for efficiency.
@@ -1229,13 +1214,13 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntDamping(ChVecto
     // Each entry in E1 = kGQ*(E11+alpha*E11dot)
     //                  = kGQ*(1/2*(F11*F11+F21*F21+F31*F31-1)+alpha*(F11*F11dot+F21*F21dot+F31*F31dot))
     VectorNIP_Dv E_BlockDamping_Dv =
-        FC_Dv.template block<NIP_Dv, 1>(0, 0).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 3)) +
-        FC_Dv.template block<NIP_Dv, 1>(0, 1).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 4)) +
-        FC_Dv.template block<NIP_Dv, 1>(0, 2).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 5));
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 3)) +
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 4)) +
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 5));
     VectorNIP_Dv E1_Block_Dv =
-        FC_Dv.template block<NIP_Dv, 1>(0, 0).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 0)) +
-        FC_Dv.template block<NIP_Dv, 1>(0, 1).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 1)) +
-        FC_Dv.template block<NIP_Dv, 1>(0, 2).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 2));
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0)) +
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1)) +
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2));
     E1_Block_Dv.array() -= 1;
     E1_Block_Dv *= 0.5;
     E1_Block_Dv += m_Alpha * E_BlockDamping_Dv;
@@ -1243,14 +1228,18 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntDamping(ChVecto
 
     // Each entry in E2 = kGQ*(E22+alpha*E22dot)
     //                  = kGQ*(1/2*(F12*F12+F22*F22+F32*F32-1)+alpha*(F12*F12dot+F22*F22dot+F32*F32dot))
-    E_BlockDamping_Dv.noalias() =
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 0).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 3)) +
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 1).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 4)) +
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 2).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 5));
-    VectorNIP_Dv E2_Block_Dv =
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 0).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 0)) +
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 1).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 1)) +
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 2).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 2));
+    E_BlockDamping_Dv.noalias() = FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0)
+                                      .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 3)) +
+                                  FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1)
+                                      .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 4)) +
+                                  FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2)
+                                      .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 5));
+    VectorNIP_Dv E2_Block_Dv = FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2));
     E2_Block_Dv.array() -= 1;
     E2_Block_Dv *= 0.5;
     E2_Block_Dv += m_Alpha * E_BlockDamping_Dv;
@@ -1258,14 +1247,18 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntDamping(ChVecto
 
     // Each entry in E3 = kGQ*(E33+alpha*E33dot)
     //                  = kGQ*(1/2*(F13*F13+F23*F23+F33*F33-1)+alpha*(F13*F13dot+F23*F23dot+F33*F33dot))
-    E_BlockDamping_Dv.noalias() =
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 0).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 3)) +
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 1).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 4)) +
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 2).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 5));
-    VectorNIP_Dv E3_Block_Dv =
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 0).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 0)) +
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 1).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 1)) +
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 2).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 2));
+    E_BlockDamping_Dv.noalias() = FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0)
+                                      .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 3)) +
+                                  FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1)
+                                      .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 4)) +
+                                  FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2)
+                                      .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 5));
+    VectorNIP_Dv E3_Block_Dv = FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2));
     E3_Block_Dv.array() -= 1;
     E3_Block_Dv *= 0.5;
     E3_Block_Dv += m_Alpha * E_BlockDamping_Dv;
@@ -1280,11 +1273,10 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntDamping(ChVecto
     const ChMatrix33<double>& Dv = GetMaterial()->Get_Dv();
 
     // =============================================================================
-    // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Gauss quadrature points in the
-    // current layer at a time component by component.
-    // Note that the Green-Largrange strain components have been scaled have already been combined with their scaled
-    // time derivatives and minus the Gauss quadrature weight times the element Jacobian at the corresponding Gauss
-    // point to make the calculation of the 2nd Piola-Kirchoff stresses more efficient.
+    // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Gauss quadrature points at a time
+    // component by component. Note that the Green-Largrange strain components have been scaled have already been
+    // combined with their scaled time derivatives and minus the Gauss quadrature weight times the element Jacobian at
+    // the corresponding Gauss point to make the calculation of the 2nd Piola-Kirchoff stresses more efficient.
     //  kGQ*SPK2 = kGQ*[SPK2_11,SPK2_22,SPK2_33,SPK2_23,SPK2_13,SPK2_12] = D * E_Combined
     // =============================================================================
 
@@ -1297,38 +1289,42 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntDamping(ChVecto
     // scaled by minus the Gauss quadrature weight times the element Jacobian at the corresponding Gauss point.
     // The entries are grouped by component in block matrices (column vectors)
     // P_Block = kGQ*P_transpose = kGQ*SPK2*F_transpose
-    //           [kGQ*(P_transpose)_11  kGQ*(P_transpose)_12  kGQ*(P_transpose)_13 ]
-    //         = [kGQ*(P_transpose)_21  kGQ*(P_transpose)_22  kGQ*(P_transpose)_23 ]
-    //           [kGQ*(P_transpose)_31  kGQ*(P_transpose)_32  kGQ*(P_transpose)_33 ]
+    //           [kGQ*(P_transpose)_11  kGQ*(P_transpose)_12  kGQ*(P_transpose)_13 ] <-- D0 Block
+    //           [kGQ*(P_transpose)_21  kGQ*(P_transpose)_22  kGQ*(P_transpose)_23 ] <-- D0 Block
+    //         = [kGQ*(P_transpose)_31  kGQ*(P_transpose)_32  kGQ*(P_transpose)_33 ] <-- D0 Block
+    //           [kGQ*(P_transpose)_11  kGQ*(P_transpose)_12  kGQ*(P_transpose)_13 ] <-- Dv Block
+    //           [kGQ*(P_transpose)_21  kGQ*(P_transpose)_22  kGQ*(P_transpose)_23 ] <-- Dv Block
+    //           [kGQ*(P_transpose)_31  kGQ*(P_transpose)_32  kGQ*(P_transpose)_33 ] <-- Dv Block
+    // Note that the D0 entries have already been calculated above
     // =============================================================================
 
-    ChMatrixNMc<double, 3 * NIP_Dv, 3> P_Block_Dv;
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0).cwiseProduct(SPK2_1_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1).cwiseProduct(SPK2_1_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2).cwiseProduct(SPK2_1_Block_Dv);
 
-    P_Block_Dv.template block<NIP_Dv, 1>(0, 0) = FC_Dv.template block<NIP_Dv, 1>(0, 0).cwiseProduct(SPK2_1_Block_Dv);
-    P_Block_Dv.template block<NIP_Dv, 1>(0, 1) = FC_Dv.template block<NIP_Dv, 1>(0, 1).cwiseProduct(SPK2_1_Block_Dv);
-    P_Block_Dv.template block<NIP_Dv, 1>(0, 2) = FC_Dv.template block<NIP_Dv, 1>(0, 2).cwiseProduct(SPK2_1_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0).cwiseProduct(SPK2_2_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1).cwiseProduct(SPK2_2_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2).cwiseProduct(SPK2_2_Block_Dv);
 
-    P_Block_Dv.template block<NIP_Dv, 1>(NIP_Dv, 0) =
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 0).cwiseProduct(SPK2_2_Block_Dv);
-    P_Block_Dv.template block<NIP_Dv, 1>(NIP_Dv, 1) =
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 1).cwiseProduct(SPK2_2_Block_Dv);
-    P_Block_Dv.template block<NIP_Dv, 1>(NIP_Dv, 2) =
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 2).cwiseProduct(SPK2_2_Block_Dv);
-
-    P_Block_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 0) =
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 0).cwiseProduct(SPK2_3_Block_Dv);
-    P_Block_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 1) =
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 1).cwiseProduct(SPK2_3_Block_Dv);
-    P_Block_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 2) =
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 2).cwiseProduct(SPK2_3_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0).cwiseProduct(SPK2_3_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1).cwiseProduct(SPK2_3_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2).cwiseProduct(SPK2_3_Block_Dv);
 
     // =============================================================================
-    // Multiply the scaled first Piola-Kirchoff stresses by the shape function derivative matrix for the current
-    // layer to get the generalized force vector in matrix form (in the correct order if its calculated in row-major
-    // memory layout)
+    // Multiply the scaled first Piola-Kirchoff stresses by the shape function derivative matrix to get the generalized
+    // force vector in matrix form (in the correct order if its calculated in row-major memory layout)
     // =============================================================================
 
-    QiCompact += m_SD_Dv * P_Block_Dv;
+    MatrixNx3 QiCompact = m_SD * P_Block;
 
     // =============================================================================
     // Reshape the compact matrix form of the generalized internal force vector (stored using a row-major memory layout)
@@ -1356,6 +1352,21 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntNoDamping(ChVec
     CalcCoordMatrix(e_bar);
 
     // =============================================================================
+    // Calculate the deformation gradient for all Gauss quadrature points in a single matrix multiplication.  Note
+    // that since the shape function derivative matrix is ordered by columns, the resulting deformation gradient
+    // will be ordered by block matrix (column vectors) components
+    // Note that the indices of the components are in transposed order
+    //      [F11  F21  F31 ] <-- D0 Block (No Poisson Effect)
+    //      [F12  F22  F32 ] <-- D0 Block (No Poisson Effect)
+    // FC = [F13  F23  F33 ] <-- D0 Block (No Poisson Effect)
+    //      [F11  F21  F31 ] <-- Dv Block (With Poisson Effect)
+    //      [F12  F22  F32 ] <-- Dv Block (With Poisson Effect)
+    //      [F13  F23  F33 ] <-- Dv Block (With Poisson Effect)
+    // =============================================================================
+
+    ChMatrixNMc<double, 3 * NIP, 3> FC = m_SD.transpose() * e_bar.transpose();
+
+    // =============================================================================
     // =============================================================================
     // Since the Enhanced Continuum Mechanics method is utilized for this element, first calculate the contribution to
     // the generalized internal force vector from the terms that do not include the Poisson effect.  This is integrated
@@ -1364,25 +1375,13 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntNoDamping(ChVec
     // =============================================================================
 
     // =============================================================================
-    // Calculate the deformation gradient for all Gauss quadrature points in a single matrix multiplication.  Note
-    // that since the shape function derivative matrix is ordered by columns, the resulting deformation gradient
-    // will be ordered by block matrix (column vectors) components
-    // Note that the indices of the components are in transposed order
-    //      [F11  F21  F31 ]
-    // FC = [F12  F22  F32 ]
-    //      [F13  F23  F33 ]
-    // =============================================================================
-
-    ChMatrixNMc<double, 3 * NIP_D0, 3> FC_D0 = m_SD_D0.transpose() * e_bar.transpose();
-
-    // =============================================================================
     // Get the diagonal terms of the 6x6 matrix (do not include the Poisson effect
     // =============================================================================
     const ChVectorN<double, 6>& D0 = GetMaterial()->Get_D0();
 
     // =============================================================================
     // Calculate each individual value of the Green-Lagrange strain component by component across all the
-    // Gauss-Quadrature points at a time for the current layer to better leverage vectorized CPU instructions.
+    // Gauss-Quadrature points at a time to better leverage vectorized CPU instructions.
     // The result is then scaled by minus the Gauss quadrature weight times the element Jacobian at the
     // corresponding Gauss point (m_kGQ) for efficiency.
     // Since only the diagonal terms in the 6x6 stiffness matrix are used, the 2nd Piola-Kirchoff can be calculated by
@@ -1393,48 +1392,47 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntNoDamping(ChVec
     // =============================================================================
 
     // Each entry in SPK2_1 = D11*kGQ*E11 = D11*kGQ*1/2*(F11*F11+F21*F21+F31*F31-1)
-    VectorNIP_D0 SPK2_1_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 2));
+    VectorNIP_D0 SPK2_1_Block_D0 = FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 0)) +
+                                   FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(0, 1)) +
+                                   FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(0, 2));
     SPK2_1_Block_D0.array() -= 1;
     SPK2_1_Block_D0.array() *= (0.5 * D0(0)) * m_kGQ_D0.array();
 
     // Each entry in SPK2_2 = D22*kGQ*E22 = D22*kGQ*1/2*(F12*F12+F22*F22+F32*F32-1)
     VectorNIP_D0 SPK2_2_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 2));
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 2));
     SPK2_2_Block_D0.array() -= 1;
     SPK2_2_Block_D0.array() *= (0.5 * D0(1)) * m_kGQ_D0.array();
 
     // Each entry in SPK2_3 = D33*kGQ_D0*E33 = D33*kGQ*1/2*(F13*F13+F23*F23+F33*F33-1)
     VectorNIP_D0 SPK2_3_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2));
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2));
     SPK2_3_Block_D0.array() -= 1;
     SPK2_3_Block_D0.array() *= (0.5 * D0(2)) * m_kGQ_D0.array();
 
     // Each entry in SPK2_4 = D44*kGQ*2*E23 = D44*kGQ*(F12*F13+F22*F23+F32*F33)
     VectorNIP_D0 SPK2_4_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2));
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2));
     SPK2_4_Block_D0.array() *= D0(3) * m_kGQ_D0.array();
 
     // Each entry in SPK2_5 = D55*kGQ*2*E13 = D55*kGQ*(F11*F13+F21*F23+F31*F33)
     VectorNIP_D0 SPK2_5_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2));
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2));
     SPK2_5_Block_D0.array() *= D0(4) * m_kGQ_D0.array();
 
     // Each entry in SPK2_6 = D66*kGQ*2*E12 = D66*(F11*F12+F21*F22+F31*F32)
     VectorNIP_D0 SPK2_6_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 2));
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 2));
     SPK2_6_Block_D0.array() *= D0(5) * m_kGQ_D0.array();
 
     // =============================================================================
@@ -1442,59 +1440,51 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntNoDamping(ChVec
     // scaled by minus the Gauss quadrature weight times the element Jacobian at the corresponding Gauss point.
     // The entries are grouped by component in block matrices (column vectors)
     // P_Block = kGQ*P_transpose = kGQ*SPK2*F_transpose
-    //           [kGQ*(P_transpose)_11  kGQ*(P_transpose)_12  kGQ*(P_transpose)_13 ]
-    //         = [kGQ*(P_transpose)_21  kGQ*(P_transpose)_22  kGQ*(P_transpose)_23 ]
-    //           [kGQ*(P_transpose)_31  kGQ*(P_transpose)_32  kGQ*(P_transpose)_33 ]
+    //           [kGQ*(P_transpose)_11  kGQ*(P_transpose)_12  kGQ*(P_transpose)_13 ] <-- D0 Block
+    //           [kGQ*(P_transpose)_21  kGQ*(P_transpose)_22  kGQ*(P_transpose)_23 ] <-- D0 Block
+    //         = [kGQ*(P_transpose)_31  kGQ*(P_transpose)_32  kGQ*(P_transpose)_33 ] <-- D0 Block
+    //           [kGQ*(P_transpose)_11  kGQ*(P_transpose)_12  kGQ*(P_transpose)_13 ] <-- Dv Block
+    //           [kGQ*(P_transpose)_21  kGQ*(P_transpose)_22  kGQ*(P_transpose)_23 ] <-- Dv Block
+    //           [kGQ*(P_transpose)_31  kGQ*(P_transpose)_32  kGQ*(P_transpose)_33 ] <-- Dv Block
     // =============================================================================
 
-    ChMatrixNMc<double, 3 * NIP_D0, 3> P_Block_D0;
+    ChMatrixNMc<double, 3 * NIP, 3> P_Block;
 
-    P_Block_D0.template block<NIP_D0, 1>(0, 0) =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(SPK2_1_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(SPK2_6_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(SPK2_5_Block_D0);
-    P_Block_D0.template block<NIP_D0, 1>(0, 1) =
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(SPK2_1_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(SPK2_6_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(SPK2_5_Block_D0);
-    P_Block_D0.template block<NIP_D0, 1>(0, 2) =
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(SPK2_1_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(SPK2_6_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(SPK2_5_Block_D0);
+    P_Block.template block<NIP_D0, 1>(0, 0) = FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(SPK2_1_Block_D0) +
+                                              FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(SPK2_6_Block_D0) +
+                                              FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(SPK2_5_Block_D0);
+    P_Block.template block<NIP_D0, 1>(0, 1) = FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(SPK2_1_Block_D0) +
+                                              FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(SPK2_6_Block_D0) +
+                                              FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(SPK2_5_Block_D0);
+    P_Block.template block<NIP_D0, 1>(0, 2) = FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(SPK2_1_Block_D0) +
+                                              FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(SPK2_6_Block_D0) +
+                                              FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(SPK2_5_Block_D0);
 
-    P_Block_D0.template block<NIP_D0, 1>(NIP_D0, 0) =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(SPK2_6_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(SPK2_2_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(SPK2_4_Block_D0);
-    P_Block_D0.template block<NIP_D0, 1>(NIP_D0, 1) =
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(SPK2_6_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(SPK2_2_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(SPK2_4_Block_D0);
-    P_Block_D0.template block<NIP_D0, 1>(NIP_D0, 2) =
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(SPK2_6_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(SPK2_2_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(SPK2_4_Block_D0);
+    P_Block.template block<NIP_D0, 1>(NIP_D0, 0) =
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(SPK2_6_Block_D0) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(SPK2_2_Block_D0) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(SPK2_4_Block_D0);
+    P_Block.template block<NIP_D0, 1>(NIP_D0, 1) =
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(SPK2_6_Block_D0) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(SPK2_2_Block_D0) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(SPK2_4_Block_D0);
+    P_Block.template block<NIP_D0, 1>(NIP_D0, 2) =
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(SPK2_6_Block_D0) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(SPK2_2_Block_D0) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(SPK2_4_Block_D0);
 
-    P_Block_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0) =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(SPK2_5_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(SPK2_4_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(SPK2_3_Block_D0);
-    P_Block_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1) =
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(SPK2_5_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(SPK2_4_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(SPK2_3_Block_D0);
-    P_Block_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2) =
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(SPK2_5_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(SPK2_4_Block_D0) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(SPK2_3_Block_D0);
-
-    // =============================================================================
-    // Multiply the scaled first Piola-Kirchoff stresses by the shape function derivative matrix for the current
-    // layer to get the generalized force vector in matrix form (in the correct order if its calculated in row-major
-    // memory layout)
-    // =============================================================================
-
-    MatrixNx3 QiCompact = m_SD_D0 * P_Block_D0;
+    P_Block.template block<NIP_D0, 1>(2 * NIP_D0, 0) =
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(SPK2_5_Block_D0) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(SPK2_4_Block_D0) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(SPK2_3_Block_D0);
+    P_Block.template block<NIP_D0, 1>(2 * NIP_D0, 1) =
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(SPK2_5_Block_D0) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(SPK2_4_Block_D0) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(SPK2_3_Block_D0);
+    P_Block.template block<NIP_D0, 1>(2 * NIP_D0, 2) =
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(SPK2_5_Block_D0) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(SPK2_4_Block_D0) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(SPK2_3_Block_D0);
 
     // =============================================================================
     // =============================================================================
@@ -1506,20 +1496,8 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntNoDamping(ChVec
     // =============================================================================
 
     // =============================================================================
-    // Calculate the deformation gradient for all Gauss quadrature points in a single matrix multiplication.  Note
-    // that since the shape function derivative matrix is ordered by columns, the resulting deformation gradient
-    // will be ordered by block matrix (column vectors) components
-    // Note that the indices of the components are in transposed order
-    //      [F11  F21  F31 ]
-    // FC = [F12  F22  F32 ]
-    //      [F13  F23  F33 ]
-    // =============================================================================
-
-    ChMatrixNMc<double, 3 * NIP_Dv, 3> FC_Dv = m_SD_Dv.transpose() * e_bar.transpose();
-
-    // =============================================================================
     // Calculate each individual value of the Green-Lagrange strain component by component across all the
-    // Gauss-Quadrature points at a time for the current layer to better leverage vectorized CPU instructions.
+    // Gauss-Quadrature points at a time to better leverage vectorized CPU instructions.
     // The combined result is then scaled by minus the Gauss quadrature weight times the element Jacobian at the
     // corresponding Gauss point (m_kGQ) again for efficiency. Results are written in Voigt notation: epsilon =
     // [E11,E22,E33,2*E23,2*E13,2*E12] Note that with the material assumption being used, only [E11,E22,E33] need to be
@@ -1528,25 +1506,29 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntNoDamping(ChVec
 
     // Each entry in E1 = kGQ*E11 = kGQ*1/2*(F11*F11+F21*F21+F31*F31-1)
     VectorNIP_Dv E1_Block_Dv =
-        FC_Dv.template block<NIP_Dv, 1>(0, 0).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 0)) +
-        FC_Dv.template block<NIP_Dv, 1>(0, 1).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 1)) +
-        FC_Dv.template block<NIP_Dv, 1>(0, 2).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 2));
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0)) +
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1)) +
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2));
     E1_Block_Dv.array() -= 1;
     E1_Block_Dv.array() *= 0.5 * m_kGQ_Dv.array();
 
     // Each entry in E2 = kGQ*E22 = kGQ*1/2*(F12*F12+F22*F22+F32*F32-1)
-    VectorNIP_Dv E2_Block_Dv =
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 0).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 0)) +
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 1).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 1)) +
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 2).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 2));
+    VectorNIP_Dv E2_Block_Dv = FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2));
     E2_Block_Dv.array() -= 1;
     E2_Block_Dv.array() *= 0.5 * m_kGQ_Dv.array();
 
     // Each entry in E3 = kGQ*E33 = kGQ*1/2*(F13*F13+F23*F23+F33*F33-1)
-    VectorNIP_Dv E3_Block_Dv =
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 0).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 0)) +
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 1).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 1)) +
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 2).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 2));
+    VectorNIP_Dv E3_Block_Dv = FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2));
     E3_Block_Dv.array() -= 1;
     E3_Block_Dv.array() *= 0.5 * m_kGQ_Dv.array();
 
@@ -1559,11 +1541,10 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntNoDamping(ChVec
     const ChMatrix33<double>& Dv = GetMaterial()->Get_Dv();
 
     // =============================================================================
-    // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Gauss quadrature points in the
-    // current layer at a time component by component.
-    // Note that the Green-Largrange strain components have been scaled have already been combined with their scaled
-    // time derivatives and minus the Gauss quadrature weight times the element Jacobian at the corresponding Gauss
-    // point to make the calculation of the 2nd Piola-Kirchoff stresses more efficient.
+    // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Gauss quadrature points at a time
+    // component by component. Note that the Green-Largrange strain components have been scaled have already been scaled
+    // by minus the Gauss quadrature weight times the element Jacobian at the corresponding Gauss point to make the
+    // calculation of the 2nd Piola-Kirchoff stresses more efficient.
     //  kGQ*SPK2 = kGQ*[SPK2_11,SPK2_22,SPK2_33,SPK2_23,SPK2_13,SPK2_12] = D * E_Combined
     // =============================================================================
 
@@ -1576,38 +1557,42 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntNoDamping(ChVec
     // scaled by minus the Gauss quadrature weight times the element Jacobian at the corresponding Gauss point.
     // The entries are grouped by component in block matrices (column vectors)
     // P_Block = kGQ*P_transpose = kGQ*SPK2*F_transpose
-    //           [kGQ*(P_transpose)_11  kGQ*(P_transpose)_12  kGQ*(P_transpose)_13 ]
-    //         = [kGQ*(P_transpose)_21  kGQ*(P_transpose)_22  kGQ*(P_transpose)_23 ]
-    //           [kGQ*(P_transpose)_31  kGQ*(P_transpose)_32  kGQ*(P_transpose)_33 ]
+    //           [kGQ*(P_transpose)_11  kGQ*(P_transpose)_12  kGQ*(P_transpose)_13 ] <-- D0 Block
+    //           [kGQ*(P_transpose)_21  kGQ*(P_transpose)_22  kGQ*(P_transpose)_23 ] <-- D0 Block
+    //         = [kGQ*(P_transpose)_31  kGQ*(P_transpose)_32  kGQ*(P_transpose)_33 ] <-- D0 Block
+    //           [kGQ*(P_transpose)_11  kGQ*(P_transpose)_12  kGQ*(P_transpose)_13 ] <-- Dv Block
+    //           [kGQ*(P_transpose)_21  kGQ*(P_transpose)_22  kGQ*(P_transpose)_23 ] <-- Dv Block
+    //           [kGQ*(P_transpose)_31  kGQ*(P_transpose)_32  kGQ*(P_transpose)_33 ] <-- Dv Block
+    // Note that the D0 entries have already been calculated above
     // =============================================================================
 
-    ChMatrixNMc<double, 3 * NIP_Dv, 3> P_Block_Dv;
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0).cwiseProduct(SPK2_1_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1).cwiseProduct(SPK2_1_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2).cwiseProduct(SPK2_1_Block_Dv);
 
-    P_Block_Dv.template block<NIP_Dv, 1>(0, 0) = FC_Dv.template block<NIP_Dv, 1>(0, 0).cwiseProduct(SPK2_1_Block_Dv);
-    P_Block_Dv.template block<NIP_Dv, 1>(0, 1) = FC_Dv.template block<NIP_Dv, 1>(0, 1).cwiseProduct(SPK2_1_Block_Dv);
-    P_Block_Dv.template block<NIP_Dv, 1>(0, 2) = FC_Dv.template block<NIP_Dv, 1>(0, 2).cwiseProduct(SPK2_1_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0).cwiseProduct(SPK2_2_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1).cwiseProduct(SPK2_2_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2).cwiseProduct(SPK2_2_Block_Dv);
 
-    P_Block_Dv.template block<NIP_Dv, 1>(NIP_Dv, 0) =
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 0).cwiseProduct(SPK2_2_Block_Dv);
-    P_Block_Dv.template block<NIP_Dv, 1>(NIP_Dv, 1) =
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 1).cwiseProduct(SPK2_2_Block_Dv);
-    P_Block_Dv.template block<NIP_Dv, 1>(NIP_Dv, 2) =
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 2).cwiseProduct(SPK2_2_Block_Dv);
-
-    P_Block_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 0) =
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 0).cwiseProduct(SPK2_3_Block_Dv);
-    P_Block_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 1) =
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 1).cwiseProduct(SPK2_3_Block_Dv);
-    P_Block_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 2) =
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 2).cwiseProduct(SPK2_3_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0).cwiseProduct(SPK2_3_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1).cwiseProduct(SPK2_3_Block_Dv);
+    P_Block.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2) =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2).cwiseProduct(SPK2_3_Block_Dv);
 
     // =============================================================================
-    // Multiply the scaled first Piola-Kirchoff stresses by the shape function derivative matrix for the current
-    // layer to get the generalized force vector in matrix form (in the correct order if its calculated in row-major
-    // memory layout)
+    // Multiply the scaled first Piola-Kirchoff stresses by the shape function derivative matrix to get the generalized
+    // force vector in matrix form (in the correct order if its calculated in row-major memory layout)
     // =============================================================================
 
-    QiCompact += m_SD_Dv * P_Block_Dv;
+    MatrixNx3 QiCompact = m_SD * P_Block;
 
     // =============================================================================
     // Reshape the compact matrix form of the generalized internal force vector (stored using a row-major memory layout)
@@ -1625,9 +1610,7 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntPreInt(ChVector
     // Calculate the generalize internal force vector using the "Pre-Integration" style of method assuming a
     // linear viscoelastic material model (single term damping model).  For this style of method, the components of the
     // generalized internal force vector and its Jacobian that need to be integrated across the volume are calculated
-    // once prior to the start of the simulation.  This makes this method well suited for applications with many
-    // discrete layers since the in-simulation calculations are independent of the number of Gauss quadrature points
-    // used throughout the entire element.
+    // once prior to the start of the simulation.
 
     Matrix3xN ebar;
     Matrix3xN ebardot;
@@ -1696,12 +1679,15 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalJacobianContIntDamping(ChMat
     // points in a single matrix multiplication.  Note that since the shape function derivative matrix is ordered by
     // columns, the resulting deformation gradient will be ordered by block matrix (column vectors) components
     // Note that the indices of the components are in transposed order
-    //      [F11  F21  F31  F11dot  F21dot  F31dot ]
-    // FC = [F12  F22  F32  F12dot  F22dot  F32dot ]
-    //      [F13  F23  F33  F13dot  F23dot  F33dot ]
+    //      [F11  F21  F31  F11dot  F21dot  F31dot ] <-- D0 Block (No Poisson Effect)
+    //      [F12  F22  F32  F12dot  F22dot  F32dot ] <-- D0 Block (No Poisson Effect)
+    // FC = [F13  F23  F33  F13dot  F23dot  F33dot ] <-- D0 Block (No Poisson Effect)
+    //      [F11  F21  F31  F11dot  F21dot  F31dot ] <-- Dv Block (With Poisson Effect)
+    //      [F12  F22  F32  F12dot  F22dot  F32dot ] <-- Dv Block (With Poisson Effect)
+    //      [F13  F23  F33  F13dot  F23dot  F33dot ] <-- Dv Block (With Poisson Effect)
     // =============================================================================
 
-    ChMatrixNMc<double, 3 * NIP_D0, 6> FC_D0 = m_SD_D0.transpose() * ebar_ebardot;
+    ChMatrixNMc<double, 3 * NIP, 6> FC = m_SD.transpose() * ebar_ebardot;
 
     //==============================================================================
     //==============================================================================
@@ -1714,88 +1700,125 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalJacobianContIntDamping(ChMat
     // (transposed).  This calculation is performed in blocks across all the Gauss quadrature points at the same
     // time.  This value should be store in row major memory layout to align with the access patterns for
     // calculating this matrix.
-    // PE = [(d epsilon1/d e)GQPnt1' (d epsilon1/d e)GQPnt2' ... (d epsilon1/d e)GQPntNIP'...
-    //       (d epsilon2/d e)GQPnt1' (d epsilon2/d e)GQPnt2' ... (d epsilon2/d e)GQPntNIP'...
-    //       (d epsilon3/d e)GQPnt1' (d epsilon3/d e)GQPnt2' ... (d epsilon3/d e)GQPntNIP'...
-    //       (d epsilon4/d e)GQPnt1' (d epsilon4/d e)GQPnt2' ... (d epsilon4/d e)GQPntNIP'...
-    //       (d epsilon5/d e)GQPnt1' (d epsilon5/d e)GQPnt2' ... (d epsilon5/d e)GQPntNIP'...
-    //       (d epsilon6/d e)GQPnt1' (d epsilon6/d e)GQPnt2' ... (d epsilon6/d e)GQPntNIP']
+    // PE = [(d epsilon1/d e)GQPnt1' (d epsilon1/d e)GQPnt2' ... (d epsilon1/d e)GQPntNIP_D0'...
+    //       (d epsilon2/d e)GQPnt1' (d epsilon2/d e)GQPnt2' ... (d epsilon2/d e)GQPntNIP_D0'...
+    //       (d epsilon3/d e)GQPnt1' (d epsilon3/d e)GQPnt2' ... (d epsilon3/d e)GQPntNIP_D0'...
+    //       (d epsilon4/d e)GQPnt1' (d epsilon4/d e)GQPnt2' ... (d epsilon4/d e)GQPntNIP_D0'...
+    //       (d epsilon5/d e)GQPnt1' (d epsilon5/d e)GQPnt2' ... (d epsilon5/d e)GQPntNIP_D0'...
+    //       (d epsilon6/d e)GQPnt1' (d epsilon6/d e)GQPnt2' ... (d epsilon6/d e)GQPntNIP_D0'...
+    //       (d epsilon1/d e)GQPntDv1' ... (d epsilon1/d e)GQPntNIP_Dv'...
+    //       (d epsilon2/d e)GQPntDv1' ... (d epsilon2/d e)GQPntNIP_Dv'...
+    //       (d epsilon3/d e)GQPntDv1' ... (d epsilon3/d e)GQPntNIP_Dv']
     // Note that each partial derivative block shown is placed to the left of the previous block.
     // The explanation of the calculation above is just too long to write it all on a single line.
+    // Since there are no shear terms with the material assumption for Dv, there is no need to calculate
+    // (d epsilon4/d e), (d epsilon5/d e), (d epsilon6/d e) for the Dv Gauss points since these partial
+    // derivatives will be multiplied by zero and will not contribute anything to the Jacobian matrix.
+    // The calculation is performed on 3 rows at a time to capture the partial with respect to the vector of nodal
+    // coordinates e while using the compact matrix form ebar for the calculations.
     // =============================================================================
 
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> PE;
-    PE.resize(3 * NSF, 6 * NIP_D0);
+    ChMatrixNM<double, 3 * NSF, 6 * NIP_D0 + 3 * NIP_Dv> PE;
 
     for (auto i = 0; i < NSF; i++) {
-        PE.block<1, NIP_D0>(3 * i, 0 * NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(0 * NIP_D0, 0).transpose());
-        PE.block<1, NIP_D0>(3 * i, 1 * NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(1 * NIP_D0, 0).transpose());
-        PE.block<1, NIP_D0>(3 * i, 2 * NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose());
-        PE.block<1, NIP_D0>(3 * i, 3 * NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(1 * NIP_D0, 0).transpose()) +
-            m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose());
-        PE.block<1, NIP_D0>(3 * i, 4 * NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(0 * NIP_D0, 0).transpose()) +
-            m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose());
-        PE.block<1, NIP_D0>(3 * i, 5 * NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(0 * NIP_D0, 0).transpose()) +
-            m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(1 * NIP_D0, 0).transpose());
+        PE.template block<1, NIP_D0>(3 * i, 0 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(0 * NIP_D0, 0).transpose());
+        PE.template block<1, NIP_D0>(3 * i, 1 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(1 * NIP_D0, 0).transpose());
+        PE.template block<1, NIP_D0>(3 * i, 2 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose());
+        PE.template block<1, NIP_D0>(3 * i, 3 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(1 * NIP_D0, 0).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose());
+        PE.template block<1, NIP_D0>(3 * i, 4 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(0 * NIP_D0, 0).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose());
+        PE.template block<1, NIP_D0>(3 * i, 5 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(0 * NIP_D0, 0).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(1 * NIP_D0, 0).transpose());
 
-        PE.block<1, NIP_D0>((3 * i) + 1, 0) =
-            m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 1).transpose());
-        PE.block<1, NIP_D0>((3 * i) + 1, NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).transpose());
-        PE.block<1, NIP_D0>((3 * i) + 1, 2 * NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose());
-        PE.block<1, NIP_D0>((3 * i) + 1, 3 * NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).transpose()) +
-            m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose());
-        PE.block<1, NIP_D0>((3 * i) + 1, 4 * NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 1).transpose()) +
-            m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose());
-        PE.block<1, NIP_D0>((3 * i) + 1, 5 * NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 1).transpose()) +
-            m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).transpose());
+        PE.template block<1, NIP_Dv>(3 * i, 6 * NIP_D0 + 0 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0 * NIP_Dv, 0).transpose());
+        PE.template block<1, NIP_Dv>(3 * i, 6 * NIP_D0 + 1 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 1 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 1 * NIP_Dv, 0).transpose());
+        PE.template block<1, NIP_Dv>(3 * i, 6 * NIP_D0 + 2 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0).transpose());
 
-        PE.block<1, NIP_D0>((3 * i) + 2, 0) =
-            m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 2).transpose());
-        PE.block<1, NIP_D0>((3 * i) + 2, NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).transpose());
-        PE.block<1, NIP_D0>((3 * i) + 2, 2 * NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose());
-        PE.block<1, NIP_D0>((3 * i) + 2, 3 * NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).transpose()) +
-            m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose());
-        PE.block<1, NIP_D0>((3 * i) + 2, 4 * NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 2).transpose()) +
-            m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose());
-        PE.block<1, NIP_D0>((3 * i) + 2, 5 * NIP_D0) =
-            m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 2).transpose()) +
-            m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                .cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 1, 0) =
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 1).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 1, NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 1).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 1, 2 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 1, 3 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 1).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 1, 4 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 1).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 1, 5 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 1).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 1).transpose());
+
+        PE.template block<1, NIP_Dv>((3 * i) + 1, 6 * NIP_D0 + 0) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1).transpose());
+        PE.template block<1, NIP_Dv>((3 * i) + 1, 6 * NIP_D0 + NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 1 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1).transpose());
+        PE.template block<1, NIP_Dv>((3 * i) + 1, 6 * NIP_D0 + 2 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1).transpose());
+
+        PE.template block<1, NIP_D0>((3 * i) + 2, 0) =
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 2).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 2, NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 2).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 2, 2 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 2, 3 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 2).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 2, 4 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 2).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 2, 5 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 2).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 2).transpose());
+
+        PE.template block<1, NIP_Dv>((3 * i) + 2, 6 * NIP_D0 + 0) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2).transpose());
+        PE.template block<1, NIP_Dv>((3 * i) + 2, 6 * NIP_D0 + NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 1 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2).transpose());
+        PE.template block<1, NIP_Dv>((3 * i) + 2, 6 * NIP_D0 + 2 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2).transpose());
     }
 
     // =============================================================================
@@ -1805,19 +1828,24 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalJacobianContIntDamping(ChMat
     // gradient for all Gauss quadrature points in a single matrix multiplication.  Note that the resulting combined
     // deformation gradient block matrix will be ordered by block matrix (column vectors) components Note that the
     // indices of the components are in transposed order
-    //            [kGQ*(Kfactor+alpha*Rfactor)*F11+alpha*Rfactor*F11dot ... similar for F21 & F31 blocks]
-    // FCscaled = [kGQ*(Kfactor+alpha*Rfactor)*F12+alpha*Rfactor*F12dot ... similar for F22 & F32 blocks]
-    //            [kGQ*(Kfactor+alpha*Rfactor)*F13+alpha*Rfactor*F13dot ... similar for F23 & F33 blocks]
+    //            [kGQ*(Kfactor+alpha*Rfactor)*F11+alpha*Rfactor*F11dot ... similar for F21 & F31 blocks] <- D0
+    // FCscaled = [kGQ*(Kfactor+alpha*Rfactor)*F12+alpha*Rfactor*F12dot ... similar for F22 & F32 blocks] <- D0
+    //            [kGQ*(Kfactor+alpha*Rfactor)*F13+alpha*Rfactor*F13dot ... similar for F23 & F33 blocks] <- D0
+    //            [kGQ*(Kfactor+alpha*Rfactor)*F11+alpha*Rfactor*F11dot ... similar for F21 & F31 blocks] <- Dv
+    //            [kGQ*(Kfactor+alpha*Rfactor)*F12+alpha*Rfactor*F12dot ... similar for F22 & F32 blocks] <- Dv
+    //            [kGQ*(Kfactor+alpha*Rfactor)*F13+alpha*Rfactor*F13dot ... similar for F23 & F33 blocks] <- Dv
     // =============================================================================
 
-    ChMatrixNMc<double, 3 * NIP_D0, 3> FCscaled_D0 =
-        (Kfactor + m_Alpha * Rfactor) * FC_D0.template block<3 * NIP_D0, 3>(0, 0) +
-        (m_Alpha * Kfactor) * FC_D0.template block<3 * NIP_D0, 3>(0, 3);
+    ChMatrixNMc<double, 3 * NIP, 3> FCscaled = (Kfactor + m_Alpha * Rfactor) * FC.template block<3 * NIP, 3>(0, 0) +
+                                               (m_Alpha * Kfactor) * FC.template block<3 * NIP, 3>(0, 3);
 
     for (auto i = 0; i < 3; i++) {
-        FCscaled_D0.template block<NIP_D0, 1>(0, i).array() *= m_kGQ_D0.array();
-        FCscaled_D0.template block<NIP_D0, 1>(NIP_D0, i).array() *= m_kGQ_D0.array();
-        FCscaled_D0.template block<NIP_D0, 1>(2 * NIP_D0, i).array() *= m_kGQ_D0.array();
+        FCscaled.template block<NIP_D0, 1>(0, i).array() *= m_kGQ_D0.array();
+        FCscaled.template block<NIP_D0, 1>(NIP_D0, i).array() *= m_kGQ_D0.array();
+        FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, i).array() *= m_kGQ_D0.array();
+        FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, i).array() *= m_kGQ_Dv.array();
+        FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, i).array() *= m_kGQ_Dv.array();
+        FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, i).array() *= m_kGQ_Dv.array();
     }
 
     // =============================================================================
@@ -1834,86 +1862,156 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalJacobianContIntDamping(ChMat
     // same time.  This value should be store in row major memory layout to align with the access patterns for
     // calculating this matrix.
     // =============================================================================
+    // For the D0 Gauss quadrature points, the stiffness matrix D0 is diagonal so the scaled partial derivatives can be
+    // easily multiplied by D0.  The Dv Gauss quadrature points are handled separately after this
+    // =============================================================================
 
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> DScaled_Combined_PE;
-    DScaled_Combined_PE.resize(3 * NSF, 6 * NIP_D0);
+    ChMatrixNM<double, 3 * NSF, 6 * NIP_D0 + 3 * NIP_Dv> DScaled_Combined_PE;
 
     for (auto i = 0; i < NSF; i++) {
-        DScaled_Combined_PE.block<1, NIP_D0>(3 * i, 0) =
-            D0(0) * m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                        .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(0, 0).transpose());
-        DScaled_Combined_PE.block<1, NIP_D0>(3 * i, NIP_D0) =
-            D0(1) * m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                        .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(NIP_D0, 0).transpose());
-        DScaled_Combined_PE.block<1, NIP_D0>(3 * i, 2 * NIP_D0) =
-            D0(2) * m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                        .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose());
-        DScaled_Combined_PE.block<1, NIP_D0>(3 * i, 3 * NIP_D0) =
-            D0(3) * (m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(NIP_D0, 0).transpose()) +
-                     m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose()));
-        DScaled_Combined_PE.block<1, NIP_D0>(3 * i, 4 * NIP_D0) =
-            D0(4) * (m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(0, 0).transpose()) +
-                     m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose()));
-        DScaled_Combined_PE.block<1, NIP_D0>(3 * i, 5 * NIP_D0) =
-            D0(5) * (m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(0, 0).transpose()) +
-                     m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(NIP_D0, 0).transpose()));
+        DScaled_Combined_PE.template block<1, NIP_D0>(3 * i, 0) =
+            D0(0) * m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 0).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>(3 * i, NIP_D0) =
+            D0(1) * m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 0).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>(3 * i, 2 * NIP_D0) =
+            D0(2) * m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>(3 * i, 3 * NIP_D0) =
+            D0(3) * (m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 0).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose()));
+        DScaled_Combined_PE.template block<1, NIP_D0>(3 * i, 4 * NIP_D0) =
+            D0(4) * (m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 0).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose()));
+        DScaled_Combined_PE.template block<1, NIP_D0>(3 * i, 5 * NIP_D0) =
+            D0(5) * (m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 0).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 0).transpose()));
 
-        DScaled_Combined_PE.block<1, NIP_D0>((3 * i) + 1, 0) =
-            D0(0) * m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                        .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(0, 1).transpose());
-        DScaled_Combined_PE.block<1, NIP_D0>((3 * i) + 1, NIP_D0) =
-            D0(1) * m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                        .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(NIP_D0, 1).transpose());
-        DScaled_Combined_PE.block<1, NIP_D0>((3 * i) + 1, 2 * NIP_D0) =
-            D0(2) * m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                        .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose());
-        DScaled_Combined_PE.block<1, NIP_D0>((3 * i) + 1, 3 * NIP_D0) =
-            D0(3) * (m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(NIP_D0, 1).transpose()) +
-                     m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose()));
-        DScaled_Combined_PE.block<1, NIP_D0>((3 * i) + 1, 4 * NIP_D0) =
-            D0(4) * (m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(0, 1).transpose()) +
-                     m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose()));
-        DScaled_Combined_PE.block<1, NIP_D0>((3 * i) + 1, 5 * NIP_D0) =
-            D0(5) * (m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(0, 1).transpose()) +
-                     m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(NIP_D0, 1).transpose()));
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 1, 0) =
+            D0(0) * m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 1).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 1, NIP_D0) =
+            D0(1) * m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 1).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 1, 2 * NIP_D0) =
+            D0(2) * m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 1, 3 * NIP_D0) =
+            D0(3) * (m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 1).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose()));
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 1, 4 * NIP_D0) =
+            D0(4) * (m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 1).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose()));
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 1, 5 * NIP_D0) =
+            D0(5) * (m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 1).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 1).transpose()));
 
-        DScaled_Combined_PE.block<1, NIP_D0>((3 * i) + 2, 0) =
-            D0(0) * m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                        .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(0, 2).transpose());
-        DScaled_Combined_PE.block<1, NIP_D0>((3 * i) + 2, NIP_D0) =
-            D0(1) * m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                        .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(NIP_D0, 2).transpose());
-        DScaled_Combined_PE.block<1, NIP_D0>((3 * i) + 2, 2 * NIP_D0) =
-            D0(2) * m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                        .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose());
-        DScaled_Combined_PE.block<1, NIP_D0>((3 * i) + 2, 3 * NIP_D0) =
-            D0(3) * (m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(NIP_D0, 2).transpose()) +
-                     m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose()));
-        DScaled_Combined_PE.block<1, NIP_D0>((3 * i) + 2, 4 * NIP_D0) =
-            D0(4) * (m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(0, 2).transpose()) +
-                     m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose()));
-        DScaled_Combined_PE.block<1, NIP_D0>((3 * i) + 2, 5 * NIP_D0) =
-            D0(5) * (m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(0, 2).transpose()) +
-                     m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)
-                         .cwiseProduct(FCscaled_D0.template block<NIP_D0, 1>(NIP_D0, 2).transpose()));
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 2, 0) =
+            D0(0) * m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 2).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 2, NIP_D0) =
+            D0(1) * m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 2).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 2, 2 * NIP_D0) =
+            D0(2) * m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 2, 3 * NIP_D0) =
+            D0(3) * (m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 2).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose()));
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 2, 4 * NIP_D0) =
+            D0(4) * (m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 2).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose()));
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 2, 5 * NIP_D0) =
+            D0(5) * (m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 2).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 2).transpose()));
     }
+
+    // =============================================================================
+    // For the Dv Gauss quadrature points, the matrix of scaled partial derivatives needs to be calculated first since
+    // they will be will be combined together when multiplying by the Dv stiffness matrix (upper 3x3 block is
+    // potentially non-zero)
+    // =============================================================================
+
+    ChMatrixNM<double, 3 * NSF, 3 * NIP_Dv> Scaled_Combined_PE_Dv;
+
+    for (auto i = 0; i < NSF; i++) {
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>(3 * i, 0) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0).transpose());
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>(3 * i, NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 1 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0).transpose());
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>(3 * i, 2 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0).transpose());
+
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>((3 * i) + 1, 0) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1).transpose());
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>((3 * i) + 1, NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 1 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1).transpose());
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>((3 * i) + 1, 2 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1).transpose());
+
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>((3 * i) + 2, 0) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2).transpose());
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>((3 * i) + 2, NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 1 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2).transpose());
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>((3 * i) + 2, 2 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2).transpose());
+    }
+
+    // =============================================================================
+    // Get the upper 3x3 block of the stiffness tensor in 6x6 matrix that accounts for the Poisson effect.  Note that
+    // with the split of the stiffness matrix and the assumed materials, the entries in the 6x6 stiffness matrix outside
+    // of the upper 3x3 block are all zeros.
+    // =============================================================================
+
+    const ChMatrix33<double>& Dv = GetMaterial()->Get_Dv();
+
+    // =============================================================================
+    // For the Dv Gauss quadrature points, multiply the scaled and combined partial derivative block matrix by the
+    // stiffness matrix for each individual Gauss quadrature point and place the results in th last 3*NIP_Dv columns of
+    // the final scaled and combined partial derivative block matrix since the D0 Gauss quadrature point columns were
+    // calculated above.
+    // =============================================================================
+
+    DScaled_Combined_PE.template block<3 * NSF, NIP_Dv>(0, 6 * NIP_D0 + 0) =
+        Dv(0, 0) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, 0) +
+        Dv(0, 1) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, NIP_Dv) +
+        Dv(0, 2) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, 2 * NIP_Dv);
+    DScaled_Combined_PE.template block<3 * NSF, NIP_Dv>(0, 6 * NIP_D0 + NIP_Dv) =
+        Dv(1, 0) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, 0) +
+        Dv(1, 1) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, NIP_Dv) +
+        Dv(1, 2) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, 2 * NIP_Dv);
+    DScaled_Combined_PE.template block<3 * NSF, NIP_Dv>(0, 6 * NIP_D0 + 2 * NIP_Dv) =
+        Dv(2, 0) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, 0) +
+        Dv(2, 1) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, NIP_Dv) +
+        Dv(2, 2) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, 2 * NIP_Dv);
 
     // =============================================================================
     // Multiply the partial derivative block matrix by the final scaled and combined partial derivative block matrix
@@ -1930,10 +2028,12 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalJacobianContIntDamping(ChMat
 
     // =============================================================================
     // Calculate each individual value of the Green-Lagrange strain component by component across all the
-    // Gauss-Quadrature points at a time for the current layer to better leverage vectorized CPU instructions.
+    // Gauss-Quadrature points at a time to better leverage vectorized CPU instructions.
     // Note that the scaled time derivatives of the Green-Lagrange strain are added to make the later calculation of
     // the 2nd Piola-Kirchoff stresses more efficient.  The combined result is then scaled by minus the Gauss
     // quadrature weight times the element Jacobian at the corresponding Gauss point (m_kGQ) again for efficiency.
+    // =============================================================================
+    // For the D0 Gauss quadrature points:
     // Since only the diagonal terms in the 6x6 stiffness matrix are used, the 2nd Piola-Kirchoff can be calculated by
     // simply scaling the vector of scaled Green-Lagrange strains in Voight notation by the corresponding diagonal entry
     // in the stiffness matrix.
@@ -1944,13 +2044,12 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalJacobianContIntDamping(ChMat
     // Each entry in SPK2_1 = D11*kGQ*(E11+alpha*E11dot)
     //     = D11*kGQ*(1/2*(F11*F11+F21*F21+F31*F31-1)+alpha*(F11*F11dot+F21*F21dot+F31*F31dot))
     VectorNIP_D0 E_BlockDamping_D0 =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 5));
-    VectorNIP_D0 SPK2_1_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 2));
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 3)) +
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(0, 4)) +
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(0, 5));
+    VectorNIP_D0 SPK2_1_Block_D0 = FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 0)) +
+                                   FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(0, 1)) +
+                                   FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(0, 2));
     SPK2_1_Block_D0.array() -= 1;
     SPK2_1_Block_D0 += (2 * m_Alpha) * E_BlockDamping_D0;
     SPK2_1_Block_D0.array() *= m_kGQ_D0.array();
@@ -1959,13 +2058,13 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalJacobianContIntDamping(ChMat
     // Each entry in SPK2_2 = D22*kGQ*(E22+alpha*E22dot)
     //     = D22*kGQ*(1/2*(F12*F12+F22*F22+F32*F32-1)+alpha*(F12*F12dot+F22*F22dot+F32*F32dot))
     E_BlockDamping_D0.noalias() =
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 5));
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 3)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 4)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 5));
     VectorNIP_D0 SPK2_2_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 2));
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 2));
     SPK2_2_Block_D0.array() -= 1;
     SPK2_2_Block_D0 += (2 * m_Alpha) * E_BlockDamping_D0;
     SPK2_2_Block_D0.array() *= m_kGQ_D0.array();
@@ -1974,13 +2073,13 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalJacobianContIntDamping(ChMat
     // Each entry in SPK2_3 = D33*kGQ*(E33+alpha*E33dot)
     //     = D33*kGQ*(1/2*(F13*F13+F23*F23+F33*F33-1)+alpha*(F13*F13dot+F23*F23dot+F33*F33dot))
     E_BlockDamping_D0.noalias() =
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 5));
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 3)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 4)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 5));
     VectorNIP_D0 SPK2_3_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2));
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2));
     SPK2_3_Block_D0.array() -= 1;
     SPK2_3_Block_D0 += (2 * m_Alpha) * E_BlockDamping_D0;
     SPK2_3_Block_D0.array() *= m_kGQ_D0.array();
@@ -1990,16 +2089,16 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalJacobianContIntDamping(ChMat
     //     = D44*kGQ*((F12*F13+F22*F23+F32*F33)
     //       +alpha*(F12dot*F13+F22dot*F23+F32dot*F33 + F12*F13dot+F22*F23dot+F32*F33dot))
     E_BlockDamping_D0.noalias() =
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 5)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 5));
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 3)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 4)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 5)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 3)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 4)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 5));
     VectorNIP_D0 SPK2_4_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2));
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2));
     SPK2_4_Block_D0 += m_Alpha * E_BlockDamping_D0;
     SPK2_4_Block_D0.array() *= m_kGQ_D0.array();
     SPK2_4_Block_D0 *= D0(3);
@@ -2008,16 +2107,16 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalJacobianContIntDamping(ChMat
     //     = D55*kGQ*((F11*F13+F21*F23+F31*F33)
     //       +alpha*(F11dot*F13+F21dot*F23+F31dot*F33 + F11*F13dot+F21*F23dot+F31*F33dot))
     E_BlockDamping_D0.noalias() =
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 5)) +
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 5));
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 3)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(0, 4)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(0, 5)) +
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 3)) +
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 4)) +
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 5));
     VectorNIP_D0 SPK2_5_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(2 * NIP_D0, 2));
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2));
     SPK2_5_Block_D0 += m_Alpha * E_BlockDamping_D0;
     SPK2_5_Block_D0.array() *= m_kGQ_D0.array();
     SPK2_5_Block_D0 *= D0(4);
@@ -2026,42 +2125,125 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalJacobianContIntDamping(ChMat
     //     = D66*kGQ*((F11*F12+F21*F22+F31*F32)
     //       +alpha*(F11dot*F12+F21dot*F22+F31dot*F32 + F11*F12dot+F21*F22dot+F31*F32dot))
     E_BlockDamping_D0.noalias() =
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(0, 5)) +
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 3)) +
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 4)) +
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 5));
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 3)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(0, 4)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(0, 5)) +
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 3)) +
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 4)) +
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 5));
     VectorNIP_D0 SPK2_6_Block_D0 =
-        FC_D0.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 0)) +
-        FC_D0.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 1)) +
-        FC_D0.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC_D0.template block<NIP_D0, 1>(NIP_D0, 2));
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 2));
     SPK2_6_Block_D0 += m_Alpha * E_BlockDamping_D0;
     SPK2_6_Block_D0.array() *= m_kGQ_D0.array();
     SPK2_6_Block_D0 *= D0(5);
+
+    // =============================================================================
+    // For the Dv Gauss quadrature points:
+    // Since only the upper 3x3 terms in the 6x6 stiffness matrix are used, only the E11, E22, and E33 components of the
+    // Green-Lagrange strain tensor (combined and scaled) are needed since multiplying by the Dv stiffness matrix will
+    // result in 2nd Piola-Kirchoff stresses that are only possibly non-zero for SPK2_11, SPK2_22, and SPK2_33. Results
+    // are written in Voigt notation: epsilon = [E11,E22,E33,2*E23,2*E13,2*E12]
+    // =============================================================================
+
+    // Each entry in E1 = kGQ*(E11+alpha*E11dot)
+    //                  = kGQ*(1/2*(F11*F11+F21*F21+F31*F31-1)+alpha*(F11*F11dot+F21*F21dot+F31*F31dot))
+    VectorNIP_Dv E_BlockDamping_Dv =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 3)) +
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 4)) +
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 5));
+    VectorNIP_Dv E1_Block_Dv =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0)) +
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1)) +
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2));
+    E1_Block_Dv.array() -= 1;
+    E1_Block_Dv *= 0.5;
+    E1_Block_Dv += m_Alpha * E_BlockDamping_Dv;
+    E1_Block_Dv.array() *= m_kGQ_Dv.array();
+
+    // Each entry in E2 = kGQ*(E22+alpha*E22dot)
+    //                  = kGQ*(1/2*(F12*F12+F22*F22+F32*F32-1)+alpha*(F12*F12dot+F22*F22dot+F32*F32dot))
+    E_BlockDamping_Dv.noalias() = FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0)
+                                      .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 3)) +
+                                  FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1)
+                                      .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 4)) +
+                                  FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2)
+                                      .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 5));
+    VectorNIP_Dv E2_Block_Dv = FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2));
+    E2_Block_Dv.array() -= 1;
+    E2_Block_Dv *= 0.5;
+    E2_Block_Dv += m_Alpha * E_BlockDamping_Dv;
+    E2_Block_Dv.array() *= m_kGQ_Dv.array();
+
+    // Each entry in E3 = kGQ*(E33+alpha*E33dot)
+    //                  = kGQ*(1/2*(F13*F13+F23*F23+F33*F33-1)+alpha*(F13*F13dot+F23*F23dot+F33*F33dot))
+    E_BlockDamping_Dv.noalias() = FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0)
+                                      .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 3)) +
+                                  FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1)
+                                      .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 4)) +
+                                  FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2)
+                                      .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 5));
+    VectorNIP_Dv E3_Block_Dv = FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2));
+    E3_Block_Dv.array() -= 1;
+    E3_Block_Dv *= 0.5;
+    E3_Block_Dv += m_Alpha * E_BlockDamping_Dv;
+    E3_Block_Dv.array() *= m_kGQ_Dv.array();
+
+    // =============================================================================
+    // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Dv Gauss quadrature points.
+    // Note that the Green-Largrange strain components have been scaled have already been combined with their scaled
+    // time derivatives and minus the Gauss quadrature weight times the element Jacobian at the corresponding Gauss
+    // point to make the calculation of the 2nd Piola-Kirchoff stresses more efficient.
+    //  kGQ*SPK2 = kGQ*[SPK2_11,SPK2_22,SPK2_33,SPK2_23,SPK2_13,SPK2_12] = D * E_Combined
+    //  where SPK2_23, SPK2_13, and SPK2_12 are zeros for the Dv Gauss quadrature points
+    // =============================================================================
+
+    VectorNIP_Dv SPK2_1_Block_Dv = Dv(0, 0) * E1_Block_Dv + Dv(0, 1) * E2_Block_Dv + Dv(0, 2) * E3_Block_Dv;
+    VectorNIP_Dv SPK2_2_Block_Dv = Dv(1, 0) * E1_Block_Dv + Dv(1, 1) * E2_Block_Dv + Dv(1, 2) * E3_Block_Dv;
+    VectorNIP_Dv SPK2_3_Block_Dv = Dv(2, 0) * E1_Block_Dv + Dv(2, 1) * E2_Block_Dv + Dv(2, 2) * E3_Block_Dv;
 
     // =============================================================================
     // Multiply the shape function derivative matrix by the 2nd Piola-Kirchoff stresses for each corresponding Gauss
     // quadrature point
     // =============================================================================
 
-    ChMatrixNM<double, NSF, 3 * NIP_D0> S_scaled_SD_D0;
+    ChMatrixNM<double, NSF, 3 * NIP> S_scaled_SD;
 
     for (auto i = 0; i < NSF; i++) {
-        S_scaled_SD_D0.template block<1, NIP_D0>(i, 0) =
-            SPK2_1_Block_D0.transpose().cwiseProduct(m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)) +
-            SPK2_6_Block_D0.transpose().cwiseProduct(m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)) +
-            SPK2_5_Block_D0.transpose().cwiseProduct(m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0));
+        S_scaled_SD.template block<1, NIP_D0>(i, 0) =
+            SPK2_1_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)) +
+            SPK2_6_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)) +
+            SPK2_5_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0));
 
-        S_scaled_SD_D0.template block<1, NIP_D0>(i, NIP_D0) =
-            SPK2_6_Block_D0.transpose().cwiseProduct(m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)) +
-            SPK2_2_Block_D0.transpose().cwiseProduct(m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)) +
-            SPK2_4_Block_D0.transpose().cwiseProduct(m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0));
+        S_scaled_SD.template block<1, NIP_D0>(i, NIP_D0) =
+            SPK2_6_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)) +
+            SPK2_2_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)) +
+            SPK2_4_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0));
 
-        S_scaled_SD_D0.template block<1, NIP_D0>(i, 2 * NIP_D0) =
-            SPK2_5_Block_D0.transpose().cwiseProduct(m_SD_D0.block<1, NIP_D0>(i, 0 * NIP_D0)) +
-            SPK2_4_Block_D0.transpose().cwiseProduct(m_SD_D0.block<1, NIP_D0>(i, 1 * NIP_D0)) +
-            SPK2_3_Block_D0.transpose().cwiseProduct(m_SD_D0.block<1, NIP_D0>(i, 2 * NIP_D0));
+        S_scaled_SD.template block<1, NIP_D0>(i, 2 * NIP_D0) =
+            SPK2_5_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)) +
+            SPK2_4_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)) +
+            SPK2_3_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0));
+
+        S_scaled_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0) =
+            SPK2_1_Block_Dv.transpose().cwiseProduct(m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0 * NIP_Dv));
+
+        S_scaled_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + NIP_Dv) =
+            SPK2_2_Block_Dv.transpose().cwiseProduct(m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 1 * NIP_Dv));
+
+        S_scaled_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv) =
+            SPK2_3_Block_Dv.transpose().cwiseProduct(m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv));
     }
 
     // =============================================================================
@@ -2076,291 +2258,8 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalJacobianContIntDamping(ChMat
     unsigned int idx = 0;
     for (unsigned int i = 0; i < NSF; i++) {
         for (unsigned int j = i; j < NSF; j++) {
-            double d = Kfactor * m_SD_D0.row(i) * S_scaled_SD_D0.row(j).transpose();
+            double d = Kfactor * m_SD.row(i) * S_scaled_SD.row(j).transpose();
             d += ScaledMassMatrix(idx);
-
-            H(3 * i, 3 * j) += d;
-            H(3 * i + 1, 3 * j + 1) += d;
-            H(3 * i + 2, 3 * j + 2) += d;
-            if (i != j) {
-                H(3 * j, 3 * i) += d;
-                H(3 * j + 1, 3 * i + 1) += d;
-                H(3 * j + 2, 3 * i + 2) += d;
-            }
-            idx++;
-        }
-    }
-
-    // =============================================================================
-    // Calculate the deformation gradient and time derivative of the deformation gradient for all Gauss quadrature
-    // points in a single matrix multiplication.  Note that since the shape function derivative matrix is ordered by
-    // columns, the resulting deformation gradient will be ordered by block matrix (column vectors) components
-    // Note that the indices of the components are in transposed order
-    //      [F11  F21  F31  F11dot  F21dot  F31dot ]
-    // FC = [F12  F22  F32  F12dot  F22dot  F32dot ]
-    //      [F13  F23  F33  F13dot  F23dot  F33dot ]
-    // =============================================================================
-
-    ChMatrixNMc<double, 3 * NIP_Dv, 6> FC_Dv = m_SD_Dv.transpose() * ebar_ebardot;
-
-    //==============================================================================
-    //==============================================================================
-    // Calculate the potentially non-symmetric and non-sparse component of the Jacobian matrix
-    //==============================================================================
-    //==============================================================================
-
-    // =============================================================================
-    // Calculate the partial derivative of the Green-Largrange strains with respect to the nodal coordinates
-    // (transposed).  This calculation is performed in blocks across all the Gauss quadrature points at the same
-    // time.  This value should be store in row major memory layout to align with the access patterns for
-    // calculating this matrix.
-    // PE = [(d epsilon1/d e)GQPnt1' (d epsilon1/d e)GQPnt2' ... (d epsilon1/d e)GQPntNIP'...
-    //       (d epsilon2/d e)GQPnt1' (d epsilon2/d e)GQPnt2' ... (d epsilon2/d e)GQPntNIP'...
-    //       (d epsilon3/d e)GQPnt1' (d epsilon3/d e)GQPnt2' ... (d epsilon3/d e)GQPntNIP'...
-    //       (d epsilon4/d e)GQPnt1' (d epsilon4/d e)GQPnt2' ... (d epsilon4/d e)GQPntNIP'...
-    //       (d epsilon5/d e)GQPnt1' (d epsilon5/d e)GQPnt2' ... (d epsilon5/d e)GQPntNIP'...
-    //       (d epsilon6/d e)GQPnt1' (d epsilon6/d e)GQPnt2' ... (d epsilon6/d e)GQPntNIP']
-    // Note that each partial derivative block shown is placed to the left of the previous block.
-    // The explanation of the calculation above is just too long to write it all on a single line.
-    // =============================================================================
-
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> PE_Dv;
-    PE_Dv.resize(3 * NSF, 3 * NIP_Dv);
-
-    for (auto i = 0; i < NSF; i++) {
-        PE_Dv.block<1, NIP_Dv>(3 * i, 0 * NIP_Dv) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 0 * NIP_Dv)
-                .cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0 * NIP_Dv, 0).transpose());
-        PE_Dv.block<1, NIP_Dv>(3 * i, 1 * NIP_Dv) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 1 * NIP_Dv)
-                .cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(1 * NIP_Dv, 0).transpose());
-        PE_Dv.block<1, NIP_Dv>(3 * i, 2 * NIP_Dv) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 2 * NIP_Dv)
-                .cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 0).transpose());
-
-        PE_Dv.block<1, NIP_Dv>((3 * i) + 1, 0) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 0 * NIP_Dv).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 1).transpose());
-        PE_Dv.block<1, NIP_Dv>((3 * i) + 1, NIP_Dv) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 1 * NIP_Dv)
-                .cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 1).transpose());
-        PE_Dv.block<1, NIP_Dv>((3 * i) + 1, 2 * NIP_Dv) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 2 * NIP_Dv)
-                .cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 1).transpose());
-
-        PE_Dv.block<1, NIP_Dv>((3 * i) + 2, 0) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 0 * NIP_Dv).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 2).transpose());
-        PE_Dv.block<1, NIP_Dv>((3 * i) + 2, NIP_Dv) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 1 * NIP_Dv)
-                .cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 2).transpose());
-        PE_Dv.block<1, NIP_Dv>((3 * i) + 2, 2 * NIP_Dv) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 2 * NIP_Dv)
-                .cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 2).transpose());
-    }
-
-    // =============================================================================
-    // Combine the deformation gradient, time derivative of the deformation gradient, damping coefficient, Gauss
-    // quadrature weighting times the element Jacobian, and Jacobian component scale factors into a scaled block
-    // deformation gradient matrix Calculate the deformation gradient and time derivative of the deformation
-    // gradient for all Gauss quadrature points in a single matrix multiplication.  Note that the resulting combined
-    // deformation gradient block matrix will be ordered by block matrix (column vectors) components Note that the
-    // indices of the components are in transposed order
-    //            [kGQ*(Kfactor+alpha*Rfactor)*F11+alpha*Rfactor*F11dot ... similar for F21 & F31 blocks]
-    // FCscaled = [kGQ*(Kfactor+alpha*Rfactor)*F12+alpha*Rfactor*F12dot ... similar for F22 & F32 blocks]
-    //            [kGQ*(Kfactor+alpha*Rfactor)*F13+alpha*Rfactor*F13dot ... similar for F23 & F33 blocks]
-    // =============================================================================
-
-    ChMatrixNMc<double, 3 * NIP_Dv, 3> FCscaled_Dv =
-        (Kfactor + m_Alpha * Rfactor) * FC_Dv.template block<3 * NIP_Dv, 3>(0, 0) +
-        (m_Alpha * Kfactor) * FC_Dv.template block<3 * NIP_Dv, 3>(0, 3);
-
-    for (auto i = 0; i < 3; i++) {
-        FCscaled_Dv.template block<NIP_Dv, 1>(0, i).array() *= m_kGQ_Dv.array();
-        FCscaled_Dv.template block<NIP_Dv, 1>(NIP_Dv, i).array() *= m_kGQ_Dv.array();
-        FCscaled_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, i).array() *= m_kGQ_Dv.array();
-    }
-
-    // =============================================================================
-    // Calculate the combination of the scaled partial derivative of the Green-Largrange strains with respect to the
-    // nodal coordinates, the scaled partial derivative of the time derivative of the Green-Largrange strains with
-    // respect to the nodal coordinates, the scaled partial derivative of the Green-Largrange strains with respect
-    // to the time derivative of the nodal coordinates, and the other parameters to correctly integrate across the
-    // volume of the element.  This calculation is performed in blocks across all the Gauss quadrature points at the
-    // same time.  This value should be store in row major memory layout to align with the access patterns for
-    // calculating this matrix.
-    // =============================================================================
-
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Scaled_Combined_PE_Dv;
-    Scaled_Combined_PE_Dv.resize(3 * NSF, 3 * NIP_Dv);
-
-    for (auto i = 0; i < NSF; i++) {
-        Scaled_Combined_PE_Dv.block<1, NIP_Dv>(3 * i, 0) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 0 * NIP_Dv)
-                .cwiseProduct(FCscaled_Dv.template block<NIP_Dv, 1>(0, 0).transpose());
-        Scaled_Combined_PE_Dv.block<1, NIP_Dv>(3 * i, NIP_Dv) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 1 * NIP_Dv)
-                .cwiseProduct(FCscaled_Dv.template block<NIP_Dv, 1>(NIP_Dv, 0).transpose());
-        Scaled_Combined_PE_Dv.block<1, NIP_Dv>(3 * i, 2 * NIP_Dv) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 2 * NIP_Dv)
-                .cwiseProduct(FCscaled_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 0).transpose());
-
-        Scaled_Combined_PE_Dv.block<1, NIP_Dv>((3 * i) + 1, 0) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 0 * NIP_Dv)
-                .cwiseProduct(FCscaled_Dv.template block<NIP_Dv, 1>(0, 1).transpose());
-        Scaled_Combined_PE_Dv.block<1, NIP_Dv>((3 * i) + 1, NIP_Dv) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 1 * NIP_Dv)
-                .cwiseProduct(FCscaled_Dv.template block<NIP_Dv, 1>(NIP_Dv, 1).transpose());
-        Scaled_Combined_PE_Dv.block<1, NIP_Dv>((3 * i) + 1, 2 * NIP_Dv) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 2 * NIP_Dv)
-                .cwiseProduct(FCscaled_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 1).transpose());
-
-        Scaled_Combined_PE_Dv.block<1, NIP_Dv>((3 * i) + 2, 0) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 0 * NIP_Dv)
-                .cwiseProduct(FCscaled_Dv.template block<NIP_Dv, 1>(0, 2).transpose());
-        Scaled_Combined_PE_Dv.block<1, NIP_Dv>((3 * i) + 2, NIP_Dv) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 1 * NIP_Dv)
-                .cwiseProduct(FCscaled_Dv.template block<NIP_Dv, 1>(NIP_Dv, 2).transpose());
-        Scaled_Combined_PE_Dv.block<1, NIP_Dv>((3 * i) + 2, 2 * NIP_Dv) =
-            m_SD_Dv.block<1, NIP_Dv>(i, 2 * NIP_Dv)
-                .cwiseProduct(FCscaled_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 2).transpose());
-    }
-
-    // =============================================================================
-    // Get the upper 3x3 block of the stiffness tensor in 6x6 matrix that accounts for the Poisson effect.  Note that
-    // with the split of the stiffness matrix and the assumed materials, the entries in the 6x6 stiffness matrix outside
-    // of the upper 3x3 block are all zeros.
-    // =============================================================================
-
-    const ChMatrix33<double>& Dv = GetMaterial()->Get_Dv();
-
-    // =============================================================================
-    // Multiply the scaled and combined partial derivative block matrix by the stiffness matrix for each individual
-    // Gauss quadrature point
-    // =============================================================================
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> DScaled_Combined_PE_Dv;
-    DScaled_Combined_PE_Dv.resize(3 * NSF, 3 * NIP_Dv);
-
-    DScaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, 0) =
-        Dv(0, 0) * Scaled_Combined_PE_Dv.block<3 * NSF, NIP_Dv>(0, 0) +
-        Dv(0, 1) * Scaled_Combined_PE_Dv.block<3 * NSF, NIP_Dv>(0, NIP_Dv) +
-        Dv(0, 2) * Scaled_Combined_PE_Dv.block<3 * NSF, NIP_Dv>(0, 2 * NIP_Dv);
-    DScaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, NIP_Dv) =
-        Dv(1, 0) * Scaled_Combined_PE_Dv.block<3 * NSF, NIP_Dv>(0, 0) +
-        Dv(1, 1) * Scaled_Combined_PE_Dv.block<3 * NSF, NIP_Dv>(0, NIP_Dv) +
-        Dv(1, 2) * Scaled_Combined_PE_Dv.block<3 * NSF, NIP_Dv>(0, 2 * NIP_Dv);
-    DScaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, 2 * NIP_Dv) =
-        Dv(2, 0) * Scaled_Combined_PE_Dv.block<3 * NSF, NIP_Dv>(0, 0) +
-        Dv(2, 1) * Scaled_Combined_PE_Dv.block<3 * NSF, NIP_Dv>(0, NIP_Dv) +
-        Dv(2, 2) * Scaled_Combined_PE_Dv.block<3 * NSF, NIP_Dv>(0, 2 * NIP_Dv);
-
-    // =============================================================================
-    // Multiply the partial derivative block matrix by the final scaled and combined partial derivative block matrix
-    // to obtain the potentially non-symmetric and non-sparse component of the Jacobian matrix
-    // =============================================================================
-
-    H += PE_Dv * DScaled_Combined_PE_Dv.transpose();
-
-    //==============================================================================
-    //==============================================================================
-    // Calculate the sparse and symmetric component of the Jacobian matrix
-    //==============================================================================
-    //==============================================================================
-
-    // =============================================================================
-    // Calculate each individual value of the Green-Lagrange strain component by component across all the
-    // Gauss-Quadrature points at a time for the current layer to better leverage vectorized CPU instructions.
-    // Note that the scaled time derivatives of the Green-Lagrange strain are added to make the later calculation of
-    // the 2nd Piola-Kirchoff stresses more efficient.  The combined result is then scaled by minus the Gauss
-    // quadrature weight times the element Jacobian at the corresponding Gauss point (m_kGQ) again for efficiency.
-    // Results are written in Voigt notation: epsilon = [E11,E22,E33,2*E23,2*E13,2*E12]
-    // Note that with the material assumption being used, only [E11,E22,E33] need to be calculated
-    // =============================================================================
-
-    // Each entry in E1 = kGQ*(E11+alpha*E11dot)
-    //                  = kGQ*(1/2*(F11*F11+F21*F21+F31*F31-1)+alpha*(F11*F11dot+F21*F21dot+F31*F31dot))
-    VectorNIP_Dv E_BlockDamping_Dv =
-        FC_Dv.template block<NIP_Dv, 1>(0, 0).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 3)) +
-        FC_Dv.template block<NIP_Dv, 1>(0, 1).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 4)) +
-        FC_Dv.template block<NIP_Dv, 1>(0, 2).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 5));
-    VectorNIP_Dv E1_Block_Dv =
-        FC_Dv.template block<NIP_Dv, 1>(0, 0).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 0)) +
-        FC_Dv.template block<NIP_Dv, 1>(0, 1).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 1)) +
-        FC_Dv.template block<NIP_Dv, 1>(0, 2).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(0, 2));
-    E1_Block_Dv.array() -= 1;
-    E1_Block_Dv *= 0.5;
-    E1_Block_Dv += m_Alpha * E_BlockDamping_Dv;
-    E1_Block_Dv.array() *= m_kGQ_Dv.array();
-
-    // Each entry in E2 = kGQ*(E22+alpha*E22dot)
-    //                  = kGQ*(1/2*(F12*F12+F22*F22+F32*F32-1)+alpha*(F12*F12dot+F22*F22dot+F32*F32dot))
-    E_BlockDamping_Dv.noalias() =
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 0).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 3)) +
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 1).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 4)) +
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 2).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 5));
-    VectorNIP_Dv E2_Block_Dv =
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 0).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 0)) +
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 1).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 1)) +
-        FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 2).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(NIP_Dv, 2));
-    E2_Block_Dv.array() -= 1;
-    E2_Block_Dv *= 0.5;
-    E2_Block_Dv += m_Alpha * E_BlockDamping_Dv;
-    E2_Block_Dv.array() *= m_kGQ_Dv.array();
-
-    // Each entry in E3 = kGQ*(E33+alpha*E33dot)
-    //                  = kGQ*(1/2*(F13*F13+F23*F23+F33*F33-1)+alpha*(F13*F13dot+F23*F23dot+F33*F33dot))
-    E_BlockDamping_Dv.noalias() =
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 0).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 3)) +
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 1).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 4)) +
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 2).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 5));
-    VectorNIP_Dv E3_Block_Dv =
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 0).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 0)) +
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 1).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 1)) +
-        FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 2).cwiseProduct(FC_Dv.template block<NIP_Dv, 1>(2 * NIP_Dv, 2));
-    E3_Block_Dv.array() -= 1;
-    E3_Block_Dv *= 0.5;
-    E3_Block_Dv += m_Alpha * E_BlockDamping_Dv;
-    E3_Block_Dv.array() *= m_kGQ_Dv.array();
-
-    // =============================================================================
-    // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Gauss quadrature points in the
-    // current layer at a time component by component.
-    // Note that the Green-Largrange strain components have been scaled have already been combined with their scaled
-    // time derivatives and minus the Gauss quadrature weight times the element Jacobian at the corresponding Gauss
-    // point to make the calculation of the 2nd Piola-Kirchoff stresses more efficient.
-    //  kGQ*SPK2 = kGQ*[SPK2_11,SPK2_22,SPK2_33,SPK2_23,SPK2_13,SPK2_12] = D * E_Combined
-    // =============================================================================
-
-    VectorNIP_Dv SPK2_1_Block_Dv = Dv(0, 0) * E1_Block_Dv + Dv(0, 1) * E2_Block_Dv + Dv(0, 2) * E3_Block_Dv;
-    VectorNIP_Dv SPK2_2_Block_Dv = Dv(1, 0) * E1_Block_Dv + Dv(1, 1) * E2_Block_Dv + Dv(1, 2) * E3_Block_Dv;
-    VectorNIP_Dv SPK2_3_Block_Dv = Dv(2, 0) * E1_Block_Dv + Dv(2, 1) * E2_Block_Dv + Dv(2, 2) * E3_Block_Dv;
-
-    // =============================================================================
-    // Multiply the shape function derivative matrix by the 2nd Piola-Kirchoff stresses for each corresponding Gauss
-    // quadrature point
-    // =============================================================================
-
-    ChMatrixNM<double, NSF, 3 * NIP_Dv> S_scaled_SD_Dv;
-
-    for (auto i = 0; i < NSF; i++) {
-        S_scaled_SD_Dv.template block<1, NIP_Dv>(i, 0) =
-            SPK2_1_Block_Dv.transpose().cwiseProduct(m_SD_Dv.block<1, NIP_Dv>(i, 0 * NIP_Dv));
-
-        S_scaled_SD_Dv.template block<1, NIP_Dv>(i, NIP_Dv) =
-            SPK2_2_Block_Dv.transpose().cwiseProduct(m_SD_Dv.block<1, NIP_Dv>(i, 1 * NIP_Dv));
-
-        S_scaled_SD_Dv.template block<1, NIP_Dv>(i, 2 * NIP_Dv) =
-            SPK2_3_Block_Dv.transpose().cwiseProduct(m_SD_Dv.block<1, NIP_Dv>(i, 2 * NIP_Dv));
-    }
-
-    // =============================================================================
-    // Calculate just the non-sparse upper triangular entires of the sparse and symmetric component of the Jacobian
-    // matrix, combine this with the scaled mass matrix, and then expand them out to full size by summing the
-    // contribution into the correct locations of the full sized Jacobian matrix
-    // =============================================================================
-
-    idx = 0;
-    for (unsigned int i = 0; i < NSF; i++) {
-        for (unsigned int j = i; j < NSF; j++) {
-            double d = Kfactor * m_SD_Dv.row(i) * S_scaled_SD_Dv.row(j).transpose();
 
             H(3 * i, 3 * j) += d;
             H(3 * i + 1, 3 * j + 1) += d;
@@ -2379,367 +2278,526 @@ template <int NP, int NT>
 void ChElementBeamANCF_3243<NP, NT>::ComputeInternalJacobianContIntNoDamping(ChMatrixRef& H,
                                                                              double Kfactor,
                                                                              double Mfactor) {
-    ComputeInternalJacobianContIntDamping(H, Kfactor, 0, Mfactor);
+    // Calculate the Jacobian of the generalize internal force vector using the "Continuous Integration" style of method
+    // assuming a linear material model (no damping).  For this style of method, the Jacobian of the generalized
+    // internal force vector is integrated across the volume of the element every time this calculation is performed.
+    // For this element, this is likely more efficient than the "Pre-Integration" style calculation method.
 
-    //// Calculate the Jacobian of the generalize internal force vector using the "Continuous Integration" style of
-    ///method / assuming a linear material model (no damping).  For this style of method, the Jacobian of the
-    ///generalized / internal force vector is integrated across the volume of the element every time this calculation is
-    ///performed. / For this element, this is likely more efficient than the "Pre-Integration" style calculation method.
+    Matrix3xN e_bar;
+    CalcCoordMatrix(e_bar);
 
-    // Matrix3xN e_bar;
-    // CalcCoordMatrix(e_bar);
+    // No values from the generalized internal force vector are cached for reuse in the Jacobian.  Instead these
+    // quantities are recalculated again during the Jacobian calculations.  This both simplifies the code and speeds
+    // up the generalized internal force calculation while only having a minimal impact on the performance of the
+    // Jacobian calculation speed.  The Jacobian calculation is performed in two major pieces.  First is the
+    // calculation of the potentially non-symmetric and non-sparse component.  The second pieces is the symmetric
+    // and sparse component.
 
-    //// No values from the generalized internal force vector are cached for reuse in the Jacobian.  Instead these
-    //// quantities are recalculated again during the Jacobian calculations.  This both simplifies the code and speeds
-    //// up the generalized internal force calculation while only having a minimal impact on the performance of the
-    //// Jacobian calculation speed.  The Jacobian calculation is performed in two major pieces.  First is the
-    //// calculation of the potentially non-symmetric and non-sparse component.  The second pieces is the symmetric
-    //// and sparse component.
+    // =============================================================================
+    // Calculate the deformation gradient for all Gauss quadrature points in a single matrix multiplication.  Note
+    // that since the shape function derivative matrix is ordered by columns, the resulting deformation gradient
+    // will be ordered by block matrix (column vectors) components
+    // Note that the indices of the components are in transposed order
+    //      [F11  F21  F31 ] <-- D0 Block (No Poisson Effect)
+    //      [F12  F22  F32 ] <-- D0 Block (No Poisson Effect)
+    // FC = [F13  F23  F33 ] <-- D0 Block (No Poisson Effect)
+    //      [F11  F21  F31 ] <-- Dv Block (With Poisson Effect)
+    //      [F12  F22  F32 ] <-- Dv Block (With Poisson Effect)
+    //      [F13  F23  F33 ] <-- Dv Block (With Poisson Effect)
+    // =============================================================================
 
-    //// =============================================================================
-    //// Calculate the deformation gradient for all Gauss quadrature points in a single matrix multiplication.  Note
-    //// that since the shape function derivative matrix is ordered by columns, the resulting deformation gradient
-    //// will be ordered by block matrix (column vectors) components
-    //// Note that the indices of the components are in transposed order
-    ////      [F11  F21  F31 ]
-    //// FC = [F12  F22  F32 ]
-    ////      [F13  F23  F33 ]
-    //// =============================================================================
-    // ChMatrixNMc<double, 3 * NIP, 3> FC = m_SD.transpose() * e_bar.transpose();
+    ChMatrixNMc<double, 3 * NIP, 3> FC = m_SD.transpose() * e_bar.transpose();
 
-    ////==============================================================================
-    ////==============================================================================
-    //// Calculate the potentially non-symmetric and non-sparse component of the Jacobian matrix
-    ////==============================================================================
-    ////==============================================================================
+    //==============================================================================
+    //==============================================================================
+    // Calculate the potentially non-symmetric and non-sparse component of the Jacobian matrix
+    //==============================================================================
+    //==============================================================================
 
-    //// =============================================================================
-    //// Calculate the partial derivative of the Green-Largrange strains with respect to the nodal coordinates
-    //// (transposed).  This calculation is performed in blocks across all the Gauss quadrature points at the same
-    //// time.  This value should be store in row major memory layout to align with the access patterns for
-    //// calculating this matrix.
-    //// PE = [(d epsilon1/d e)GQPnt1' (d epsilon1/d e)GQPnt2' ... (d epsilon1/d e)GQPntNIP'...
-    ////       (d epsilon2/d e)GQPnt1' (d epsilon2/d e)GQPnt2' ... (d epsilon2/d e)GQPntNIP'...
-    ////       (d epsilon3/d e)GQPnt1' (d epsilon3/d e)GQPnt2' ... (d epsilon3/d e)GQPntNIP'...
-    ////       (d epsilon4/d e)GQPnt1' (d epsilon4/d e)GQPnt2' ... (d epsilon4/d e)GQPntNIP'...
-    ////       (d epsilon5/d e)GQPnt1' (d epsilon5/d e)GQPnt2' ... (d epsilon5/d e)GQPntNIP'...
-    ////       (d epsilon6/d e)GQPnt1' (d epsilon6/d e)GQPnt2' ... (d epsilon6/d e)GQPntNIP']
-    //// Note that each partial derivative block shown is placed to the left of the previous block.
-    //// The explanation of the calculation above is just too long to write it all on a single line.
-    //// =============================================================================
-    // Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> PE;
-    // PE.resize(3 * NSF, 6 * NIP);
+    // =============================================================================
+    // Calculate the partial derivative of the Green-Largrange strains with respect to the nodal coordinates
+    // (transposed).  This calculation is performed in blocks across all the Gauss quadrature points at the same
+    // time.  This value should be store in row major memory layout to align with the access patterns for
+    // calculating this matrix.
+    // PE = [(d epsilon1/d e)GQPnt1' (d epsilon1/d e)GQPnt2' ... (d epsilon1/d e)GQPntNIP_D0'...
+    //       (d epsilon2/d e)GQPnt1' (d epsilon2/d e)GQPnt2' ... (d epsilon2/d e)GQPntNIP_D0'...
+    //       (d epsilon3/d e)GQPnt1' (d epsilon3/d e)GQPnt2' ... (d epsilon3/d e)GQPntNIP_D0'...
+    //       (d epsilon4/d e)GQPnt1' (d epsilon4/d e)GQPnt2' ... (d epsilon4/d e)GQPntNIP_D0'...
+    //       (d epsilon5/d e)GQPnt1' (d epsilon5/d e)GQPnt2' ... (d epsilon5/d e)GQPntNIP_D0'...
+    //       (d epsilon6/d e)GQPnt1' (d epsilon6/d e)GQPnt2' ... (d epsilon6/d e)GQPntNIP_D0'...
+    //       (d epsilon1/d e)GQPntDv1' ... (d epsilon1/d e)GQPntNIP_Dv'...
+    //       (d epsilon2/d e)GQPntDv1' ... (d epsilon2/d e)GQPntNIP_Dv'...
+    //       (d epsilon3/d e)GQPntDv1' ... (d epsilon3/d e)GQPntNIP_Dv']
+    // Note that each partial derivative block shown is placed to the left of the previous block.
+    // The explanation of the calculation above is just too long to write it all on a single line.
+    // Since there are no shear terms with the material assumption for Dv, there is no need to calculate
+    // (d epsilon4/d e), (d epsilon5/d e), (d epsilon6/d e) for the Dv Gauss points since these partial
+    // derivatives will be multiplied by zero and will not contribute anything to the Jacobian matrix.
+    // The calculation is performed on 3 rows at a time to capture the partial with respect to the vector of nodal
+    // coordinates e while using the compact matrix form ebar for the calculations.
+    // =============================================================================
 
-    // for (auto i = 0; i < NSF; i++) {
-    //    PE.block<1, NIP>(3 * i, 0) =
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 0).transpose());
-    //    PE.block<1, NIP>(3 * i, NIP) =
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 0).transpose());
-    //    PE.block<1, NIP>(3 * i, 2 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0).transpose());
-    //    PE.block<1, NIP>(3 * i, 3 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 0).transpose()) +
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0).transpose());
-    //    PE.block<1, NIP>(3 * i, 4 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 0).transpose()) +
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0).transpose());
-    //    PE.block<1, NIP>(3 * i, 5 * NIP) =
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 0).transpose()) +
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 0).transpose());
+    ChMatrixNM<double, 3 * NSF, 6 * NIP_D0 + 3 * NIP_Dv> PE;
 
-    //    PE.block<1, NIP>((3 * i) + 1, 0) =
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose());
-    //    PE.block<1, NIP>((3 * i) + 1, NIP) =
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose());
-    //    PE.block<1, NIP>((3 * i) + 1, 2 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1).transpose());
-    //    PE.block<1, NIP>((3 * i) + 1, 3 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose()) +
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1).transpose());
-    //    PE.block<1, NIP>((3 * i) + 1, 4 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose()) +
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1).transpose());
-    //    PE.block<1, NIP>((3 * i) + 1, 5 * NIP) =
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 1).transpose()) +
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 1).transpose());
+    for (auto i = 0; i < NSF; i++) {
+        PE.template block<1, NIP_D0>(3 * i, 0 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(0 * NIP_D0, 0).transpose());
+        PE.template block<1, NIP_D0>(3 * i, 1 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(1 * NIP_D0, 0).transpose());
+        PE.template block<1, NIP_D0>(3 * i, 2 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose());
+        PE.template block<1, NIP_D0>(3 * i, 3 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(1 * NIP_D0, 0).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose());
+        PE.template block<1, NIP_D0>(3 * i, 4 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(0 * NIP_D0, 0).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose());
+        PE.template block<1, NIP_D0>(3 * i, 5 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(0 * NIP_D0, 0).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(1 * NIP_D0, 0).transpose());
 
-    //    PE.block<1, NIP>((3 * i) + 2, 0) =
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose());
-    //    PE.block<1, NIP>((3 * i) + 2, NIP) =
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose());
-    //    PE.block<1, NIP>((3 * i) + 2, 2 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2).transpose());
-    //    PE.block<1, NIP>((3 * i) + 2, 3 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose()) +
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2).transpose());
-    //    PE.block<1, NIP>((3 * i) + 2, 4 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose()) +
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2).transpose());
-    //    PE.block<1, NIP>((3 * i) + 2, 5 * NIP) =
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FC.template block<NIP, 1>(0, 2).transpose()) +
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FC.template block<NIP, 1>(NIP, 2).transpose());
-    //}
+        PE.template block<1, NIP_Dv>(3 * i, 6 * NIP_D0 + 0 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0 * NIP_Dv, 0).transpose());
+        PE.template block<1, NIP_Dv>(3 * i, 6 * NIP_D0 + 1 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 1 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 1 * NIP_Dv, 0).transpose());
+        PE.template block<1, NIP_Dv>(3 * i, 6 * NIP_D0 + 2 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0).transpose());
 
-    //// =============================================================================
-    //// Scale the block deformation gradient matrix by the Kfactor weighting factor for the Jacobian and multiply
-    //// each Gauss quadrature component by its Gauss quadrature weight times the element Jacobian (kGQ)
-    //// =============================================================================
-    // ChMatrixNMc<double, 3 * NIP, 3> FCscaled = Kfactor * FC;
+        PE.template block<1, NIP_D0>((3 * i) + 1, 0) =
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 1).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 1, NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 1).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 1, 2 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 1, 3 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 1).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 1, 4 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 1).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 1, 5 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 1).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 1).transpose());
 
-    // for (auto i = 0; i < 3; i++) {
-    //    FCscaled.template block<NIP, 1>(0, i).array() *= m_kGQ.array();
-    //    FCscaled.template block<NIP, 1>(NIP, i).array() *= m_kGQ.array();
-    //    FCscaled.template block<NIP, 1>(2 * NIP, i).array() *= m_kGQ.array();
-    //}
+        PE.template block<1, NIP_Dv>((3 * i) + 1, 6 * NIP_D0 + 0) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1).transpose());
+        PE.template block<1, NIP_Dv>((3 * i) + 1, 6 * NIP_D0 + NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 1 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1).transpose());
+        PE.template block<1, NIP_Dv>((3 * i) + 1, 6 * NIP_D0 + 2 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1).transpose());
 
-    //// =============================================================================
-    //// Calculate the scaled partial derivative of the Green-Largrange strains with respect to the nodal coordinates
-    //// and the other parameters to correctly integrate across the volume of the element.  This calculation is
-    //// performed in blocks across all the Gauss quadrature points at the same time.  This value should be store in
-    //// row major memory layout to align with the access patterns for calculating this matrix.
-    //// =============================================================================
+        PE.template block<1, NIP_D0>((3 * i) + 2, 0) =
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 2).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 2, NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 2).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 2, 2 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 2, 3 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 2).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 2, 4 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 2).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose());
+        PE.template block<1, NIP_D0>((3 * i) + 2, 5 * NIP_D0) =
+            m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 2).transpose()) +
+            m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                .cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 2).transpose());
 
-    // Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Scaled_Combined_PE;
-    // Scaled_Combined_PE.resize(3 * NSF, 6 * NIP);
+        PE.template block<1, NIP_Dv>((3 * i) + 2, 6 * NIP_D0 + 0) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2).transpose());
+        PE.template block<1, NIP_Dv>((3 * i) + 2, 6 * NIP_D0 + NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 1 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2).transpose());
+        PE.template block<1, NIP_Dv>((3 * i) + 2, 6 * NIP_D0 + 2 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv)
+                .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2).transpose());
+    }
 
-    // for (auto i = 0; i < NSF; i++) {
-    //    Scaled_Combined_PE.block<1, NIP>(3 * i, 0) =
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 0).transpose());
-    //    Scaled_Combined_PE.block<1, NIP>(3 * i, NIP) =
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 0).transpose());
-    //    Scaled_Combined_PE.block<1, NIP>(3 * i, 2 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 0).transpose());
-    //    Scaled_Combined_PE.block<1, NIP>(3 * i, 3 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 0).transpose()) +
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 0).transpose());
-    //    Scaled_Combined_PE.block<1, NIP>(3 * i, 4 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 0).transpose()) +
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 0).transpose());
-    //    Scaled_Combined_PE.block<1, NIP>(3 * i, 5 * NIP) =
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 0).transpose()) +
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 0).transpose());
+    // =============================================================================
+    // Scale the block deformation gradient matrix by the Kfactor weighting factor for the Jacobian and multiply
+    // each Gauss quadrature component by its Gauss quadrature weight times the element Jacobian (kGQ)
+    // =============================================================================
 
-    //    Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 0) =
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 1).transpose());
-    //    Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, NIP) =
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 1).transpose());
-    //    Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 2 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 1).transpose());
-    //    Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 3 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 1).transpose()) +
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 1).transpose());
-    //    Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 4 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 1).transpose()) +
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 1).transpose());
-    //    Scaled_Combined_PE.block<1, NIP>((3 * i) + 1, 5 * NIP) =
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 1).transpose()) +
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 1).transpose());
+    ChMatrixNMc<double, 3 * NIP, 3> FCscaled = Kfactor * FC;
 
-    //    Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 0) =
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 2).transpose());
-    //    Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, NIP) =
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 2).transpose());
-    //    Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 2 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 2).transpose());
-    //    Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 3 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 2).transpose()) +
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 2).transpose());
-    //    Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 4 * NIP) =
-    //        m_SD.block<1, NIP>(i, 2 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 2).transpose()) +
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(2 * NIP, 2).transpose());
-    //    Scaled_Combined_PE.block<1, NIP>((3 * i) + 2, 5 * NIP) =
-    //        m_SD.block<1, NIP>(i, 1 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(0, 2).transpose()) +
-    //        m_SD.block<1, NIP>(i, 0 * NIP).cwiseProduct(FCscaled.template block<NIP, 1>(NIP, 2).transpose());
-    //}
+    for (auto i = 0; i < 3; i++) {
+        FCscaled.template block<NIP_D0, 1>(0, i).array() *= m_kGQ_D0.array();
+        FCscaled.template block<NIP_D0, 1>(NIP_D0, i).array() *= m_kGQ_D0.array();
+        FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, i).array() *= m_kGQ_D0.array();
+        FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, i).array() *= m_kGQ_Dv.array();
+        FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, i).array() *= m_kGQ_Dv.array();
+        FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, i).array() *= m_kGQ_Dv.array();
+    }
 
-    //// =============================================================================
-    //// Get the stiffness tensor in 6x6 matrix form
-    //// =============================================================================
+    // =============================================================================
+    // Get the diagonal terms of the 6x6 matrix (do not include the Poisson effect
+    // =============================================================================
+    const ChVectorN<double, 6>& D0 = GetMaterial()->Get_D0();
 
-    // const ChMatrixNM<double, 6, 6>& D = GetMaterial()->Get_D();
+    // =============================================================================
+    // Calculate the combination of the scaled partial derivative of the Green-Largrange strains with respect to the
+    // nodal coordinates and the other parameters to correctly integrate across the
+    // volume of the element multiplied by the stiffness matrix.  This calculation is performed in blocks across all the
+    // Gauss quadrature points at the same time.  This value should be store in row major memory layout to align with
+    // the access patterns for calculating this matrix.
+    // =============================================================================
+    // For the D0 Gauss quadrature points, the stiffness matrix D0 is diagonal so the scaled partial derivatives can be
+    // easily multiplied by D0.  The Dv Gauss quadrature points are handled separately after this
+    // =============================================================================
 
-    //// =============================================================================
-    //// Multiply the scaled and combined partial derivative block matrix by the stiffness matrix for each individual
-    //// Gauss quadrature point
-    //// =============================================================================
-    // Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> DScaled_Combined_PE;
-    // DScaled_Combined_PE.resize(3 * NSF, 6 * NIP);
+    ChMatrixNM<double, 3 * NSF, 6 * NIP_D0 + 3 * NIP_Dv> DScaled_Combined_PE;
 
-    // DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 0) =
-    //    D(0, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
-    //    D(0, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
-    //    D(0, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
-    //    D(0, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
-    //    D(0, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
-    //    D(0, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
-    // DScaled_Combined_PE.template block<3 * NSF, NIP>(0, NIP) =
-    //    D(1, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
-    //    D(1, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
-    //    D(1, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
-    //    D(1, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
-    //    D(1, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
-    //    D(1, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
-    // DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 2 * NIP) =
-    //    D(2, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
-    //    D(2, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
-    //    D(2, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
-    //    D(2, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
-    //    D(2, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
-    //    D(2, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
-    // DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 3 * NIP) =
-    //    D(3, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
-    //    D(3, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
-    //    D(3, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
-    //    D(3, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
-    //    D(3, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
-    //    D(3, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
-    // DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 4 * NIP) =
-    //    D(4, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
-    //    D(4, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
-    //    D(4, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
-    //    D(4, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
-    //    D(4, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
-    //    D(4, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
-    // DScaled_Combined_PE.template block<3 * NSF, NIP>(0, 5 * NIP) =
-    //    D(5, 0) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 0) +
-    //    D(5, 1) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, NIP) +
-    //    D(5, 2) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 2 * NIP) +
-    //    D(5, 3) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 3 * NIP) +
-    //    D(5, 4) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 4 * NIP) +
-    //    D(5, 5) * Scaled_Combined_PE.block<3 * NSF, NIP>(0, 5 * NIP);
+    for (auto i = 0; i < NSF; i++) {
+        DScaled_Combined_PE.template block<1, NIP_D0>(3 * i, 0) =
+            D0(0) * m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 0).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>(3 * i, NIP_D0) =
+            D0(1) * m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 0).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>(3 * i, 2 * NIP_D0) =
+            D0(2) * m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>(3 * i, 3 * NIP_D0) =
+            D0(3) * (m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 0).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose()));
+        DScaled_Combined_PE.template block<1, NIP_D0>(3 * i, 4 * NIP_D0) =
+            D0(4) * (m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 0).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 0).transpose()));
+        DScaled_Combined_PE.template block<1, NIP_D0>(3 * i, 5 * NIP_D0) =
+            D0(5) * (m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 0).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 0).transpose()));
 
-    //// =============================================================================
-    //// Multiply the partial derivative block matrix by the final scaled and combined partial derivative block matrix
-    //// to obtain the potentially non-symmetric and non-sparse component of the Jacobian matrix
-    //// =============================================================================
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 1, 0) =
+            D0(0) * m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 1).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 1, NIP_D0) =
+            D0(1) * m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 1).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 1, 2 * NIP_D0) =
+            D0(2) * m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 1, 3 * NIP_D0) =
+            D0(3) * (m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 1).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose()));
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 1, 4 * NIP_D0) =
+            D0(4) * (m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 1).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 1).transpose()));
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 1, 5 * NIP_D0) =
+            D0(5) * (m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 1).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 1).transpose()));
 
-    // H = PE * DScaled_Combined_PE.transpose();
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 2, 0) =
+            D0(0) * m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 2).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 2, NIP_D0) =
+            D0(1) * m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 2).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 2, 2 * NIP_D0) =
+            D0(2) * m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                        .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose());
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 2, 3 * NIP_D0) =
+            D0(3) * (m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 2).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose()));
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 2, 4 * NIP_D0) =
+            D0(4) * (m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 2).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(2 * NIP_D0, 2).transpose()));
+        DScaled_Combined_PE.template block<1, NIP_D0>((3 * i) + 2, 5 * NIP_D0) =
+            D0(5) * (m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(0, 2).transpose()) +
+                     m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)
+                         .cwiseProduct(FCscaled.template block<NIP_D0, 1>(NIP_D0, 2).transpose()));
+    }
 
-    ////==============================================================================
-    ////==============================================================================
-    //// Calculate the sparse and symmetric component of the Jacobian matrix
-    ////==============================================================================
-    ////==============================================================================
+    // =============================================================================
+    // For the Dv Gauss quadrature points, the matrix of scaled partial derivatives needs to be calculated first since
+    // they will be will be combined together when multiplying by the Dv stiffness matrix (upper 3x3 block is
+    // potentially non-zero)
+    // =============================================================================
 
-    //// =============================================================================
-    //// Calculate each individual value of the Green-Lagrange strain component by component across all the
-    //// Gauss-Quadrature points at a time for the current layer to better leverage vectorized CPU instructions.
-    //// The result is then scaled by minus the Gauss quadrature weight times the element Jacobian at the
-    //// corresponding Gauss point (m_kGQ) for efficiency.
-    //// Results are written in Voigt notation: epsilon = [E11,E22,E33,2*E23,2*E13,2*E12]
-    //// =============================================================================
+    ChMatrixNM<double, 3 * NSF, 3 * NIP_Dv> Scaled_Combined_PE_Dv;
 
-    //// Each entry in E1 = kGQ*E11 = kGQ*1/2*(F11*F11+F21*F21+F31*F31-1)
-    // VectorNIP E1_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(0, 0)) +
-    //    FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(0, 1)) +
-    //    FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(0, 2));
-    // E1_Block.array() -= 1;
-    // E1_Block.array() *= 0.5 * m_kGQ.array();
+    for (auto i = 0; i < NSF; i++) {
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>(3 * i, 0) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0).transpose());
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>(3 * i, NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 1 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0).transpose());
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>(3 * i, 2 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0).transpose());
 
-    //// Each entry in E2 = kGQ*E22 = kGQ*1/2*(F12*F12+F22*F22+F32*F32-1)
-    // VectorNIP E2_Block = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 0)) +
-    //    FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 1)) +
-    //    FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 2));
-    // E2_Block.array() -= 1;
-    // E2_Block.array() *= 0.5 * m_kGQ.array();
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>((3 * i) + 1, 0) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1).transpose());
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>((3 * i) + 1, NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 1 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1).transpose());
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>((3 * i) + 1, 2 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1).transpose());
 
-    //// Each entry in E3 = kGQ*E33 = kGQ*1/2*(F13*F13+F23*F23+F33*F33-1)
-    // VectorNIP E3_Block = FC.template block<NIP, 1>(2 * NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0)) +
-    //    FC.template block<NIP, 1>(2 * NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1)) +
-    //    FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
-    // E3_Block.array() -= 1;
-    // E3_Block.array() *= 0.5 * m_kGQ.array();
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>((3 * i) + 2, 0) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2).transpose());
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>((3 * i) + 2, NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 1 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2).transpose());
+        Scaled_Combined_PE_Dv.template block<1, NIP_Dv>((3 * i) + 2, 2 * NIP_Dv) =
+            m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv)
+                .cwiseProduct(FCscaled.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2).transpose());
+    }
 
-    //// Each entry in E4 = kGQ*2*E23 = kGQ*(F12*F13+F22*F23+F32*F33)
-    // VectorNIP E4_Block = FC.template block<NIP, 1>(NIP, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0)) +
-    //    FC.template block<NIP, 1>(NIP, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1)) +
-    //    FC.template block<NIP, 1>(NIP, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
-    // E4_Block.array() *= m_kGQ.array();
+    // =============================================================================
+    // Get the upper 3x3 block of the stiffness tensor in 6x6 matrix that accounts for the Poisson effect.  Note that
+    // with the split of the stiffness matrix and the assumed materials, the entries in the 6x6 stiffness matrix outside
+    // of the upper 3x3 block are all zeros.
+    // =============================================================================
 
-    //// Each entry in E5 = kGQ*2*E13 = kGQ*(F11*F13+F21*F23+F31*F33)
-    // VectorNIP E5_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 0)) +
-    //    FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 1)) +
-    //    FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(2 * NIP, 2));
-    // E5_Block.array() *= m_kGQ.array();
+    const ChMatrix33<double>& Dv = GetMaterial()->Get_Dv();
 
-    //// Each entry in E6 = kGQ*2*E12 = (F11*F12+F21*F22+F31*F32)
-    // VectorNIP E6_Block = FC.template block<NIP, 1>(0, 0).cwiseProduct(FC.template block<NIP, 1>(NIP, 0)) +
-    //    FC.template block<NIP, 1>(0, 1).cwiseProduct(FC.template block<NIP, 1>(NIP, 1)) +
-    //    FC.template block<NIP, 1>(0, 2).cwiseProduct(FC.template block<NIP, 1>(NIP, 2));
-    // E6_Block.array() *= m_kGQ.array();
+    // =============================================================================
+    // For the Dv Gauss quadrature points, multiply the scaled and combined partial derivative block matrix by the
+    // stiffness matrix for each individual Gauss quadrature point and place the results in th last 3*NIP_Dv columns of
+    // the final scaled and combined partial derivative block matrix since the D0 Gauss quadrature point columns were
+    // calculated above.
+    // =============================================================================
 
-    //// =============================================================================
-    //// Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Gauss quadrature points in the
-    //// current layer at a time component by component.
-    //// Note that the Green-Largrange strain components have been scaled have already been combined with their scaled
-    //// time derivatives and minus the Gauss quadrature weight times the element Jacobian at the corresponding Gauss
-    //// point to make the calculation of the 2nd Piola-Kirchoff stresses more efficient.
-    ////  kGQ*SPK2 = kGQ*[SPK2_11,SPK2_22,SPK2_33,SPK2_23,SPK2_13,SPK2_12] = D * E_Combined
-    //// =============================================================================
+    DScaled_Combined_PE.template block<3 * NSF, NIP_Dv>(0, 6 * NIP_D0 + 0) =
+        Dv(0, 0) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, 0) +
+        Dv(0, 1) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, NIP_Dv) +
+        Dv(0, 2) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, 2 * NIP_Dv);
+    DScaled_Combined_PE.template block<3 * NSF, NIP_Dv>(0, 6 * NIP_D0 + NIP_Dv) =
+        Dv(1, 0) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, 0) +
+        Dv(1, 1) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, NIP_Dv) +
+        Dv(1, 2) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, 2 * NIP_Dv);
+    DScaled_Combined_PE.template block<3 * NSF, NIP_Dv>(0, 6 * NIP_D0 + 2 * NIP_Dv) =
+        Dv(2, 0) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, 0) +
+        Dv(2, 1) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, NIP_Dv) +
+        Dv(2, 2) * Scaled_Combined_PE_Dv.template block<3 * NSF, NIP_Dv>(0, 2 * NIP_Dv);
 
-    // VectorNIP SPK2_1_Block = D(0, 0) * E1_Block + D(0, 1) * E2_Block + D(0, 2) * E3_Block + D(0, 3) * E4_Block +
-    //    D(0, 4) * E5_Block + D(0, 5) * E6_Block;
-    // VectorNIP SPK2_2_Block = D(1, 0) * E1_Block + D(1, 1) * E2_Block + D(1, 2) * E3_Block + D(1, 3) * E4_Block +
-    //    D(1, 4) * E5_Block + D(1, 5) * E6_Block;
-    // VectorNIP SPK2_3_Block = D(2, 0) * E1_Block + D(2, 1) * E2_Block + D(2, 2) * E3_Block + D(2, 3) * E4_Block +
-    //    D(2, 4) * E5_Block + D(2, 5) * E6_Block;
-    // VectorNIP SPK2_4_Block = D(3, 0) * E1_Block + D(3, 1) * E2_Block + D(3, 2) * E3_Block + D(3, 3) * E4_Block +
-    //    D(3, 4) * E5_Block + D(3, 5) * E6_Block;
-    // VectorNIP SPK2_5_Block = D(4, 0) * E1_Block + D(4, 1) * E2_Block + D(4, 2) * E3_Block + D(4, 3) * E4_Block +
-    //    D(4, 4) * E5_Block + D(4, 5) * E6_Block;
-    // VectorNIP SPK2_6_Block = D(5, 0) * E1_Block + D(5, 1) * E2_Block + D(5, 2) * E3_Block + D(5, 3) * E4_Block +
-    //    D(5, 4) * E5_Block + D(5, 5) * E6_Block;
+    // =============================================================================
+    // Multiply the partial derivative block matrix by the final scaled and combined partial derivative block matrix
+    // to obtain the potentially non-symmetric and non-sparse component of the Jacobian matrix
+    // =============================================================================
 
-    //// =============================================================================
-    //// Multiply the shape function derivative matrix by the 2nd Piola-Kirchoff stresses for each corresponding Gauss
-    //// quadrature point
-    //// =============================================================================
+    H = PE * DScaled_Combined_PE.transpose();
 
-    // ChMatrixNM<double, NSF, 3 * NIP> S_scaled_SD;
+    //==============================================================================
+    //==============================================================================
+    // Calculate the sparse and symmetric component of the Jacobian matrix
+    //==============================================================================
+    //==============================================================================
 
-    // for (auto i = 0; i < NSF; i++) {
-    //    S_scaled_SD.template block<1, NIP>(i, 0) =
-    //        SPK2_1_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, 0 * NIP)) +
-    //        SPK2_6_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, 1 * NIP)) +
-    //        SPK2_5_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, 2 * NIP));
+    // =============================================================================
+    // Calculate each individual value of the Green-Lagrange strain component by component across all the
+    // Gauss-Quadrature points at a time to better leverage vectorized CPU instructions.
+    // Note that the result is then scaled by minus the Gauss quadrature weight times the element Jacobian at the
+    // corresponding Gauss point (m_kGQ) again for efficiency.
+    // =============================================================================
+    // For the D0 Gauss quadrature points:
+    // Since only the diagonal terms in the 6x6 stiffness matrix are used, the 2nd Piola-Kirchoff can be calculated by
+    // simply scaling the vector of scaled Green-Lagrange strains in Voight notation by the corresponding diagonal entry
+    // in the stiffness matrix.
+    // Results are written in Voigt notation: epsilon = [E11,E22,E33,2*E23,2*E13,2*E12]
+    //  kGQ*SPK2 = kGQ*[SPK2_11,SPK2_22,SPK2_33,SPK2_23,SPK2_13,SPK2_12] = D * E_Combined
+    // =============================================================================
 
-    //    S_scaled_SD.template block<1, NIP>(i, NIP) =
-    //        SPK2_6_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, 0 * NIP)) +
-    //        SPK2_2_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, 1 * NIP)) +
-    //        SPK2_4_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, 2 * NIP));
+    // Each entry in SPK2_1 = D11*kGQ*E11 = D11*kGQ*1/2*(F11*F11+F21*F21+F31*F31-1)
+    VectorNIP_D0 SPK2_1_Block_D0 = FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(0, 0)) +
+                                   FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(0, 1)) +
+                                   FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(0, 2));
+    SPK2_1_Block_D0.array() -= 1;
+    SPK2_1_Block_D0.array() *= (0.5 * D0(0)) * m_kGQ_D0.array();
 
-    //    S_scaled_SD.template block<1, NIP>(i, 2 * NIP) =
-    //        SPK2_5_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, 0 * NIP)) +
-    //        SPK2_4_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, 1 * NIP)) +
-    //        SPK2_3_Block.transpose().cwiseProduct(m_SD.block<1, NIP>(i, 2 * NIP));
-    //}
+    // Each entry in SPK2_2 = D22*kGQ*E22 = D22*kGQ*1/2*(F12*F12+F22*F22+F32*F32-1)
+    VectorNIP_D0 SPK2_2_Block_D0 =
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 2));
+    SPK2_2_Block_D0.array() -= 1;
+    SPK2_2_Block_D0.array() *= (0.5 * D0(1)) * m_kGQ_D0.array();
 
-    //// =============================================================================
-    //// Calculate just the non-sparse upper triangular entires of the sparse and symmetric component of the Jacobian
-    //// matrix, combine this with the scaled mass matrix, and then expand them out to full size by summing the
-    //// contribution into the correct locations of the full sized Jacobian matrix
-    //// =============================================================================
+    // Each entry in SPK2_3 = D33*kGQ_D0*E33 = D33*kGQ*1/2*(F13*F13+F23*F23+F33*F33-1)
+    VectorNIP_D0 SPK2_3_Block_D0 =
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(2 * NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2));
+    SPK2_3_Block_D0.array() -= 1;
+    SPK2_3_Block_D0.array() *= (0.5 * D0(2)) * m_kGQ_D0.array();
 
-    //// Add in the Mass Matrix Which is Stored in Compact Upper Triangular Form
-    // ChVectorN<double, (NSF * (NSF + 1)) / 2> ScaledMassMatrix = Mfactor * m_MassMatrix;
+    // Each entry in SPK2_4 = D44*kGQ*2*E23 = D44*kGQ*(F12*F13+F22*F23+F32*F33)
+    VectorNIP_D0 SPK2_4_Block_D0 =
+        FC.template block<NIP_D0, 1>(NIP_D0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(NIP_D0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2));
+    SPK2_4_Block_D0.array() *= D0(3) * m_kGQ_D0.array();
 
-    // unsigned int idx = 0;
-    // for (unsigned int i = 0; i < NSF; i++) {
-    //    for (unsigned int j = i; j < NSF; j++) {
-    //        double d = Kfactor * m_SD.row(i) * S_scaled_SD.row(j).transpose();
-    //        d += ScaledMassMatrix(idx);
+    // Each entry in SPK2_5 = D55*kGQ*2*E13 = D55*kGQ*(F11*F13+F21*F23+F31*F33)
+    VectorNIP_D0 SPK2_5_Block_D0 =
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(2 * NIP_D0, 2));
+    SPK2_5_Block_D0.array() *= D0(4) * m_kGQ_D0.array();
 
-    //        H(3 * i, 3 * j) += d;
-    //        H(3 * i + 1, 3 * j + 1) += d;
-    //        H(3 * i + 2, 3 * j + 2) += d;
-    //        if (i != j) {
-    //            H(3 * j, 3 * i) += d;
-    //            H(3 * j + 1, 3 * i + 1) += d;
-    //            H(3 * j + 2, 3 * i + 2) += d;
-    //        }
-    //        idx++;
-    //    }
-    //}
+    // Each entry in SPK2_6 = D66*kGQ*2*E12 = D66*(F11*F12+F21*F22+F31*F32)
+    VectorNIP_D0 SPK2_6_Block_D0 =
+        FC.template block<NIP_D0, 1>(0, 0).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 0)) +
+        FC.template block<NIP_D0, 1>(0, 1).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 1)) +
+        FC.template block<NIP_D0, 1>(0, 2).cwiseProduct(FC.template block<NIP_D0, 1>(NIP_D0, 2));
+    SPK2_6_Block_D0.array() *= D0(5) * m_kGQ_D0.array();
+
+    // =============================================================================
+    // For the Dv Gauss quadrature points:
+    // Since only the upper 3x3 terms in the 6x6 stiffness matrix are used, only the E11, E22, and E33 components of the
+    // Green-Lagrange strain tensor (combined and scaled) are needed since multiplying by the Dv stiffness matrix will
+    // result in 2nd Piola-Kirchoff stresses that are only possibly non-zero for SPK2_11, SPK2_22, and SPK2_33. Results
+    // are written in Voigt notation: epsilon = [E11,E22,E33,2*E23,2*E13,2*E12]
+    // =============================================================================
+
+    // Each entry in E1 = kGQ*E11 = kGQ*1/2*(F11*F11+F21*F21+F31*F31-1)
+    VectorNIP_Dv E1_Block_Dv =
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 0)) +
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 1)) +
+        FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2).cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 0, 2));
+    E1_Block_Dv.array() -= 1;
+    E1_Block_Dv.array() *= 0.5 * m_kGQ_Dv.array();
+
+    // Each entry in E2 = kGQ*E22 = kGQ*1/2*(F12*F12+F22*F22+F32*F32-1)
+    VectorNIP_Dv E2_Block_Dv = FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 0)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 1)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + NIP_Dv, 2));
+    E2_Block_Dv.array() -= 1;
+    E2_Block_Dv.array() *= 0.5 * m_kGQ_Dv.array();
+
+    // Each entry in E3 = kGQ*E33 = kGQ*1/2*(F13*F13+F23*F23+F33*F33-1)
+    VectorNIP_Dv E3_Block_Dv = FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 0)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 1)) +
+                               FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2)
+                                   .cwiseProduct(FC.template block<NIP_Dv, 1>(3 * NIP_D0 + 2 * NIP_Dv, 2));
+    E3_Block_Dv.array() -= 1;
+    E3_Block_Dv.array() *= 0.5 * m_kGQ_Dv.array();
+
+    // =============================================================================
+    // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Dv Gauss quadrature points.
+    // Note that the Green-Largrange strain components have been scaled by minus the Gauss quadrature weight times the
+    // element Jacobian at the corresponding Gauss point to make the calculation of the 2nd Piola-Kirchoff stresses more
+    // efficient.
+    //  kGQ*SPK2 = kGQ*[SPK2_11,SPK2_22,SPK2_33,SPK2_23,SPK2_13,SPK2_12] = D * E_Combined
+    //  where SPK2_23, SPK2_13, and SPK2_12 are zeros for the Dv Gauss quadrature points
+    // =============================================================================
+
+    VectorNIP_Dv SPK2_1_Block_Dv = Dv(0, 0) * E1_Block_Dv + Dv(0, 1) * E2_Block_Dv + Dv(0, 2) * E3_Block_Dv;
+    VectorNIP_Dv SPK2_2_Block_Dv = Dv(1, 0) * E1_Block_Dv + Dv(1, 1) * E2_Block_Dv + Dv(1, 2) * E3_Block_Dv;
+    VectorNIP_Dv SPK2_3_Block_Dv = Dv(2, 0) * E1_Block_Dv + Dv(2, 1) * E2_Block_Dv + Dv(2, 2) * E3_Block_Dv;
+
+    // =============================================================================
+    // Multiply the shape function derivative matrix by the 2nd Piola-Kirchoff stresses for each corresponding Gauss
+    // quadrature point
+    // =============================================================================
+
+    ChMatrixNM<double, NSF, 3 * NIP> S_scaled_SD;
+
+    for (auto i = 0; i < NSF; i++) {
+        S_scaled_SD.template block<1, NIP_D0>(i, 0) =
+            SPK2_1_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)) +
+            SPK2_6_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)) +
+            SPK2_5_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0));
+
+        S_scaled_SD.template block<1, NIP_D0>(i, NIP_D0) =
+            SPK2_6_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)) +
+            SPK2_2_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)) +
+            SPK2_4_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0));
+
+        S_scaled_SD.template block<1, NIP_D0>(i, 2 * NIP_D0) =
+            SPK2_5_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 0 * NIP_D0)) +
+            SPK2_4_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 1 * NIP_D0)) +
+            SPK2_3_Block_D0.transpose().cwiseProduct(m_SD.template block<1, NIP_D0>(i, 2 * NIP_D0));
+
+        S_scaled_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0) =
+            SPK2_1_Block_Dv.transpose().cwiseProduct(m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 0 * NIP_Dv));
+
+        S_scaled_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + NIP_Dv) =
+            SPK2_2_Block_Dv.transpose().cwiseProduct(m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 1 * NIP_Dv));
+
+        S_scaled_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv) =
+            SPK2_3_Block_Dv.transpose().cwiseProduct(m_SD.template block<1, NIP_Dv>(i, 3 * NIP_D0 + 2 * NIP_Dv));
+    }
+
+    // =============================================================================
+    // Calculate just the non-sparse upper triangular entires of the sparse and symmetric component of the Jacobian
+    // matrix, combine this with the scaled mass matrix, and then expand them out to full size by summing the
+    // contribution into the correct locations of the full sized Jacobian matrix
+    // =============================================================================
+
+    // Add in the Mass Matrix Which is Stored in Compact Upper Triangular Form
+    ChVectorN<double, (NSF * (NSF + 1)) / 2> ScaledMassMatrix = Mfactor * m_MassMatrix;
+
+    unsigned int idx = 0;
+    for (unsigned int i = 0; i < NSF; i++) {
+        for (unsigned int j = i; j < NSF; j++) {
+            double d = Kfactor * m_SD.row(i) * S_scaled_SD.row(j).transpose();
+            d += ScaledMassMatrix(idx);
+
+            H(3 * i, 3 * j) += d;
+            H(3 * i + 1, 3 * j + 1) += d;
+            H(3 * i + 2, 3 * j + 2) += d;
+            if (i != j) {
+                H(3 * j, 3 * i) += d;
+                H(3 * j + 1, 3 * i + 1) += d;
+                H(3 * j + 2, 3 * i + 2) += d;
+            }
+            idx++;
+        }
+    }
 }
 
 template <int NP, int NT>
@@ -2750,11 +2808,9 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalJacobianPreInt(ChMatrixRef& 
     // Calculate the Jacobian of the generalize internal force vector using the "Pre-Integration" style of method
     // assuming a linear viscoelastic material model (single term damping model).  For this style of method, the
     // components of the generalized internal force vector and its Jacobian that need to be integrated across the volume
-    // are calculated once prior to the start of the simulation.  This makes this method well suited for applications
-    // with many discrete layers since the in-simulation calculations are independent of the number of Gauss quadrature
-    // points used throughout the entire element.  Since computationally expensive quantities are required for both the
-    // generalized internal force vector and its Jacobian, these values were cached for reuse during this Jacobian
-    // calculation.
+    // are calculated once prior to the start of the simulation.  Since computationally expensive quantities are
+    // required for both the generalized internal force vector and its Jacobian, these values were cached for reuse
+    // during this Jacobian calculation.
 
     Matrix3xN e_bar;
     Matrix3xN e_bar_dot;
@@ -2975,34 +3031,6 @@ double ChElementBeamANCF_3243<NP, NT>::Calc_det_J_0xi(double xi, double eta, dou
     return (J_0xi.determinant());
 }
 
-template <int NP, int NT>
-void ChElementBeamANCF_3243<NP, NT>::RotateReorderStiffnessMatrix(ChMatrixNM<double, 6, 6>& D, double theta) {
-    // Reorder the stiffness matrix from the order assumed in ChMaterialShellANCF.h
-    //  E = [E11,E22,2*E12,E33,2*E13,2*E23]
-    // to the order assumed in this element formulation
-    //  E = [E11,E22,E33,2*E23,2*E13,2*E12]
-    // Note that the 6x6 stiffness matrix is symmetric
-
-    ChMatrixNM<double, 6, 6> D_Reordered;
-    D_Reordered << D(0, 0), D(0, 1), D(0, 3), D(0, 5), D(0, 4), D(0, 2), D(1, 0), D(1, 1), D(1, 3), D(1, 5), D(1, 4),
-        D(1, 2), D(3, 0), D(3, 1), D(3, 3), D(3, 5), D(3, 4), D(3, 2), D(5, 0), D(5, 1), D(5, 3), D(5, 5), D(5, 4),
-        D(5, 2), D(4, 0), D(4, 1), D(4, 3), D(4, 5), D(4, 4), D(4, 2), D(2, 0), D(2, 1), D(2, 3), D(2, 5), D(2, 4),
-        D(2, 2);
-
-    // Stiffness Tensor Rotation Matrix From:
-    // http://solidmechanics.org/text/Chapter3_2/Chapter3_2.htm
-
-    ChMatrixNM<double, 6, 6> K;
-    K << std::cos(theta) * std::cos(theta), std::sin(theta) * std::sin(theta), 0, 0, 0,
-        2 * std::cos(theta) * std::sin(theta), std::sin(theta) * std::sin(theta), std::cos(theta) * std::cos(theta), 0,
-        0, 0, -2 * std::cos(theta) * std::sin(theta), 0, 0, 1, 0, 0, 0, 0, 0, 0, std::cos(theta), std::sin(theta), 0, 0,
-        0, 0, -std::sin(theta), std::cos(theta), 0, -std::cos(theta) * std::sin(theta),
-        std::cos(theta) * std::sin(theta), 0, 0, 0,
-        std::cos(theta) * std::cos(theta) - std::sin(theta) * std::sin(theta);
-
-    D = K * D_Reordered * K.transpose();
-}
-
 ////////////////////////////////////////////////////////////////
 
 //#ifndef CH_QUADRATURE_STATIC_TABLES
@@ -3013,77 +3041,4 @@ ChQuadratureTables static_tables_3243(1, CH_QUADRATURE_STATIC_TABLES);
 template <int NP, int NT>
 ChQuadratureTables* ChElementBeamANCF_3243<NP, NT>::GetStaticGQTables() {
     return &static_tables_3243;
-}
-
-////////////////////////////////////////////////////////////////
-
-// ============================================================================
-// Implementation of ChMaterialBeamANCF_3243 methods
-// ============================================================================
-
-// Construct an isotropic material.
-ChMaterialBeamANCF_3243::ChMaterialBeamANCF_3243(double rho,        // material density
-                                                 double E,          // Young's modulus
-                                                 double nu,         // Poisson ratio
-                                                 const double& k1,  // Shear correction factor along beam local y axis
-                                                 const double& k2   // Shear correction factor along beam local z axis
-                                                 )
-    : m_rho(rho) {
-    double G = 0.5 * E / (1 + nu);
-    Calc_D0_Dv(ChVector<>(E), ChVector<>(nu), ChVector<>(G), k1, k2);
-}
-
-// Construct a (possibly) orthotropic material.
-ChMaterialBeamANCF_3243::ChMaterialBeamANCF_3243(double rho,            // material density
-                                                 const ChVector<>& E,   // elasticity moduli (E_x, E_y, E_z)
-                                                 const ChVector<>& nu,  // Poisson ratios (nu_xy, nu_xz, nu_yz)
-                                                 const ChVector<>& G,   // shear moduli (G_xy, G_xz, G_yz)
-                                                 const double& k1,  // Shear correction factor along beam local y axis
-                                                 const double& k2   // Shear correction factor along beam local z axis
-                                                 )
-    : m_rho(rho) {
-    Calc_D0_Dv(E, nu, G, k1, k2);
-}
-
-// Calculate the matrix form of two stiffness tensors used by the ANCF beam for selective reduced integration of the
-// Poisson effect
-void ChMaterialBeamANCF_3243::Calc_D0_Dv(const ChVector<>& E,
-                                         const ChVector<>& nu,
-                                         const ChVector<>& G,
-                                         double k1,
-                                         double k2) {
-    // orthotropic material ref: http://homes.civil.aau.dk/lda/Continuum/material.pdf
-    // except position of the shear terms is different to match the original ANCF reference paper
-
-    double nu_12 = nu.x();
-    double nu_13 = nu.y();
-    double nu_23 = nu.z();
-    double nu_21 = nu_12 * E.y() / E.x();
-    double nu_31 = nu_13 * E.z() / E.x();
-    double nu_32 = nu_23 * E.z() / E.y();
-    double k = 1.0 - nu_23 * nu_32 - nu_12 * nu_21 - nu_13 * nu_31 - nu_12 * nu_23 * nu_31 - nu_21 * nu_32 * nu_13;
-
-    // Component of Stiffness Tensor that does not contain the Poisson Effect
-    m_D0(0) = E.x();
-    m_D0(1) = E.y();
-    m_D0(2) = E.z();
-    m_D0(3) = G.z();
-    m_D0(4) = G.y() * k1;
-    m_D0(5) = G.x() * k2;
-
-    // Remaining components of the Stiffness Tensor that contain the Poisson Effect
-    m_Dv(0, 0) = E.x() * (1 - nu_23 * nu_32) / k - m_D0(0);
-    m_Dv(1, 0) = E.y() * (nu_13 * nu_32 + nu_12) / k;
-    m_Dv(2, 0) = E.z() * (nu_12 * nu_23 + nu_13) / k;
-
-    m_Dv(0, 1) = E.x() * (nu_23 * nu_31 + nu_21) / k;
-    m_Dv(1, 1) = E.y() * (1 - nu_13 * nu_31) / k - m_D0(1);
-    m_Dv(2, 1) = E.z() * (nu_13 * nu_21 + nu_23) / k;
-
-    m_Dv(0, 2) = E.x() * (nu_21 * nu_32 + nu_31) / k;
-    m_Dv(1, 2) = E.y() * (nu_12 * nu_31 + nu_32) / k;
-    m_Dv(2, 2) = E.z() * (1 - nu_12 * nu_21) / k - m_D0(2);
-
-    m_D.diagonal() = m_D0;
-    m_D.block<3, 3>(0, 0) += m_Dv;
 }

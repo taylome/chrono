@@ -386,7 +386,8 @@ set(ChronoEngine_fea_SOURCES
     fea/ChContactSurfaceMesh.cpp
     fea/ChMeshSurface.cpp
     fea/ChLoadContactSurfaceMesh.cpp
-    fea/ChMaterialShellANCF.cpp
+    fea/ChMaterialBeamANCF.cpp
+	fea/ChMaterialShellANCF.cpp
     fea/ChMaterialShellReissner.cpp
 	fea/ChMaterialShellKirchhoff.cpp
     )
@@ -427,7 +428,8 @@ set(ChronoEngine_fea_HEADERS
     fea/ChMeshSurface.h
     fea/ChLoadContactSurfaceMesh.h
     fea/ChRotUtils.h
-    fea/ChMaterialShellANCF.h
+    fea/ChMaterialBeamANCF.h
+	fea/ChMaterialShellANCF.h
     fea/ChMaterialShellReissner.h
 	fea/ChMaterialShellKirchhoff.h
 )

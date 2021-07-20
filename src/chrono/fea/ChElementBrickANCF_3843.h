@@ -340,7 +340,7 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
                            ) override;
 
     /// This is needed so that it can be accessed by ChLoaderVolumeGravity.
-    /// Density is mass per unit surface.
+    /// Density is the average mass per unit volume in the reference state of the element.
     virtual double GetDensity() override;
 
   private:
@@ -439,10 +439,6 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
     /// Calculate the determinate of the element Jacobian of the reference configuration with respect to the normalized
     /// configuration
     double Calc_det_J_0xi(double xi, double eta, double zeta);
-
-    /// Calculate the rotated 6x6 stiffness matrix and reorder it to match the Voigt notation order used with this
-    /// element
-    void RotateReorderStiffnessMatrix(ChMatrixNM<double, 6, 6>& D, double theta);
 
     /// Access a statically-allocated set of tables, from 0 to a 10th order, with precomputed tables.
     static ChQuadratureTables* GetStaticGQTables();

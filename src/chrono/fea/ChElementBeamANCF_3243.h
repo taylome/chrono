@@ -45,6 +45,7 @@
 
 #include <vector>
 
+#include "chrono/fea/ChMaterialBeamANCF.h"
 #include "chrono/core/ChQuadrature.h"
 #include "chrono/fea/ChElementBeam.h"
 #include "chrono/fea/ChNodeFEAxyzDDD.h"
@@ -68,63 +69,18 @@ namespace fea {
 ///             w
 /// </pre>
 
-/// Material definition.
-/// This class implements material properties for an ANCF Brick.
-class ChMaterialBeamANCF_3243 {
-  public:
-    /// Construct an isotropic material.
-    ChMaterialBeamANCF_3243(double rho,        ///< material density
-                            double E,          ///< Young's modulus
-                            double nu,         ///< Poisson ratio
-                            const double& k1,  ///< Shear correction factor along beam local y axis
-                            const double& k2   ///< Shear correction factor along beam local z axis
-    );
-
-    /// Construct a (possibly) orthotropic material.
-    ChMaterialBeamANCF_3243(double rho,            ///< material density
-                            const ChVector<>& E,   ///< elasticity moduli (E_x, E_y, E_z)
-                            const ChVector<>& nu,  ///< Poisson ratios (nu_xy, nu_xz, nu_yz)
-                            const ChVector<>& G,   ///< shear moduli (G_xy, G_xz, G_yz)
-                            const double& k1,      ///< Shear correction factor along beam local y axis
-                            const double& k2       ///< Shear correction factor along beam local z axis
-    );
-
-    /// Return the material density.
-    double Get_rho() const { return m_rho; }
-
-    /// Complete Elasticity Tensor in 6x6 matrix form
-    const ChMatrixNM<double, 6, 6>& Get_D() const { return m_D; }
-
-    /// Diagonal components of the 6x6 elasticity matrix form without the terms contributing to the Poisson effect
-    const ChVectorN<double, 6>& Get_D0() const { return m_D0; }
-
-    /// Upper 3x3 block of the elasticity matrix with the terms contributing to the Poisson effect
-    const ChMatrixNM<double, 3, 3>& Get_Dv() const { return m_Dv; }
-
-  private:
-    /// Calculate the matrix form of two stiffness tensors used by the ANCF beam for selective reduced integration of
-    /// the Poisson effect k1 and k2 are Timoshenko shear correction factors.
-    void Calc_D0_Dv(const ChVector<>& E, const ChVector<>& nu, const ChVector<>& G, double k1, double k2);
-
-    double m_rho;                  ///< density
-    ChMatrixNM<double, 6, 6> m_D;  ///< full 6x6 matrix of elastic coefficients
-    ChVectorN<double, 6> m_D0;     ///< Diagonal components of the 6x6 elasticity matrix form without the terms
-                                   ///< contributing to the Poisson effect
-    ChMatrixNM<double, 3, 3>
-        m_Dv;  ///< Upper 3x3 block of the elasticity matrix with the terms contributing to the Poisson effect
-
-  public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-};
-
 template <int NP = 3, int NT = 2>
 class ChElementBeamANCF_3243 : public ChElementBeam, public ChLoadableU, public ChLoadableUVW {
   public:
     static const int NIP_D0 = NP * NT * NT;  ///< number of Gauss quadrature points excluding the Poisson effect for the
                                              ///< Enhanced Continuum Mechanics method
-    static const int NIP_Dv = NP;  ///< number of Gauss quadrature points including the Poisson effect only along the
-                                   ///< beam axis for the Enhanced Continuum Mechanics method
-    static const int NSF = 8;      ///< number of shape functions
+    static const int NIP_Dv =
+        NP;  ///< number of Gauss quadrature points including the Poisson effect for reduced integration along the
+             ///< beam axis for the Enhanced Continuum Mechanics method (Full Gauss quadrature points along the beam
+             ///< axis (xi direction) and 1 point Gauss quadrature in the eta and zeta directions)
+    static const int NIP =
+        NIP_D0 + NIP_Dv;       ///< total number of integration points for the Enhanced Continuum Mechanics method
+    static const int NSF = 8;  ///< number of shape functions
 
     // Short-cut for defining a column-major Eigen matrix instead of the typically used row-major format
     template <typename T, int M, int N>
@@ -142,8 +98,8 @@ class ChElementBeamANCF_3243 : public ChElementBeam, public ChLoadableU, public 
 
     /// Internal force calculation method
     enum class IntFrcMethod {
-        ContInt,  ///< "Continuous Integration" style method - Fastest for a small number of layers
-        PreInt    ///< "Pre-Integration" style method - Fastest for a large number of layers
+        ContInt,  ///< "Continuous Integration" style method - Typically fastest for this element
+        PreInt    ///< "Pre-Integration" style method
     };
 
     ChElementBeamANCF_3243();
@@ -165,10 +121,10 @@ class ChElementBeamANCF_3243 : public ChElementBeam, public ChLoadableU, public 
     void SetDimensions(double lenX, double thicknessY, double thicknessZ);
 
     /// Specify the element material.
-    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF_3243> beam_mat);
+    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF> beam_mat);
 
     /// Return the material.
-    std::shared_ptr<ChMaterialBeamANCF_3243> GetMaterial() const { return m_material; }
+    std::shared_ptr<ChMaterialBeamANCF> GetMaterial() const { return m_material; }
 
     /// Access the n-th node of this element.
     virtual std::shared_ptr<ChNodeFEAbase> GetNodeN(int n) override { return m_nodes[n]; }
@@ -185,13 +141,13 @@ class ChElementBeamANCF_3243 : public ChElementBeam, public ChLoadableU, public 
     /// Set the structural damping.
     void SetAlphaDamp(double a);
 
-    /// Get the element length in the xi direction.
+    /// Get the element length in the xi direction (when there is no deformation of the element)
     double GetLengthX() const { return m_lenX; }
 
-    /// Get the total thickness of the beam element in the eta direction
+    /// Get the total thickness of the beam element in the eta direction (when there is no deformation of the element)
     double GetThicknessY() { return m_thicknessY; }
 
-    /// Get the total thickness of the beam element in the zeta direction
+    /// Get the total thickness of the beam element in the zeta direction (when there is no deformation of the element)
     double GetThicknessZ() { return m_thicknessZ; }
 
     /// Set the calculation method to use for the generalized internal force and its Jacobian calculations.  This should
@@ -221,7 +177,7 @@ class ChElementBeamANCF_3243 : public ChElementBeam, public ChLoadableU, public 
 
     /// Fill the D vector (column matrix) with the current field values at the nodes of the element, with proper
     /// ordering. If the D vector has not the size of this->GetNdofs(), it will be resized.
-    ///  {Pos_a Du_a Dv_a Dw_a  Pos_b Du_b Dv_b Dw_b  Pos_c Du_c Dv_c Dw_c  Pos_d Du_d Dv_d Dw_d}
+    ///  {Pos_a Du_a Dv_a Dw_a  Pos_b Du_b Dv_b Dw_b}
     virtual void GetStateBlock(ChVectorDynamic<>& mD) override;
 
     /// Update the state of this element.
@@ -339,7 +295,7 @@ class ChElementBeamANCF_3243 : public ChElementBeam, public ChLoadableU, public 
                            ) override;
 
     /// This is needed so that it can be accessed by ChLoaderVolumeGravity.
-    /// Density is mass per unit surface.
+    /// Density is the average mass per unit volume in the reference state of the element.
     virtual double GetDensity() override;
 
     /// Gets the tangent to the beam axis at the parametric coordinate xi.
@@ -443,15 +399,11 @@ class ChElementBeamANCF_3243 : public ChElementBeam, public ChLoadableU, public 
     /// configuration
     double Calc_det_J_0xi(double xi, double eta, double zeta);
 
-    /// Calculate the rotated 6x6 stiffness matrix and reorder it to match the Voigt notation order used with this
-    /// element
-    void RotateReorderStiffnessMatrix(ChMatrixNM<double, 6, 6>& D, double theta);
-
     /// Access a statically-allocated set of tables, from 0 to a 10th order, with precomputed tables.
     static ChQuadratureTables* GetStaticGQTables();
 
-    IntFrcMethod m_method;  ///< Generalized internal force and Jacobian calculation method
-    std::shared_ptr<ChMaterialBeamANCF_3243> m_material;    ///< material model
+    IntFrcMethod m_method;                           ///< Generalized internal force and Jacobian calculation method
+    std::shared_ptr<ChMaterialBeamANCF> m_material;  ///< material model
     std::vector<std::shared_ptr<ChNodeFEAxyzDDD>> m_nodes;  ///< element nodes
     double m_lenX;                                          ///< total element length along X
     double m_thicknessY;                                    ///< total element length along Y
@@ -462,21 +414,20 @@ class ChElementBeamANCF_3243 : public ChElementBeam, public ChLoadableU, public 
     Vector3N m_GravForce;                                   ///< Gravity Force
     Matrix3xN m_ebar0;  ///< Element Position Coordinate Vector for the Reference Configuration
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
-        m_SD_D0;  ///< Precomputed corrected normalized shape function derivative matrices ordered by columns instead of
-                  ///< by Gauss quadrature points used for the "Continuous Integration" style method for excluding the
-                  ///< Poisson effect in the Enhanced Continuum Mechanics method
+        m_SD;  ///< Precomputed corrected normalized shape function derivative matrices ordered by columns instead of
+               ///< by Gauss quadrature points used for the "Continuous Integration" style method for both the section
+               ///< of the Enhanced Continuum Mechanics method that includes the Poisson effect followed separately by
+               ///< the section that does not
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>
-        m_kGQ_D0;  ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale factors used for the "Continuous
-                   ///< Integration" style method for excluding the Poisson effect in the Enhanced Continuum Mechanics
-                   ///< method
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
-        m_SD_Dv;  ///< Precomputed corrected normalized shape function derivative matrices ordered by columns instead of
-                  ///< by Gauss quadrature points used for the "Continuous Integration" style method for including the
-                  ///< Poisson effect only along the beam axis in the Enhanced Continuum Mechanics method
+        m_kGQ_D0;  ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale factors used
+                   ///< for the "Continuous Integration" style method for excluding the Poisson
+                   ///< effect in the Enhanced Continuum Mechanics method
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>
         m_kGQ_Dv;  ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale factors used for the "Continuous
-                   ///< Integration" style method for including the Poisson effect only along the beam axis in the
-                   ///< Enhanced Continuum Mechanics method
+                   ///< Integration" style method for including the Poisson effect.  Selective reduced integration is
+                   ///< used for capturing the Poisson effect with the Enhanced Continuum Mechanics method with only one
+                   ///< point Gauss quadrature for the directions in the beam cross section and the full Gauss
+                   ///< quadrature points only along the beam axis
     ChVectorN<double, (NSF * (NSF + 1)) / 2>
         m_MassMatrix;  /// Mass Matrix in extra compact form (Upper Triangular Part only)
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>

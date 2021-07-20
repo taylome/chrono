@@ -218,8 +218,8 @@ void ChElementBrickANCF_3843<NP>::GetGreenLagrangeStrain(const double xi,
     E = 0.5 * (F.transpose() * F - I3x3);
 }
 
-// Get the 2nd Piola-Kirchoff stress tensor at the normalized element coordinates (xi, eta, zeta) [-1...1] at the current
-// state of the element.
+// Get the 2nd Piola-Kirchoff stress tensor at the normalized element coordinates (xi, eta, zeta) [-1...1] at the
+// current state of the element.
 template <int NP>
 void ChElementBrickANCF_3843<NP>::GetPK2Stress(const double xi,
                                                const double eta,
@@ -863,7 +863,7 @@ void ChElementBrickANCF_3843<NP>::PrecomputeInternalForceMatricesWeightsContInt(
                 SD_precompute_D = Sxi_D * J_0xi.inverse();
                 m_kGQ(index) = -J_0xi.determinant() * GQ_weight;
 
-                // Group all of the columns together in blocks, and then layer by layer across the entire element
+                // Group all of the columns together in blocks across the entire element
                 m_SD.col(index) = SD_precompute_D.col(0);
                 m_SD.col(index + NIP) = SD_precompute_D.col(1);
                 m_SD.col(index + 2 * NIP) = SD_precompute_D.col(2);
@@ -1032,7 +1032,7 @@ void ChElementBrickANCF_3843<NP>::ComputeInternalForcesContIntDamping(ChVectorDy
 
     // =============================================================================
     // Calculate each individual value of the Green-Lagrange strain component by component across all the
-    // Gauss-Quadrature points at a time for the current layer to better leverage vectorized CPU instructions.
+    // Gauss-Quadrature points at a time to better leverage vectorized CPU instructions.
     // Note that the scaled time derivatives of the Green-Lagrange strain are added to make the later calculation of
     // the 2nd Piola-Kirchoff stresses more efficient.  The combined result is then scaled by minus the Gauss
     // quadrature weight times the element Jacobian at the corresponding Gauss point (m_kGQ) again for efficiency.
@@ -1131,11 +1131,10 @@ void ChElementBrickANCF_3843<NP>::ComputeInternalForcesContIntDamping(ChVectorDy
     const ChMatrixNM<double, 6, 6>& D = GetMaterial()->Get_D();
 
     // =============================================================================
-    // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Gauss quadrature points in the
-    // current layer at a time component by component.
-    // Note that the Green-Largrange strain components have been scaled have already been combined with their scaled
-    // time derivatives and minus the Gauss quadrature weight times the element Jacobian at the corresponding Gauss
-    // point to make the calculation of the 2nd Piola-Kirchoff stresses more efficient.
+    // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Gauss quadrature points at a time
+    // component by component. Note that the Green-Largrange strain components have been scaled have already been
+    // combined with their scaled time derivatives and minus the Gauss quadrature weight times the element Jacobian at
+    // the corresponding Gauss point to make the calculation of the 2nd Piola-Kirchoff stresses more efficient.
     //  kGQ*SPK2 = kGQ*[SPK2_11,SPK2_22,SPK2_33,SPK2_23,SPK2_13,SPK2_12] = D * E_Combined
     // =============================================================================
 
@@ -1195,9 +1194,8 @@ void ChElementBrickANCF_3843<NP>::ComputeInternalForcesContIntDamping(ChVectorDy
                                                  FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(SPK2_3_Block);
 
     // =============================================================================
-    // Multiply the scaled first Piola-Kirchoff stresses by the shape function derivative matrix for the current
-    // layer to get the generalized force vector in matrix form (in the correct order if its calculated in row-major
-    // memory layout)
+    // Multiply the scaled first Piola-Kirchoff stresses by the shape function derivative matrix to get the generalized
+    // force vector in matrix form (in the correct order if its calculated in row-major memory layout)
     // =============================================================================
 
     MatrixNx3 QiCompact = m_SD * P_Block;
@@ -1241,7 +1239,7 @@ void ChElementBrickANCF_3843<NP>::ComputeInternalForcesContIntNoDamping(ChVector
 
     // =============================================================================
     // Calculate each individual value of the Green-Lagrange strain component by component across all the
-    // Gauss-Quadrature points at a time for the current layer to better leverage vectorized CPU instructions.
+    // Gauss-Quadrature points at a time to better leverage vectorized CPU instructions.
     // The result is then scaled by minus the Gauss quadrature weight times the element Jacobian at the
     // corresponding Gauss point (m_kGQ) for efficiency.
     // Results are written in Voigt notation: epsilon = [E11,E22,E33,2*E23,2*E13,2*E12]
@@ -1293,11 +1291,10 @@ void ChElementBrickANCF_3843<NP>::ComputeInternalForcesContIntNoDamping(ChVector
     const ChMatrixNM<double, 6, 6>& D = GetMaterial()->Get_D();
 
     // =============================================================================
-    // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Gauss quadrature points in the
-    // current layer at a time component by component.
-    // Note that the Green-Largrange strain components have been scaled have already been combined with their scaled
-    // time derivatives and minus the Gauss quadrature weight times the element Jacobian at the corresponding Gauss
-    // point to make the calculation of the 2nd Piola-Kirchoff stresses more efficient.
+    // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Gauss quadrature points at a time
+    // component by component. Note that the Green-Largrange strain components have been scaled by minus the Gauss
+    // quadrature weight times the element Jacobian at the corresponding Gauss point to make the calculation of the 2nd
+    // Piola-Kirchoff stresses more efficient.
     //  kGQ*SPK2 = kGQ*[SPK2_11,SPK2_22,SPK2_33,SPK2_23,SPK2_13,SPK2_12] = D * E_Combined
     // =============================================================================
 
@@ -1357,9 +1354,8 @@ void ChElementBrickANCF_3843<NP>::ComputeInternalForcesContIntNoDamping(ChVector
                                                  FC.template block<NIP, 1>(2 * NIP, 2).cwiseProduct(SPK2_3_Block);
 
     // =============================================================================
-    // Multiply the scaled first Piola-Kirchoff stresses by the shape function derivative matrix for the current
-    // layer to get the generalized force vector in matrix form (in the correct order if its calculated in row-major
-    // memory layout)
+    // Multiply the scaled first Piola-Kirchoff stresses by the shape function derivative matrix to get the generalized
+    // force vector in matrix form (in the correct order if its calculated in row-major memory layout)
     // =============================================================================
 
     MatrixNx3 QiCompact = m_SD * P_Block;
@@ -1687,7 +1683,7 @@ void ChElementBrickANCF_3843<NP>::ComputeInternalJacobianContIntDamping(ChMatrix
 
     // =============================================================================
     // Calculate each individual value of the Green-Lagrange strain component by component across all the
-    // Gauss-Quadrature points at a time for the current layer to better leverage vectorized CPU instructions.
+    // Gauss-Quadrature points at a time to better leverage vectorized CPU instructions.
     // Note that the scaled time derivatives of the Green-Lagrange strain are added to make the later calculation of
     // the 2nd Piola-Kirchoff stresses more efficient.  The combined result is then scaled by minus the Gauss
     // quadrature weight times the element Jacobian at the corresponding Gauss point (m_kGQ) again for efficiency.
@@ -1780,11 +1776,10 @@ void ChElementBrickANCF_3843<NP>::ComputeInternalJacobianContIntDamping(ChMatrix
     E6_Block.array() *= m_kGQ.array();
 
     // =============================================================================
-    // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Gauss quadrature points in the
-    // current layer at a time component by component.
-    // Note that the Green-Largrange strain components have been scaled have already been combined with their scaled
-    // time derivatives and minus the Gauss quadrature weight times the element Jacobian at the corresponding Gauss
-    // point to make the calculation of the 2nd Piola-Kirchoff stresses more efficient.
+    // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Gauss quadrature points at a time
+    // component by component. Note that the Green-Largrange strain components have been scaled and already been
+    // combined with their scaled time derivatives and minus the Gauss quadrature weight times the element Jacobian at
+    // the corresponding Gauss point to make the calculation of the 2nd Piola-Kirchoff stresses more efficient.
     //  kGQ*SPK2 = kGQ*[SPK2_11,SPK2_22,SPK2_33,SPK2_23,SPK2_13,SPK2_12] = D * E_Combined
     // =============================================================================
 
@@ -2099,7 +2094,7 @@ void ChElementBrickANCF_3843<NP>::ComputeInternalJacobianContIntNoDamping(ChMatr
 
     // =============================================================================
     // Calculate each individual value of the Green-Lagrange strain component by component across all the
-    // Gauss-Quadrature points at a time for the current layer to better leverage vectorized CPU instructions.
+    // Gauss-Quadrature points at a time to better leverage vectorized CPU instructions.
     // The result is then scaled by minus the Gauss quadrature weight times the element Jacobian at the
     // corresponding Gauss point (m_kGQ) for efficiency.
     // Results are written in Voigt notation: epsilon = [E11,E22,E33,2*E23,2*E13,2*E12]
@@ -2145,11 +2140,10 @@ void ChElementBrickANCF_3843<NP>::ComputeInternalJacobianContIntNoDamping(ChMatr
     E6_Block.array() *= m_kGQ.array();
 
     // =============================================================================
-    // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Gauss quadrature points in the
-    // current layer at a time component by component.
-    // Note that the Green-Largrange strain components have been scaled have already been combined with their scaled
-    // time derivatives and minus the Gauss quadrature weight times the element Jacobian at the corresponding Gauss
-    // point to make the calculation of the 2nd Piola-Kirchoff stresses more efficient.
+    // Calculate the 2nd Piola-Kirchoff stresses in Voigt notation across all the Gauss quadrature points at a time
+    // component by component. Note that the Green-Largrange strain components have been scaled by minus the Gauss
+    // quadrature weight times the element Jacobian at the corresponding Gauss point to make the calculation of the 2nd
+    // Piola-Kirchoff stresses more efficient.
     //  kGQ*SPK2 = kGQ*[SPK2_11,SPK2_22,SPK2_33,SPK2_23,SPK2_13,SPK2_12] = D * E_Combined
     // =============================================================================
 
