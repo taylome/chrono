@@ -11,9 +11,10 @@
 // =============================================================================
 // Authors: Michael Taylor, Antonio Recuero, Radu Serban
 // =============================================================================
-// Fully Parameterized ANCF brick element with 8 nodes (96DOF). A Description of this element can be found in:
-// Olshevskiy, A., Dmitrochenko, O., & Kim, C. W. (2014). Three-dimensional solid brick element using slopes in the
-// absolute nodal coordinate formulation. Journal of Computational and Nonlinear Dynamics, 9(2).
+// Fully Parameterized ANCF beam element with 3 nodes (27DOF). A Description of this element and the Enhanced Continuum
+// Mechanics based method can be found in: K. Nachbagauer, P. Gruber, and J. Gerstmayr. Structural and Continuum
+// Mechanics Approaches for a 3D Shear Deformable ANCF Beam Finite Element : Application to Static and Linearized
+// Dynamic Examples.J.Comput.Nonlinear Dynam, 8 (2) : 021004, 2012.
 // =============================================================================
 // The "Continuous Integration" style calculation for the generalized internal force is based on modifications to
 // (including a new analytical Jacobian):  Gerstmayr, J., Shabana, A.A.: Efficient integration of the elastic forces and
@@ -30,20 +31,20 @@
 // with Linear Viscoelastic Materials, Simulation Based Engineering Lab, University of Wisconsin-Madison; 2021.
 // =============================================================================
 // This element class has been templatized by the number of Gauss quadrature points to use for the generalized internal
-// force calculations and its Jacobian with the recommended values as the default.  Using fewer than 3 Gauss quadrature
-// will likely result in numerical issues with the element.
+// force calculations and its Jacobian with the recommended values as the default.  Using fewer than 2 Gauss quadrature
+// points along the beam axis (NP) or through each cross section direction (NT) will likely result in numerical issues
+// with the element.
 // =============================================================================
 
-#ifndef CHELEMENTBRICKANCF3843_H
-#define CHELEMENTBRICKANCF3843_H
+#ifndef CHELEMENTBEAMANCF3333_H
+#define CHELEMENTBEAMANCF3333_H
 
 #include <vector>
 
-#include "chrono/fea/ChMaterialBrickANCF.h"
+#include "chrono/fea/ChMaterialBeamANCF.h"
 #include "chrono/core/ChQuadrature.h"
-#include "chrono/fea/ChElementGeneric.h"
-#include "chrono/fea/ChNodeFEAxyzDDD.h"
-#include "chrono/physics/ChLoadable.h"
+#include "chrono/fea/ChElementBeam.h"
+#include "chrono/fea/ChNodeFEAxyzDD.h"
 
 namespace chrono {
 namespace fea {
@@ -51,37 +52,32 @@ namespace fea {
 /// @addtogroup fea_elements
 /// @{
 
-/// ANCF brick element with eight nodes.  The coordinates at each node are the position vector
-/// and 3 position vector gradients.
+/// ANCF beam element with three nodes.  The coordinates at each node are the position vector
+/// and the 2 position vector gradients in the cross-section.
 ///
-/// The node numbering is in ccw fashion as in the following scheme:
+/// The node numbering, as follows:
 /// <pre>
-/// Bottom Layer:
-///         v
-///         ^
-///         |
-/// D o-----+-----o C
-///   |     |     |
-/// --+-----+-----+----> u
-///   |     |     |
-/// A o-----+-----o B
-///
-/// Top Layer:
-///         v
-///         ^
-///         |
-/// H o-----+-----o G
-///   |     |     |
-/// --+-----+-----+----> u
-///   |     |     |
-/// E o-----+-----o F
+///               v
+///               ^
+///               |
+/// A o-----+-----o-----+-----o B -> u
+///              /C
+///             w
 /// </pre>
+/// where C is the third and central node.
 
-template <int NP = 4>
-class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
+template <int NP = 3, int NT = 2>
+class ChElementBeamANCF_3333 : public ChElementBeam, public ChLoadableU, public ChLoadableUVW {
   public:
-    static const int NIP = NP * NP * NP;  ///< number of Gauss quadrature points
-    static const int NSF = 32;            ///< number of shape functions
+    static const int NIP_D0 = NP * NT * NT;  ///< number of Gauss quadrature points excluding the Poisson effect for the
+                                             ///< Enhanced Continuum Mechanics method
+    static const int NIP_Dv =
+        NP;  ///< number of Gauss quadrature points including the Poisson effect for reduced integration along the
+             ///< beam axis for the Enhanced Continuum Mechanics method (Full Gauss quadrature points along the beam
+             ///< axis (xi direction) and 1 point Gauss quadrature in the eta and zeta directions)
+    static const int NIP =
+        NIP_D0 + NIP_Dv;       ///< total number of integration points for the Enhanced Continuum Mechanics method
+    static const int NSF = 9;  ///< number of shape functions
 
     // Short-cut for defining a column-major Eigen matrix instead of the typically used row-major format
     template <typename T, int M, int N>
@@ -89,7 +85,8 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
 
     using VectorN = ChVectorN<double, NSF>;
     using Vector3N = ChVectorN<double, 3 * NSF>;
-    using VectorNIP = ChVectorN<double, NIP>;
+    using VectorNIP_D0 = ChVectorN<double, NIP_D0>;
+    using VectorNIP_Dv = ChVectorN<double, NIP_Dv>;
     using Matrix3xN = ChMatrixNM<double, 3, NSF>;
     using MatrixNx3 = ChMatrixNM<double, NSF, 3>;
     using MatrixNx3c = ChMatrixNMc<double, NSF, 3>;
@@ -98,67 +95,45 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
 
     /// Internal force calculation method
     enum class IntFrcMethod {
-        ContInt,  ///< "Continuous Integration" style method - Typically the Fastest for this element
+        ContInt,  ///< "Continuous Integration" style method - Typically fastest for this element
         PreInt    ///< "Pre-Integration" style method
     };
 
-    ChElementBrickANCF_3843();
-    ~ChElementBrickANCF_3843() {}
+    ChElementBeamANCF_3333();
+    ~ChElementBeamANCF_3333() {}
 
     /// Get the number of nodes used by this element.
-    virtual int GetNnodes() override { return 8; }
+    virtual int GetNnodes() override { return 3; }
 
     /// Get the number of coordinates in the field used by the referenced nodes.
-    virtual int GetNdofs() override { return 8 * 12; }
+    virtual int GetNdofs() override { return 3 * 9; }
 
     /// Get the number of coordinates from the n-th node used by this element.
-    virtual int GetNodeNdofs(int n) override { return 12; }
+    virtual int GetNodeNdofs(int n) override { return 9; }
 
     /// Specify the nodes of this element.
-    void SetNodes(std::shared_ptr<ChNodeFEAxyzDDD> nodeA,
-                  std::shared_ptr<ChNodeFEAxyzDDD> nodeB,
-                  std::shared_ptr<ChNodeFEAxyzDDD> nodeC,
-                  std::shared_ptr<ChNodeFEAxyzDDD> nodeD,
-                  std::shared_ptr<ChNodeFEAxyzDDD> nodeE,
-                  std::shared_ptr<ChNodeFEAxyzDDD> nodeF,
-                  std::shared_ptr<ChNodeFEAxyzDDD> nodeG,
-                  std::shared_ptr<ChNodeFEAxyzDDD> nodeH);
+    void SetNodes(std::shared_ptr<ChNodeFEAxyzDD> nodeA, std::shared_ptr<ChNodeFEAxyzDD> nodeB, std::shared_ptr<ChNodeFEAxyzDD> nodeC);
 
     /// Specify the element dimensions.
-    void SetDimensions(double lenX, double lenY, double lenZ);
+    void SetDimensions(double lenX, double thicknessY, double thicknessZ);
 
     /// Specify the element material.
-    void SetMaterial(std::shared_ptr<ChMaterialBrickANCF> brick_mat);
+    void SetMaterial(std::shared_ptr<ChMaterialBeamANCF> beam_mat);
 
     /// Return the material.
-    std::shared_ptr<ChMaterialBrickANCF> GetMaterial() const { return m_material; }
+    std::shared_ptr<ChMaterialBeamANCF> GetMaterial() const { return m_material; }
 
     /// Access the n-th node of this element.
     virtual std::shared_ptr<ChNodeFEAbase> GetNodeN(int n) override { return m_nodes[n]; }
 
     /// Get a handle to the first node of this element.
-    std::shared_ptr<ChNodeFEAxyzDDD> GetNodeA() const { return m_nodes[0]; }
+    std::shared_ptr<ChNodeFEAxyzDD> GetNodeA() const { return m_nodes[0]; }
 
     /// Get a handle to the second node of this element.
-    std::shared_ptr<ChNodeFEAxyzDDD> GetNodeB() const { return m_nodes[1]; }
+    std::shared_ptr<ChNodeFEAxyzDD> GetNodeB() const { return m_nodes[1]; }
 
-    /// Get a handle to the third node of this element.
-    std::shared_ptr<ChNodeFEAxyzDDD> GetNodeC() const { return m_nodes[2]; }
-
-    /// Get a handle to the fourth node of this element.
-    std::shared_ptr<ChNodeFEAxyzDDD> GetNodeD() const { return m_nodes[3]; }
-
-    /// Get a handle to the 5th node of this element.
-    std::shared_ptr<ChNodeFEAxyzDDD> GetNodeE() const { return m_nodes[4]; }
-
-    /// Get a handle to the 6th node of this element.
-    std::shared_ptr<ChNodeFEAxyzDDD> GetNodeF() const { return m_nodes[5]; }
-
-    /// Get a handle to the 7th node of this element.
-    std::shared_ptr<ChNodeFEAxyzDDD> GetNodeG() const { return m_nodes[6]; }
-
-    /// Get a handle to the 8th node of this element.
-    std::shared_ptr<ChNodeFEAxyzDDD> GetNodeH() const { return m_nodes[7]; }
+    /// Get a handle to the third (middle) node of this element.
+    std::shared_ptr<ChNodeFEAxyzDD> GetNodeC() const { return m_nodes[2]; }
 
     /// Turn gravity on/off.
     void SetGravityOn(bool val) { m_gravity_on = val; }
@@ -166,14 +141,14 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
     /// Set the structural damping.
     void SetAlphaDamp(double a);
 
-    /// Get the element length in the X direction.
+    /// Get the element length in the xi direction (when there is no deformation of the element)
     double GetLengthX() const { return m_lenX; }
 
-    /// Get the element length in the Y direction.
-    double GetLengthY() { return m_lenY; }
+    /// Get the total thickness of the beam element in the eta direction (when there is no deformation of the element)
+    double GetThicknessY() { return m_thicknessY; }
 
-    /// Get the element length in the Z direction.
-    double GetLengthZ() { return m_lenZ; }
+    /// Get the total thickness of the beam element in the zeta direction (when there is no deformation of the element)
+    double GetThicknessZ() { return m_thicknessZ; }
 
     /// Set the calculation method to use for the generalized internal force and its Jacobian calculations.  This should
     /// be set prior to the start of the simulation since can be a significant amount of pre-calculation overhead
@@ -202,7 +177,7 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
 
     /// Fill the D vector (column matrix) with the current field values at the nodes of the element, with proper
     /// ordering. If the D vector has not the size of this->GetNdofs(), it will be resized.
-    ///  {Pos_a Du_a Dv_a Dw_a  Pos_b Du_b Dv_b Dw_b  Pos_c Du_c Dv_c Dw_c  Pos_d Du_d Dv_d Dw_d}
+    ///  {Pos_a Dv_a Dw_a  Pos_b Dv_b Dw_b  Pos_c Dv_c Dw_c}
     virtual void GetStateBlock(ChVectorDynamic<>& mD) override;
 
     /// Update the state of this element.
@@ -226,43 +201,43 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
                                           double Rfactor = 0,
                                           double Mfactor = 0) override;
 
+    // Interface to ChElementBeam base class (and similar methods)
     // --------------------------------------
 
-    /// Gets the xyz displacement of a point in the element, and the approximate rotation RxRyRz at that point
-    /// '(xi,eta,zeta)'.
-    virtual void EvaluateElementDisplacement(const double xi,
-                                             const double eta,
-                                             const double zeta,
-                                             ChVector<>& u_displ,
-                                             ChVector<>& u_rotaz) {}
+    // Dummy method definition - Does not translate to an ANCF continuum mechanics based beam element
+    virtual void EvaluateSectionStrain(const double, chrono::ChVector<double>&) override {}
 
-    /// Gets the absolute xyz position of a point in the element, and the approximate rotation RxRyRz at that point
-    /// '(xi,eta,zeta)'. Note, nodeA = (xi=-1, eta=-1, zeta=-1) Note, nodeB = (xi=1, eta=-1, zeta=-1) Note, nodeC =
-    /// (xi=1, eta=1, zeta=-1) Note, nodeD = (xi=-1, eta=1, zeta=-1) Note, nodeE = (xi=-1, eta=-1, zeta=1) Note, nodeF =
-    /// (xi=1, eta=-1, zeta=1) Note, nodeG = (xi=1, eta=1, zeta=1) Note, nodeH = (xi=-1, eta=1, zeta=1)
-    virtual void EvaluateElementFrame(const double xi,
-                                      const double eta,
-                                      const double zeta,
-                                      ChVector<>& point,
-                                      ChQuaternion<>& rot);
+    // Dummy method definition - Does not translate to an ANCF continuum mechanics based beam element
+    virtual void EvaluateSectionForceTorque(const double,
+                                            chrono::ChVector<double>&,
+                                            chrono::ChVector<double>&) override {}
 
-    /// Gets the absolute xyz position of a point in the element specified in normalized coordinates
-    virtual void EvaluateElementPoint(const double xi, const double eta, const double zeta, ChVector<>& point);
+    /// Gets the xyz displacement of a point on the beam line,
+    /// and the rotation RxRyRz of section plane, at abscissa '(xi,0,0)'.
+    /// xi = -1 at node A and xi = 1 at node B
+    virtual void EvaluateSectionDisplacement(const double xi, ChVector<>& u_displ, ChVector<>& u_rotaz) override {}
 
-    /// Gets the absolute xyz velocity of a point in the element specified in normalized coordinates
-    virtual void EvaluateElementVel(const double xi,
-                                        const double eta,
-                                        const double zeta,
-                                        ChVector<>& Result);
+    /// Gets the absolute xyz position of a point on the beam line,
+    /// and the absolute rotation of section plane, at abscissa '(xi,0,0)'.
+    /// xi = -1 at node A and xi = 1 at node B
+    virtual void EvaluateSectionFrame(const double xi, ChVector<>& point, ChQuaternion<>& rot) override;
+
+    /// Gets the absolute xyz position of a point on the beam line specified in normalized coordinates
+    /// xi = -1 at node A and xi = 1 at node B
+    void EvaluateSectionPoint(const double xi, ChVector<>& point);
+
+    /// Gets the absolute xyz velocity of a point on the beam line specified in normalized coordinates
+    /// xi = -1 at node A and xi = 1 at node B
+    void EvaluateSectionVel(const double xi, ChVector<>& Result);
 
     // Functions for ChLoadable interface
     // ----------------------------------
 
     /// Gets the number of DOFs affected by this element (position part).
-    virtual int LoadableGet_ndof_x() override { return 8 * 12; }
+    virtual int LoadableGet_ndof_x() override { return 3 * 9; }
 
     /// Gets the number of DOFs affected by this element (velocity part).
-    virtual int LoadableGet_ndof_w() override { return 8 * 12; }
+    virtual int LoadableGet_ndof_w() override { return 3 * 9; }
 
     /// Gets all the DOFs packed in a single vector (position part).
     virtual void LoadableGetStateBlock_x(int block_offset, ChState& mD) override;
@@ -279,19 +254,31 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
 
     /// Number of coordinates in the interpolated field, ex=3 for a
     /// tetrahedron finite element or a cable, = 1 for a thermal problem, etc.
-    virtual int Get_field_ncoords() override { return 12; }
+    virtual int Get_field_ncoords() override { return 9; }
 
     /// Tell the number of DOFs blocks (ex. =1 for a body, =4 for a tetrahedron, etc.)
-    virtual int GetSubBlocks() override { return 4; }
+    virtual int GetSubBlocks() override { return 3; }
 
     /// Get the offset of the i-th sub-block of DOFs in global vector.
     virtual unsigned int GetSubBlockOffset(int nblock) override { return m_nodes[nblock]->NodeGetOffset_w(); }
 
     /// Get the size of the i-th sub-block of DOFs in global vector.
-    virtual unsigned int GetSubBlockSize(int nblock) override { return 12; }
+    virtual unsigned int GetSubBlockSize(int nblock) override { return 9; }
 
     /// Get the pointers to the contained ChVariables, appending to the mvars vector.
     virtual void LoadableGetVariables(std::vector<ChVariables*>& mvars) override;
+
+    /// Evaluate N'*F , where N is some type of shape function
+    /// evaluated at xi coordinate of the beam line, each ranging in -1..+1
+    /// F is a load, N'*F is the resulting generalized load
+    /// Returns also det[J] with J=[dx/du,..], that might be useful in gauss quadrature.
+    virtual void ComputeNF(const double xi,             ///< parametric coordinate along the beam axis
+                           ChVectorDynamic<>& Qi,       ///< Return result of Q = N'*F  here
+                           double& detJ,                ///< Return det[J] here
+                           const ChVectorDynamic<>& F,  ///< Input F vector, size is =n. field coords.
+                           ChVectorDynamic<>* state_x,  ///< if != 0, update state (pos. part) to this, then evaluate
+                           ChVectorDynamic<>* state_w   ///< if != 0, update state (speed part) to this, then evaluate
+                           ) override;
 
     /// Evaluate N'*F , where N is some type of shape function
     /// evaluated at xi,eta,zeta coordinates of the volume, each ranging in -1..+1
@@ -310,6 +297,10 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
     /// This is needed so that it can be accessed by ChLoaderVolumeGravity.
     /// Density is the average mass per unit volume in the reference state of the element.
     virtual double GetDensity() override;
+
+    /// Gets the tangent to the beam axis at the parametric coordinate xi.
+    /// xi = -1 at node A and xi = 1 at node B
+    ChVector<> ComputeTangent(const double xi);
 
   private:
     /// Initial setup. This is used to precompute matrices that do not change during the simulation, such as the local
@@ -356,7 +347,7 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
 
     /// Calculate the calculate the Jacobian of the internal force integrand using the "Continuous Integration" style
     /// method assuming damping is not included This function calculates just the stiffness (K) matrix,
-///     J = Kfactor * K + Mfactor * M
+    ///     J = Kfactor * K + Mfactor * M
     /// for given coefficients Kfactor and Mfactor.
     /// This Jacobian includes the global mass matrix M with the global stiffness in H.
     void ComputeInternalJacobianContIntNoDamping(ChMatrixRef& H, double Kfactor, double Mfactor);
@@ -411,23 +402,32 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
     /// Access a statically-allocated set of tables, from 0 to a 10th order, with precomputed tables.
     static ChQuadratureTables* GetStaticGQTables();
 
-    IntFrcMethod m_method;  ///< Generalized internal force and Jacobian calculation method
-    std::shared_ptr<ChMaterialBrickANCF> m_material;   ///< material model
-    std::vector<std::shared_ptr<ChNodeFEAxyzDDD>> m_nodes;  ///< element nodes
+    IntFrcMethod m_method;                           ///< Generalized internal force and Jacobian calculation method
+    std::shared_ptr<ChMaterialBeamANCF> m_material;  ///< material model
+    std::vector<std::shared_ptr<ChNodeFEAxyzDD>> m_nodes;  ///< element nodes
     double m_lenX;                                          ///< total element length along X
-    double m_lenY;                                          ///< total element length along Y
-    double m_lenZ;                                          ///< total element length along Z
+    double m_thicknessY;                                    ///< total element length along Y
+    double m_thicknessZ;                                    ///< total element length along Z
     double m_Alpha;                                         ///< structural damping
     bool m_damping_enabled;                                 ///< Flag to run internal force damping calculations
     bool m_gravity_on;                                      ///< enable/disable gravity calculation
     Vector3N m_GravForce;                                   ///< Gravity Force
     Matrix3xN m_ebar0;  ///< Element Position Coordinate Vector for the Reference Configuration
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
-        m_SD;  ///< Precomputed corrected normalized shape function derivative matrices ordered by columns instead of by
-               ///< Gauss quadrature points used for the "Continuous Integration" style method
+        m_SD;  ///< Precomputed corrected normalized shape function derivative matrices ordered by columns instead of
+               ///< by Gauss quadrature points used for the "Continuous Integration" style method for both the section
+               ///< of the Enhanced Continuum Mechanics method that includes the Poisson effect followed separately by
+               ///< the section that does not
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>
-        m_kGQ;  ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale factors used for the "Continuous
-                ///< Integration" style method
+        m_kGQ_D0;  ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale factors used
+                   ///< for the "Continuous Integration" style method for excluding the Poisson
+                   ///< effect in the Enhanced Continuum Mechanics method
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>
+        m_kGQ_Dv;  ///< Precomputed Gauss-Quadrature Weight & Element Jacobian scale factors used for the "Continuous
+                   ///< Integration" style method for including the Poisson effect.  Selective reduced integration is
+                   ///< used for capturing the Poisson effect with the Enhanced Continuum Mechanics method with only one
+                   ///< point Gauss quadrature for the directions in the beam cross section and the full Gauss
+                   ///< quadrature points only along the beam axis
     ChVectorN<double, (NSF * (NSF + 1)) / 2>
         m_MassMatrix;  /// Mass Matrix in extra compact form (Upper Triangular Part only)
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>
@@ -449,7 +449,7 @@ class ChElementBrickANCF_3843 : public ChElementGeneric, public ChLoadableUVW {
 
 /// @} fea_elements
 
-#include "ChElementBrickANCF_3843_impl.h"
+#include "ChElementBeamANCF_3333_impl.h"
 
 }  // end of namespace fea
 }  // end of namespace chrono

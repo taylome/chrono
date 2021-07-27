@@ -481,7 +481,7 @@ void ChElementShellANCF_3833<NP, NT>::ComputeNodalMass() {
                                m_MassMatrix(231) + m_MassMatrix(261) + m_MassMatrix(282) + m_MassMatrix(294);
 }
 
-// Compute the generalized internal force vector for the current nodal coordinates as set the value in the Fi vector.
+// Compute the generalized internal force vector for the current nodal coordinates and set the value in the Fi vector.
 template <int NP, int NT>
 void ChElementShellANCF_3833<NP, NT>::ComputeInternalForces(ChVectorDynamic<>& Fi) {
     assert(Fi.size() == 3 * NSF);
@@ -884,7 +884,8 @@ void ChElementShellANCF_3833<NP, NT>::PrecomputeInternalForceMatricesWeights() {
         PrecomputeInternalForceMatricesWeightsPreInt();
 }
 
-// Precalculate constant matrices for the internal force calculations using the "Continuous Integration" style method
+// Precalculate constant matrices for the internal force calculations when using the "Continuous Integration" style
+// method
 template <int NP, int NT>
 void ChElementShellANCF_3833<NP, NT>::PrecomputeInternalForceMatricesWeightsContInt() {
     ChQuadratureTables* GQTable = GetStaticGQTables();
@@ -935,7 +936,7 @@ void ChElementShellANCF_3833<NP, NT>::PrecomputeInternalForceMatricesWeightsCont
     }
 }
 
-// Precalculate constant matrices for the internal force calculations using the "Pre-Integration Integration" style
+// Precalculate constant matrices for the internal force calculations when using the "Pre-Integration" style
 // method
 template <int NP, int NT>
 void ChElementShellANCF_3833<NP, NT>::PrecomputeInternalForceMatricesWeightsPreInt() {

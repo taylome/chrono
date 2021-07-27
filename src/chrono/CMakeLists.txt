@@ -390,6 +390,7 @@ set(ChronoEngine_fea_SOURCES
 	fea/ChMaterialShellANCF.cpp
     fea/ChMaterialShellReissner.cpp
 	fea/ChMaterialShellKirchhoff.cpp
+    fea/ChMaterialBrickANCF.cpp
     )
 
 set(ChronoEngine_fea_HEADERS
@@ -432,6 +433,7 @@ set(ChronoEngine_fea_HEADERS
 	fea/ChMaterialShellANCF.h
     fea/ChMaterialShellReissner.h
 	fea/ChMaterialShellKirchhoff.h
+    fea/ChMaterialBrickANCF.h
 )
 
 source_group(fea FILES
@@ -624,6 +626,8 @@ set(ChronoEngine_fea_elements_HEADERS
     fea/ChElementBar.h
     fea/ChElementBeam.h
     fea/ChElementBeamANCF.h
+	fea/ChElementBeamANCF_3333.h
+	fea/ChElementBeamANCF_3333_impl.h	
 	fea/ChElementBeamANCF_3333_TR00.h
 	fea/ChElementBeamANCF_3333_TR01.h
 	fea/ChElementBeamANCF_3333_TR02.h
