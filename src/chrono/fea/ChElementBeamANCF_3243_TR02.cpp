@@ -49,6 +49,7 @@ namespace fea {
 ChElementBeamANCF_3243_TR02::ChElementBeamANCF_3243_TR02()
     : m_gravity_on(false), m_thicknessY(0), m_thicknessZ(0), m_lenX(0), m_Alpha(0), m_damping_enabled(false) {
     m_nodes.resize(2);
+    m_strain_form = ChElementBeamANCF_3243_TR02::CMPoisson;
 }
 
 // ------------------------------------------------------------------------------

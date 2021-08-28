@@ -33,6 +33,7 @@ namespace fea {
 
 ChElementBeamANCF::ChElementBeamANCF() : m_lenX(0), m_thicknessY(0), m_thicknessZ(0), m_Alpha(0), m_gravity_on(false) {
     m_nodes.resize(3);
+    m_strain_form = ChElementBeamANCF::CMPoisson;
 }
 
 // ------------------------------------------------------------------------------

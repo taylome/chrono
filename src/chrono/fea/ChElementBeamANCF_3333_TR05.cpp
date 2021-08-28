@@ -57,6 +57,7 @@ namespace fea {
 ChElementBeamANCF_3333_TR05::ChElementBeamANCF_3333_TR05()
     : m_gravity_on(false), m_thicknessY(0), m_thicknessZ(0), m_lenX(0), m_Alpha(0), m_damping_enabled(false) {
     m_nodes.resize(3);
+    m_strain_form = ChElementBeamANCF_3333_TR05::CMPoisson;
 }
 
 // ------------------------------------------------------------------------------
