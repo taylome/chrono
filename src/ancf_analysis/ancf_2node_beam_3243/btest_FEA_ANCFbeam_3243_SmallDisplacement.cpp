@@ -38,14 +38,25 @@
 
 #include "chrono/fea/ChElementBeamANCF_3243_TR01.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR02.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR02_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR03.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR03_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR04.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR04_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR05.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR05_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR06.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR06_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR07.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR07s.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR07s_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR08.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR08s.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR08s_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR09.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR10.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR11.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR11s.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -546,7 +557,7 @@ int main(int argc, char* argv[]) {
     // SolverType::SparseQR};
 
     ChVectorN<int, 1> num_els;
-    num_els << 128;
+    num_els << 8;
     std::vector<SolverType> Solver = {SolverType::MUMPS};
 
     ChMatrixNM<double, 4, 17> timing_stats;
@@ -567,8 +578,22 @@ int main(int argc, char* argv[]) {
 
     for (const auto& ls : Solver) {
         for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR02_GQ322, ChMaterialBeamANCF_3243_TR02_GQ322> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR02_GQ322");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
             ANCFBeamTest<ChElementBeamANCF_3243_TR03, ChMaterialBeamANCF_3243_TR03> test(num_els(i), ls);
             test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR03");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR03_GQ322, ChMaterialBeamANCF_3243_TR03_GQ322> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR03_GQ322");
         }
     }
 
@@ -581,8 +606,22 @@ int main(int argc, char* argv[]) {
 
     for (const auto& ls : Solver) {
         for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR04_GQ322, ChMaterialBeamANCF_3243_TR04_GQ322> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR04_GQ322");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
             ANCFBeamTest<ChElementBeamANCF_3243_TR05, ChMaterialBeamANCF_3243_TR05> test(num_els(i), ls);
             test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR05");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR05_GQ322, ChMaterialBeamANCF_3243_TR05_GQ322> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR05_GQ322");
         }
     }
 
@@ -595,6 +634,13 @@ int main(int argc, char* argv[]) {
 
     for (const auto& ls : Solver) {
         for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR06_GQ322, ChMaterialBeamANCF_3243_TR06_GQ322> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR06_GQ322");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
             ANCFBeamTest<ChElementBeamANCF_3243_TR07, ChMaterialBeamANCF_3243_TR07> test(num_els(i), ls);
             test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR07");
         }
@@ -602,8 +648,36 @@ int main(int argc, char* argv[]) {
 
     for (const auto& ls : Solver) {
         for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR07S, ChMaterialBeamANCF_3243_TR07S> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR07S");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR07S_GQ322, ChMaterialBeamANCF_3243_TR07S_GQ322> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR07S_GQ322");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
             ANCFBeamTest<ChElementBeamANCF_3243_TR08, ChMaterialBeamANCF_3243_TR08> test(num_els(i), ls);
             test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR08S, ChMaterialBeamANCF_3243_TR08S> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08S");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR08S_GQ322, ChMaterialBeamANCF_3243_TR08S_GQ322> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08S_GQ322");
         }
     }
 
@@ -618,6 +692,20 @@ int main(int argc, char* argv[]) {
         for (auto i = 0; i < num_els.size(); i++) {
             ANCFBeamTest<ChElementBeamANCF_3243_TR10, ChMaterialBeamANCF_3243_TR10> test(num_els(i), ls);
             test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR10");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR11, ChMaterialBeamANCF_3243_TR11> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR11");
+        }
+    }
+
+    for (const auto& ls : Solver) {
+        for (auto i = 0; i < num_els.size(); i++) {
+            ANCFBeamTest<ChElementBeamANCF_3243_TR11S, ChMaterialBeamANCF_3243_TR11S> test(num_els(i), ls);
+            test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR11S");
         }
     }
 

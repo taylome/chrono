@@ -21,10 +21,14 @@
 #include "chrono/physics/ChSystemSMC.h"
 #include "chrono/solver/ChDirectSolverLS.h"
 
+#include "chrono/fea/ChElementBeamANCF_3243.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR01.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR02.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR02_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR03.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR03_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR04.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR04_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR05.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR05_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR06.h"
@@ -55,6 +59,7 @@ using namespace chrono::fea;
 
 #define TIP_MOMENT 10.0  // Nm
 #define TIP_FORCE 10.0   // N
+#define Jac_Error 0.33   // Percent error as decimal
 
 // =============================================================================
 
@@ -182,7 +187,7 @@ ANCFBeamTest<ElementVersion, MaterialVersion>::ANCFBeamTest() {
     element->SetMaterial(material);
     element->SetAlphaDamp(0.0);
     element->SetGravityOn(false);  //Enable the efficient ANCF method for calculating the application of gravity to the element
-    element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
+    //element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
     mesh->AddElement(element);
 
     m_element = element;
@@ -523,7 +528,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelNoDamping
 
         std::cout << "Jacobian K Term - No Displacement, No Velocity, No Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacK * 100 << "%";
-        if (max_percent_error_JacK > 0.01) {
+        if (max_percent_error_JacK > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -533,7 +538,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelNoDamping
     if (zeros_max_error_JacK / JacobianK_NoDispNoVelNoDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacK > 0.01) {
+    if (max_percent_error_JacK > Jac_Error) {
         passed_tests = false;
     }
 
@@ -546,14 +551,14 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelNoDamping
         std::cout << "Jacobian R Term - No Displacement, No Velocity, No Damping (Max Abs Error) = "
             << MaxAbsError_JacR;
 
-        if (MaxAbsError_JacR > 0.01) {
+        if (MaxAbsError_JacR > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
             std::cout << " - Test PASSED" << std::endl;
         }
     }
-    if (MaxAbsError_JacR > 0.01) {
+    if (MaxAbsError_JacR > Jac_Error) {
         passed_tests = false;
     }
 
@@ -647,7 +652,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelNoDamp
 
         std::cout << "Jacobian K Term - Small Displacement, No Velocity, No Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacK * 100 << "%";
-        if (max_percent_error_JacK > 0.01) {
+        if (max_percent_error_JacK > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -657,7 +662,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelNoDamp
     if (zeros_max_error_JacK / JacobianK_SmallDispNoVelNoDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacK > 0.01) {
+    if (max_percent_error_JacK > Jac_Error) {
         passed_tests = false;
     }
 
@@ -670,14 +675,14 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelNoDamp
         std::cout << "Jacobian R Term - Small Displacement, No Velocity, No Damping (Max Abs Error) = "
             << MaxAbsError_JacR;
 
-        if (MaxAbsError_JacR > 0.01) {
+        if (MaxAbsError_JacR > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
             std::cout << " - Test PASSED" << std::endl;
         }
     }
-    if (MaxAbsError_JacR > 0.01) {
+    if (MaxAbsError_JacR > Jac_Error) {
         passed_tests = false;
     }
 
@@ -794,7 +799,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelWithDampi
 
         std::cout << "Jacobian K Term - No Displacement, No Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacK * 100 << "%";
-        if (max_percent_error_JacK > 0.01) {
+        if (max_percent_error_JacK > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -804,7 +809,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelWithDampi
     if (zeros_max_error_JacK / JacobianK_NoDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacK > 0.01) {
+    if (max_percent_error_JacK > Jac_Error) {
         passed_tests = false;
     }
 
@@ -832,7 +837,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelWithDampi
 
         std::cout << "Jacobian R Term - No Displacement, No Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacR * 100 << "%";
-        if (max_percent_error_JacR > 0.01) {
+        if (max_percent_error_JacR > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -842,7 +847,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelWithDampi
     if (zeros_max_error_JacR / JacobianR_NoDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacR > 0.01) {
+    if (max_percent_error_JacR > Jac_Error) {
         passed_tests = false;
     }
 
@@ -961,7 +966,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelWithDa
 
         std::cout << "Jacobian K Term - Small Displacement, No Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacK * 100 << "%";
-        if (max_percent_error_JacK > 0.01) {
+        if (max_percent_error_JacK > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -971,7 +976,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelWithDa
     if (zeros_max_error_JacK / JacobianK_SmallDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacK > 0.01) {
+    if (max_percent_error_JacK > Jac_Error) {
         passed_tests = false;
     }
 
@@ -999,7 +1004,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelWithDa
 
         std::cout << "Jacobian R Term - Small Displacement, No Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacR * 100 << "%";
-        if (max_percent_error_JacR > 0.01) {
+        if (max_percent_error_JacR > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -1009,7 +1014,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelWithDa
     if (zeros_max_error_JacR / JacobianR_SmallDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacR > 0.01) {
+    if (max_percent_error_JacR > Jac_Error) {
         passed_tests = false;
     }
 
@@ -1128,7 +1133,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianNoDispSmallVelWithDa
 
         std::cout << "Jacobian K Term - No Displacement, Small Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacK * 100 << "%";
-        if (max_percent_error_JacK > 0.01) {
+        if (max_percent_error_JacK > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -1138,7 +1143,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianNoDispSmallVelWithDa
     if (zeros_max_error_JacK / JacobianK_NoDispSmallVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacK > 0.01) {
+    if (max_percent_error_JacK > Jac_Error) {
         passed_tests = false;
     }
 
@@ -1166,7 +1171,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianNoDispSmallVelWithDa
 
         std::cout << "Jacobian R Term - No Displacement, Small Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacR * 100 << "%";
-        if (max_percent_error_JacR > 0.01) {
+        if (max_percent_error_JacR > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -1176,7 +1181,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::JacobianNoDispSmallVelWithDa
     if (zeros_max_error_JacR / JacobianR_NoDispSmallVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacR > 0.01) {
+    if (max_percent_error_JacR > Jac_Error) {
         passed_tests = false;
     }
 
@@ -1258,7 +1263,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::AxialDisplacementCheck(int m
         element->SetAlphaDamp(0.0);
         element->SetGravityOn(
             false);  // Enable the efficient ANCF method for calculating the application of gravity to the element
-        element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
+        //element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
         // element->SetStrainFormulation(ElementVersion::StrainFormulation::CMNoPoisson);
         mesh->AddElement(element);
 
@@ -1432,7 +1437,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::CantileverCheck(int msglvl) 
         element->SetAlphaDamp(0.0);
         element->SetGravityOn(
             false);  // Enable the efficient ANCF method for calculating the application of gravity to the element
-        element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
+        //element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
         // element->SetStrainFormulation(ElementVersion::StrainFormulation::CMNoPoisson);
         mesh->AddElement(element);
 
@@ -1607,7 +1612,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::AxialTwistCheck(int msglvl) 
         element->SetAlphaDamp(0.0);
         element->SetGravityOn(
             false);  // Enable the efficient ANCF method for calculating the application of gravity to the element
-        element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
+        //element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
         // element->SetStrainFormulation(ElementVersion::StrainFormulation::CMNoPoisson);
         mesh->AddElement(element);
 
@@ -1726,6 +1731,13 @@ int main(int argc, char* argv[]) {
 #endif
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243<>, ChMaterialBeamANCF> ChElementBeamANCF_3243_test;
+    if (ChElementBeamANCF_3243_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3243_TR01, ChMaterialBeamANCF_3243_TR01> ChElementBeamANCF_3243_TR01_test;
     if (ChElementBeamANCF_3243_TR01_test.RunElementChecks(0))
         print_green("ChElementBeamANCF_3243_TR01 Element Checks = PASSED\n");
@@ -1740,6 +1752,13 @@ int main(int argc, char* argv[]) {
         print_red("ChElementBeamANCF_3243_TR02 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR02_GQ322, ChMaterialBeamANCF_3243_TR02_GQ322> ChElementBeamANCF_3243_TR02_GQ322_test;
+    if (ChElementBeamANCF_3243_TR02_GQ322_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR02_GQ322 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR02_GQ322 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3243_TR03, ChMaterialBeamANCF_3243_TR03> ChElementBeamANCF_3243_TR03_test;
     if (ChElementBeamANCF_3243_TR03_test.RunElementChecks(0))
         print_green("ChElementBeamANCF_3243_TR03 Element Checks = PASSED\n");
@@ -1747,11 +1766,25 @@ int main(int argc, char* argv[]) {
         print_red("ChElementBeamANCF_3243_TR03 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR03_GQ322, ChMaterialBeamANCF_3243_TR03_GQ322> ChElementBeamANCF_3243_TR03_GQ322_test;
+    if (ChElementBeamANCF_3243_TR03_GQ322_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR03_GQ322 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR03_GQ322 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3243_TR04, ChMaterialBeamANCF_3243_TR04> ChElementBeamANCF_3243_TR04_test;
     if (ChElementBeamANCF_3243_TR04_test.RunElementChecks(0))
         print_green("ChElementBeamANCF_3243_TR04 Element Checks = PASSED\n");
     else
         print_red("ChElementBeamANCF_3243_TR04 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR04_GQ322, ChMaterialBeamANCF_3243_TR04_GQ322> ChElementBeamANCF_3243_TR04_GQ322_test;
+    if (ChElementBeamANCF_3243_TR04_GQ322_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR04_GQ322 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR04_GQ322 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3243_TR05, ChMaterialBeamANCF_3243_TR05> ChElementBeamANCF_3243_TR05_test;
@@ -1762,7 +1795,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3243_TR05_GQ322, ChMaterialBeamANCF_3243_TR05_GQ322> ChElementBeamANCF_3243_TR05_GQ322_test;
-    if (ChElementBeamANCF_3243_TR05_GQ322_test.RunElementChecks(1))
+    if (ChElementBeamANCF_3243_TR05_GQ322_test.RunElementChecks(0))
         print_green("ChElementBeamANCF_3243_TR05_GQ322 Element Checks = PASSED\n");
     else
         print_red("ChElementBeamANCF_3243_TR05_GQ322 Element Checks = FAILED\n");
@@ -1776,7 +1809,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3243_TR06_GQ322, ChMaterialBeamANCF_3243_TR06_GQ322> ChElementBeamANCF_3243_TR06_GQ322_test;
-    if (ChElementBeamANCF_3243_TR06_GQ322_test.RunElementChecks(1))
+    if (ChElementBeamANCF_3243_TR06_GQ322_test.RunElementChecks(0))
         print_green("ChElementBeamANCF_3243_TR06_GQ322 Element Checks = PASSED\n");
     else
         print_red("ChElementBeamANCF_3243_TR06_GQ322 Element Checks = FAILED\n");
@@ -1797,7 +1830,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3243_TR07S_GQ322, ChMaterialBeamANCF_3243_TR07S_GQ322> ChElementBeamANCF_3243_TR07S_GQ322_test;
-    if (ChElementBeamANCF_3243_TR07S_GQ322_test.RunElementChecks(1))
+    if (ChElementBeamANCF_3243_TR07S_GQ322_test.RunElementChecks(0))
         print_green("ChElementBeamANCF_3243_TR07S_GQ322 Element Checks = PASSED\n");
     else
         print_red("ChElementBeamANCF_3243_TR07S_GQ322 Element Checks = FAILED\n");
@@ -1825,7 +1858,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3243_TR08S_GQ322, ChMaterialBeamANCF_3243_TR08S_GQ322> ChElementBeamANCF_3243_TR08S_GQ322_test;
-    if (ChElementBeamANCF_3243_TR08S_GQ322_test.RunElementChecks(1))
+    if (ChElementBeamANCF_3243_TR08S_GQ322_test.RunElementChecks(0))
         print_green("ChElementBeamANCF_3243_TR08S_GQ322 Element Checks = PASSED\n");
     else
         print_red("ChElementBeamANCF_3243_TR08S_GQ322 Element Checks = FAILED\n");

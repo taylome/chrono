@@ -38,16 +38,26 @@
 
 #include "chrono/fea/ChElementBeamANCF_3243_TR01.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR02.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR02_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR03.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR03_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR04.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR04_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR05.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR05_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR06.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR06_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR07.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR07s.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR07s_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR08.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR08b.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR08s.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR08s_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR09.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR10.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR11.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR11s.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -76,7 +86,7 @@ enum class SolverType { MINRES, MKL, MUMPS, SparseLU, SparseQR };
 
 // =============================================================================
 
-#define NUM_SKIP_STEPS 0  // number of steps for hot start
+#define NUM_SKIP_STEPS 10  // number of steps for hot start
 #define NUM_SIM_STEPS 100  // number of simulation steps for each benchmark
 #define REPEATS 10
 
@@ -512,10 +522,12 @@ void ANCFBeamTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<dou
 }
 
 int main(int argc, char* argv[]) {
-    ChVectorN<int, 8> num_els;
-    num_els << 8, 16, 32, 64, 128, 256, 512, 1024;
+    // ChVectorN<int, 8> num_els;
+    // num_els << 8, 16, 32, 64, 128, 256, 512, 1024;
     // ChVectorN<int, 1> num_els;
     // num_els << 128;
+    ChVectorN<int, 2> num_els;
+    num_els << 8, 1024;
 
     // std::vector<SolverType> Solver = {SolverType::MINRES, SolverType::MKL, SolverType::MUMPS, SolverType::SparseLU,
     //                                  SolverType::SparseQR};
@@ -550,32 +562,68 @@ int main(int argc, char* argv[]) {
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR02");
                 }
                 {
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR02_GQ322, ChMaterialBeamANCF_3243_TR02_GQ322> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR02_GQ322");
+                }
+                {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR03, ChMaterialBeamANCF_3243_TR03> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR03");
+                }
+                {
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR03_GQ322, ChMaterialBeamANCF_3243_TR03_GQ322> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR03_GQ322");
                 }
                 {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR04, ChMaterialBeamANCF_3243_TR04> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR04");
                 }
                 {
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR04_GQ322, ChMaterialBeamANCF_3243_TR04_GQ322> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR04_GQ322");
+                }
+                {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR05, ChMaterialBeamANCF_3243_TR05> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR05");
+                }
+                {
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR05_GQ322, ChMaterialBeamANCF_3243_TR05_GQ322> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR05_GQ322");
                 }
                 {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR06, ChMaterialBeamANCF_3243_TR06> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR06");
                 }
                 {
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR06_GQ322, ChMaterialBeamANCF_3243_TR06_GQ322> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR06_GQ322");
+                }
+                {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR07, ChMaterialBeamANCF_3243_TR07> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR07");
+                }
+                {
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR07S, ChMaterialBeamANCF_3243_TR07S> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR07S");
+                }
+                {
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR07S_GQ322, ChMaterialBeamANCF_3243_TR07S_GQ322> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR07S_GQ322");
                 }
                 {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR08, ChMaterialBeamANCF_3243_TR08> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08");
                 }
+                //{
+                //    ANCFBeamTest<ChElementBeamANCF_3243_TR08b, ChMaterialBeamANCF_3243_TR08b> test(num_els(i), ls, NumThreads, f);
+                //    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08b");
+                //}
                 {
-                    ANCFBeamTest<ChElementBeamANCF_3243_TR08b, ChMaterialBeamANCF_3243_TR08b> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08b");
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR08S, ChMaterialBeamANCF_3243_TR08S> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08S");
+                }
+                {
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR08S_GQ322, ChMaterialBeamANCF_3243_TR08S_GQ322> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08S_GQ322");
                 }
                 {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR09, ChMaterialBeamANCF_3243_TR09> test(num_els(i), ls, NumThreads, f);
@@ -588,6 +636,10 @@ int main(int argc, char* argv[]) {
                 {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR11, ChMaterialBeamANCF_3243_TR11> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR11");
+                }
+                {
+                    ANCFBeamTest<ChElementBeamANCF_3243_TR11S, ChMaterialBeamANCF_3243_TR11S> test(num_els(i), ls, NumThreads, f);
+                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR11S");
                 }
 
 
