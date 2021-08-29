@@ -35,20 +35,35 @@
 //#include "chrono_postprocess/ChGnuPlot.h"
 //#include "chrono_thirdparty/filesystem/path.h"
 
-#include "chrono/fea/ChElementShellANCF_3443_TR01.h"
-#include "chrono/fea/ChElementShellANCF_3443_TR02.h"
-#include "chrono/fea/ChElementShellANCF_3443_TR03.h"
-#include "chrono/fea/ChElementShellANCF_3443_TR04.h"
-#include "chrono/fea/ChElementShellANCF_3443_TR05.h"
-#include "chrono/fea/ChElementShellANCF_3443_TR06.h"
-#include "chrono/fea/ChElementShellANCF_3443_TR07.h"
-#include "chrono/fea/ChElementShellANCF_3443_TR07s.h"
-#include "chrono/fea/ChElementShellANCF_3443_TR08.h"
-#include "chrono/fea/ChElementShellANCF_3443_TR08s.h"
-#include "chrono/fea/ChElementShellANCF_3443_TR09.h"
-#include "chrono/fea/ChElementShellANCF_3443_TR10.h"
-#include "chrono/fea/ChElementShellANCF_3443_TR11.h"
-#include "chrono/fea/ChElementShellANCF_3443_TR11s.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR01.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR02.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR02_GQ332.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR02_GQ442.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR03.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR03_GQ332.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR03_GQ442.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR04.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR04_GQ332.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR04_GQ442.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR05.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR05_GQ332.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR05_GQ442.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR06.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR06_GQ332.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR06_GQ442.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR07.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR07b.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR07s.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR07s_GQ332.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR07s_GQ442.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR08.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR08s.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR08s_GQ332.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR08s_GQ442.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR09.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR10.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR11.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR11s.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -200,7 +215,7 @@ ANCFShellTest<ElementVersion, MaterialVersion>::ANCFShellTest(int num_elements,
     double width = 0.3;         // m
     double thickness = 0.01;    // m
     double rho = 7810;          // kg/m^3
-    double E = 10e5;            // Pa
+    double E = 1.0e5;            // Pa
     double nu = 0.3;            // Poisson's Ratio
 
     auto material = chrono_types::make_shared<MaterialVersion>(rho, E, nu);
@@ -266,8 +281,10 @@ ANCFShellTest<ElementVersion, MaterialVersion>::ANCFShellTest(int num_elements,
                 std::dynamic_pointer_cast<ChNodeFEAxyzDDD>(mesh->GetNode(nodeB_idx)),
                 std::dynamic_pointer_cast<ChNodeFEAxyzDDD>(mesh->GetNode(nodeC_idx)),
                 std::dynamic_pointer_cast<ChNodeFEAxyzDDD>(mesh->GetNode(nodeD_idx)));
-            element->SetDimensions(dx, dy, thickness);
-            element->SetMaterial(material);
+            // element->SetDimensions(dx, dy, thickness);
+            // element->SetMaterial(material);
+            element->SetDimensions(dx, dy);
+            element->AddLayer(thickness, 0 * CH_C_DEG_TO_RAD, material);
             element->SetAlphaDamp(0.01);
             element->SetGravityOn(
                 true);  // Enable the efficient ANCF method for calculating the application of gravity to the element
@@ -506,13 +523,11 @@ void ANCFShellTest<ElementVersion, MaterialVersion>::RunTimingTest(ChMatrixNM<do
     // mplot3.Plot(midpoint_displacement, 1, 3, "from ChMatrix", " with lines lt 5");
 }
 
-
-
 int main(int argc, char* argv[]) {
     //ChVectorN<int, 8> num_els;
     //num_els << 8, 16, 32, 64, 128, 256, 512, 1024;
-     //ChVectorN<int, 1> num_els;
-     //num_els << 2;
+    //ChVectorN<int, 1> num_els;
+    //num_els << 2;
     ChVectorN<int, 2> num_els;
     num_els << 2, 20; //2=>2x4=8, 20=>20x40=800 
 
@@ -520,7 +535,7 @@ int main(int argc, char* argv[]) {
     //                                  SolverType::SparseQR};
     // std::vector<SolverType> Solver = {SolverType::MKL, SolverType::MUMPS, SolverType::SparseLU,
     // SolverType::SparseQR};
-    std::vector<SolverType> Solver = {SolverType::SparseLU};
+    std::vector<SolverType> Solver = { SolverType::SparseLU };
     // std::vector<SolverType> Solver = { SolverType::MKL };
 
     int MaxThreads = 1;
@@ -535,65 +550,121 @@ int main(int argc, char* argv[]) {
             // int NumThreads = MaxThreads;
             bool run = true;
             while (run) {
+                if (i == 0) {
+                    ANCFShellTest<ChElementShellANCF_3443ML_TR01, ChMaterialShellANCF_3443ML_TR01> test(num_els(i), ls, NumThreads);
+                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR01");
+                }
+                //if (i == 0) {
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR02, ChMaterialShellANCF_3443ML_TR02> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR02");
+                //}
+                //if (i == 0) {
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR02_GQ332, ChMaterialShellANCF_3443ML_TR02_GQ332> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR02_GQ332");
+                //}
+                if (i == 0) {
+                    ANCFShellTest<ChElementShellANCF_3443ML_TR02_GQ442, ChMaterialShellANCF_3443ML_TR02_GQ442> test(num_els(i), ls, NumThreads);
+                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR02_GQ442");
+                }
+                //if (i == 0) {
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR03, ChMaterialShellANCF_3443ML_TR03> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR03");
+                //}
+                //if (i == 0) {
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR03_GQ332, ChMaterialShellANCF_3443ML_TR03_GQ332> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR03_GQ332");
+                //}
+                if (i == 0) {
+                    ANCFShellTest<ChElementShellANCF_3443ML_TR03_GQ442, ChMaterialShellANCF_3443ML_TR03_GQ442> test(num_els(i), ls, NumThreads);
+                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR03_GQ442");
+                }
+                //if (i == 0) {
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR04, ChMaterialShellANCF_3443ML_TR04> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR04");
+                //}
+                //if (i == 0) {
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR04_GQ332, ChMaterialShellANCF_3443ML_TR04_GQ332> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR04_GQ332");
+                //}
+                if (i == 0) {
+                    ANCFShellTest<ChElementShellANCF_3443ML_TR04_GQ442, ChMaterialShellANCF_3443ML_TR04_GQ442> test(num_els(i), ls, NumThreads);
+                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR04_GQ442");
+                }
+                //if (i == 0) {
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR05, ChMaterialShellANCF_3443ML_TR05> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR05");
+                //}
+                //{
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR05_GQ332, ChMaterialShellANCF_3443ML_TR05_GQ332> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR05_GQ332");
+                //}
                 {
-                    ANCFShellTest<ChElementShellANCF_3443_TR01, ChMaterialShellANCF_3443_TR01> test(num_els(i), ls, NumThreads);
-                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443_TR01");
+                    ANCFShellTest<ChElementShellANCF_3443ML_TR05_GQ442, ChMaterialShellANCF_3443ML_TR05_GQ442> test(num_els(i), ls, NumThreads);
+                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR05_GQ442");
+                }
+                //if (i == 0) {
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR06, ChMaterialShellANCF_3443ML_TR06> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR06");
+                //}
+                //{
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR06_GQ332, ChMaterialShellANCF_3443ML_TR06_GQ332> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR06_GQ332");
+                //}
+                {
+                    ANCFShellTest<ChElementShellANCF_3443ML_TR06_GQ442, ChMaterialShellANCF_3443ML_TR06_GQ442> test(num_els(i), ls, NumThreads);
+                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR06_GQ442");
+                }
+                //{
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR07, ChMaterialShellANCF_3443ML_TR07> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR07");
+                //}
+                //{
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR07S, ChMaterialShellANCF_3443ML_TR07S> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR07S");
+                //}
+                //{
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR07S_GQ332, ChMaterialShellANCF_3443ML_TR07S_GQ332> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR07S_GQ332");
+                //}
+                {
+                    ANCFShellTest<ChElementShellANCF_3443ML_TR07S_GQ442, ChMaterialShellANCF_3443ML_TR07S_GQ442> test(num_els(i), ls, NumThreads);
+                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR07S_GQ442");
+                }
+                //{
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR08, ChMaterialShellANCF_3443ML_TR08> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR08");
+                //}
+                //{
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR08S, ChMaterialShellANCF_3443ML_TR08S> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR08S");
+                //}
+                //{
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR08S_GQ332, ChMaterialShellANCF_3443ML_TR08S_GQ332> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR08S_GQ332");
+                //}
+                {
+                    ANCFShellTest<ChElementShellANCF_3443ML_TR08S_GQ442, ChMaterialShellANCF_3443ML_TR08S_GQ442> test(num_els(i), ls, NumThreads);
+                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR08S_GQ442");
                 }
                 {
-                    ANCFShellTest<ChElementShellANCF_3443_TR02, ChMaterialShellANCF_3443_TR02> test(num_els(i), ls, NumThreads);
-                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443_TR02");
+                    ANCFShellTest<ChElementShellANCF_3443ML_TR09, ChMaterialShellANCF_3443ML_TR09> test(num_els(i), ls, NumThreads);
+                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR09");
                 }
                 {
-                    ANCFShellTest<ChElementShellANCF_3443_TR03, ChMaterialShellANCF_3443_TR03> test(num_els(i), ls, NumThreads);
-                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443_TR03");
+                    ANCFShellTest<ChElementShellANCF_3443ML_TR10, ChMaterialShellANCF_3443ML_TR10> test(num_els(i), ls, NumThreads);
+                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR10");
                 }
+                //{
+                //    ANCFShellTest<ChElementShellANCF_3443ML_TR11, ChMaterialShellANCF_3443ML_TR11> test(num_els(i), ls, NumThreads);
+                //    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR11");
+                //}
                 {
-                    ANCFShellTest<ChElementShellANCF_3443_TR04, ChMaterialShellANCF_3443_TR04> test(num_els(i), ls, NumThreads);
-                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443_TR04");
-                }
-                {
-                    ANCFShellTest<ChElementShellANCF_3443_TR05, ChMaterialShellANCF_3443_TR05> test(num_els(i), ls, NumThreads);
-                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443_TR05");
-                }
-                {
-                    ANCFShellTest<ChElementShellANCF_3443_TR06, ChMaterialShellANCF_3443_TR06> test(num_els(i), ls, NumThreads);
-                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443_TR06");
-                }
-                {
-                    ANCFShellTest<ChElementShellANCF_3443_TR07, ChMaterialShellANCF_3443_TR07> test(num_els(i), ls, NumThreads);
-                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443_TR07");
-                }
-                {
-                    ANCFShellTest<ChElementShellANCF_3443_TR07S, ChMaterialShellANCF_3443_TR07S> test(num_els(i), ls, NumThreads);
-                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443_TR07S");
-                }
-                {
-                    ANCFShellTest<ChElementShellANCF_3443_TR08, ChMaterialShellANCF_3443_TR08> test(num_els(i), ls, NumThreads);
-                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443_TR08");
-                }
-                {
-                    ANCFShellTest<ChElementShellANCF_3443_TR08S, ChMaterialShellANCF_3443_TR08S> test(num_els(i), ls, NumThreads);
-                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443_TR08S");
-                }
-                {
-                    ANCFShellTest<ChElementShellANCF_3443_TR09, ChMaterialShellANCF_3443_TR09> test(num_els(i), ls, NumThreads);
-                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443_TR09");
-                }
-                {
-                    ANCFShellTest<ChElementShellANCF_3443_TR10, ChMaterialShellANCF_3443_TR10> test(num_els(i), ls, NumThreads);
-                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443_TR10");
-                }
-                {
-                    ANCFShellTest<ChElementShellANCF_3443_TR11, ChMaterialShellANCF_3443_TR11> test(num_els(i), ls, NumThreads);
-                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443_TR11");
-                }
-                {
-                    ANCFShellTest<ChElementShellANCF_3443_TR11S, ChMaterialShellANCF_3443_TR11S> test(num_els(i), ls, NumThreads);
-                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443_TR11S");
+                    ANCFShellTest<ChElementShellANCF_3443ML_TR11S, ChMaterialShellANCF_3443ML_TR11S> test(num_els(i), ls, NumThreads);
+                    test.RunTimingTest(timing_stats, "ChElementShellANCF_3443ML_TR11S");
                 }
 
 
-                run = false;
+                //run = false;
                 if (NumThreads == MaxThreads)
                     run = false;
 
