@@ -1,9 +1,11 @@
 set(TESTS
 	btest_FEA_ANCFshell_3833_InternalFrcKRM
 	btest_FEA_ANCFshell_3833ML_InternalFrcKRM
-#	btest_FEA_ANCFshell_3833_LargeDisplacement_3DPendulum
+	btest_FEA_ANCFshell_3833_LargeDisplacement_3DPendulum
+	btest_FEA_ANCFshell_3833_Roofline
 	utest_FEA_ANCFshell_3833_InternalFrcKRM
 	utest_FEA_ANCFshell_3833ML_InternalFrcKRM
+	btest_FEA_ANCFshell_3833ML_LargeDisplacement_3DPendulum
     )
 
 # ------------------------------------------------------------------------------

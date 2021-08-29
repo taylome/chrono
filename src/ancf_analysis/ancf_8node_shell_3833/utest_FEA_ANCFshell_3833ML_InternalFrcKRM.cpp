@@ -22,10 +22,14 @@
 #include "chrono/solver/ChDirectSolverLS.h"
 
 #include "chrono/fea/ChElementShellANCF_8.h"
+#include "chrono/fea/ChElementShellANCF_3833.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR01.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR02.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR02_GQ332.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR03.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR03_GQ332.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR04.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR04_GQ332.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR05.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR05_GQ332.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR06.h"
@@ -56,6 +60,7 @@ using namespace chrono::fea;
 
 #define TIP_MOMENT 10.0  // Nm
 #define TIP_FORCE 10.0   // N
+#define Jac_Error 0.33   // Percent error as decimal
 
 // =============================================================================
 
@@ -232,7 +237,6 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::RunElementChecks(int msgl
     tests_passed = (tests_passed & CantileverCheck(msglvl));
     tests_passed = (tests_passed & AxialTwistCheck(msglvl));
 
-    msglvl = 2;
     tests_passed = (tests_passed & MLCantileverCheck1(msglvl));
     tests_passed = (tests_passed & MLCantileverCheck2(msglvl));
     tests_passed = (tests_passed & MLCantileverCheck3(msglvl));
@@ -546,7 +550,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelNoDamp
 
         std::cout << "Jacobian K Term - No Displacement, No Velocity, No Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacK * 100 << "%";
-        if (max_percent_error_JacK > 0.01) {
+        if (max_percent_error_JacK > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -556,7 +560,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelNoDamp
     if (zeros_max_error_JacK / JacobianK_NoDispNoVelNoDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacK > 0.01) {
+    if (max_percent_error_JacK > Jac_Error) {
         passed_tests = false;
     }
 
@@ -569,14 +573,14 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelNoDamp
         std::cout << "Jacobian R Term - No Displacement, No Velocity, No Damping (Max Abs Error) = "
             << MaxAbsError_JacR;
 
-        if (MaxAbsError_JacR > 0.01) {
+        if (MaxAbsError_JacR > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
             std::cout << " - Test PASSED" << std::endl;
         }
     }
-    if (MaxAbsError_JacR > 0.01) {
+    if (MaxAbsError_JacR > Jac_Error) {
         passed_tests = false;
     }
 
@@ -670,7 +674,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelNoD
 
         std::cout << "Jacobian K Term - Small Displacement, No Velocity, No Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacK * 100 << "%";
-        if (max_percent_error_JacK > 0.01) {
+        if (max_percent_error_JacK > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -680,7 +684,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelNoD
     if (zeros_max_error_JacK / JacobianK_SmallDispNoVelNoDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacK > 0.01) {
+    if (max_percent_error_JacK > Jac_Error) {
         passed_tests = false;
     }
 
@@ -693,14 +697,14 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelNoD
         std::cout << "Jacobian R Term - Small Displacement, No Velocity, No Damping (Max Abs Error) = "
             << MaxAbsError_JacR;
 
-        if (MaxAbsError_JacR > 0.01) {
+        if (MaxAbsError_JacR > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
             std::cout << " - Test PASSED" << std::endl;
         }
     }
-    if (MaxAbsError_JacR > 0.01) {
+    if (MaxAbsError_JacR > Jac_Error) {
         passed_tests = false;
     }
 
@@ -816,7 +820,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelWithDa
 
         std::cout << "Jacobian K Term - No Displacement, No Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacK * 100 << "%";
-        if (max_percent_error_JacK > 0.01) {
+        if (max_percent_error_JacK > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -826,7 +830,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelWithDa
     if (zeros_max_error_JacK / JacobianK_NoDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacK > 0.01) {
+    if (max_percent_error_JacK > Jac_Error) {
         passed_tests = false;
     }
 
@@ -854,7 +858,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelWithDa
 
         std::cout << "Jacobian R Term - No Displacement, No Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacR * 100 << "%";
-        if (max_percent_error_JacR > 0.01) {
+        if (max_percent_error_JacR > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -864,7 +868,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianNoDispNoVelWithDa
     if (zeros_max_error_JacR / JacobianR_NoDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacR > 0.01) {
+    if (max_percent_error_JacR > Jac_Error) {
         passed_tests = false;
     }
 
@@ -984,7 +988,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelWit
 
         std::cout << "Jacobian K Term - Small Displacement, No Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacK * 100 << "%";
-        if (max_percent_error_JacK > 0.01) {
+        if (max_percent_error_JacK > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -994,7 +998,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelWit
     if (zeros_max_error_JacK / JacobianK_SmallDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacK > 0.01) {
+    if (max_percent_error_JacK > Jac_Error) {
         passed_tests = false;
     }
 
@@ -1022,7 +1026,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelWit
 
         std::cout << "Jacobian R Term - Small Displacement, No Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacR * 100 << "%";
-        if (max_percent_error_JacR > 0.01) {
+        if (max_percent_error_JacR > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -1032,7 +1036,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianSmallDispNoVelWit
     if (zeros_max_error_JacR / JacobianR_SmallDispNoVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacR > 0.01) {
+    if (max_percent_error_JacR > Jac_Error) {
         passed_tests = false;
     }
 
@@ -1152,7 +1156,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianNoDispSmallVelWit
 
         std::cout << "Jacobian K Term - No Displacement, Small Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacK * 100 << "%";
-        if (max_percent_error_JacK > 0.01) {
+        if (max_percent_error_JacK > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -1162,7 +1166,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianNoDispSmallVelWit
     if (zeros_max_error_JacK / JacobianK_NoDispSmallVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacK > 0.01) {
+    if (max_percent_error_JacK > Jac_Error) {
         passed_tests = false;
     }
 
@@ -1190,7 +1194,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianNoDispSmallVelWit
 
         std::cout << "Jacobian R Term - No Displacement, Small Velocity, With Damping (Max Abs % Error - Only Larger Terms) = "
             << max_percent_error_JacR * 100 << "%";
-        if (max_percent_error_JacR > 0.01) {
+        if (max_percent_error_JacR > Jac_Error) {
             print_red(" - Test FAILED\n");
         }
         else {
@@ -1200,7 +1204,7 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::JacobianNoDispSmallVelWit
     if (zeros_max_error_JacR / JacobianR_NoDispSmallVelWithDamping.cwiseAbs().maxCoeff() > 0.0001) {
         passed_tests = false;
     }
-    if (max_percent_error_JacR > 0.01) {
+    if (max_percent_error_JacR > Jac_Error) {
         passed_tests = false;
     }
 
@@ -2262,6 +2266,10 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::MLCantileverCheck3(int ms
 
     // Find the nonlinear static solution for the system (final displacement)
     system->DoStaticLinear();
+    system->DoStaticLinear();
+    system->DoStaticLinear();
+    system->DoStaticLinear();
+    system->DoStaticLinear();
     //system->DoStaticNonlinear(50);
 
     // Calculate the displacement of the end of the ANCF beam mesh
@@ -2435,8 +2443,12 @@ bool ANCFShellMLTest<ElementVersion, MaterialVersion>::MLCantileverCheck4(int ms
                                        // efficient for ANCF elements
 
     // Find the nonlinear static solution for the system (final displacement)
-    //system->DoStaticLinear();
-    system->DoStaticNonlinear(50);
+    system->DoStaticLinear();
+    system->DoStaticLinear();
+    system->DoStaticLinear();
+    system->DoStaticLinear();
+    system->DoStaticLinear();
+    //system->DoStaticNonlinear(50);
 
     // Calculate the displacement of the end of the ANCF beam mesh
     ChVector<> point;
@@ -2513,6 +2525,13 @@ int main(int argc, char* argv[]) {
         print_red("ChElementShellANCF_8 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFShellMLTest<ChElementShellANCF_3833<>, ChMaterialShellANCF> ChElementShellANCF_3833_test;
+    if (ChElementShellANCF_3833_test.RunElementChecks(0))
+        print_green("ChElementShellANCF_3833 Element Checks = PASSED\n");
+    else
+        print_red("ChElementShellANCF_3833 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR01, ChMaterialShellANCF_3833ML_TR01> ChElementShellANCF_3833ML_TR01_test;
     if (ChElementShellANCF_3833ML_TR01_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3833ML_TR01 Element Checks = PASSED\n");
@@ -2527,11 +2546,25 @@ int main(int argc, char* argv[]) {
         print_red("ChElementShellANCF_3833ML_TR02 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFShellMLTest<ChElementShellANCF_3833ML_TR02_GQ332, ChMaterialShellANCF_3833ML_TR02_GQ332> ChElementShellANCF_3833ML_TR02_GQ332_test;
+    if (ChElementShellANCF_3833ML_TR02_GQ332_test.RunElementChecks(0))
+        print_green("ChElementShellANCF_3833ML_TR02_GQ332 Element Checks = PASSED\n");
+    else
+        print_red("ChElementShellANCF_3833ML_TR02_GQ332 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR03, ChMaterialShellANCF_3833ML_TR03> ChElementShellANCF_3833ML_TR03_test;
     if (ChElementShellANCF_3833ML_TR03_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3833ML_TR03 Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR03 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFShellMLTest<ChElementShellANCF_3833ML_TR03_GQ332, ChMaterialShellANCF_3833ML_TR03_GQ332> ChElementShellANCF_3833ML_TR03_GQ332_test;
+    if (ChElementShellANCF_3833ML_TR03_GQ332_test.RunElementChecks(0))
+        print_green("ChElementShellANCF_3833ML_TR03_GQ332 Element Checks = PASSED\n");
+    else
+        print_red("ChElementShellANCF_3833ML_TR03_GQ332 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR04, ChMaterialShellANCF_3833ML_TR04> ChElementShellANCF_3833ML_TR04_test;
@@ -2541,92 +2574,99 @@ int main(int argc, char* argv[]) {
         print_red("ChElementShellANCF_3833ML_TR04 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFShellMLTest<ChElementShellANCF_3833ML_TR04_GQ332, ChMaterialShellANCF_3833ML_TR04_GQ332> ChElementShellANCF_3833ML_TR04_GQ332_test;
+    if (ChElementShellANCF_3833ML_TR04_GQ332_test.RunElementChecks(0))
+        print_green("ChElementShellANCF_3833ML_TR04_GQ332 Element Checks = PASSED\n");
+    else
+        print_red("ChElementShellANCF_3833ML_TR04_GQ332 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR05, ChMaterialShellANCF_3833ML_TR05> ChElementShellANCF_3833ML_TR05_test;
-    if (ChElementShellANCF_3833ML_TR05_test.RunElementChecks(1))
+    if (ChElementShellANCF_3833ML_TR05_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3833ML_TR05 Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR05 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR05_GQ332, ChMaterialShellANCF_3833ML_TR05_GQ332> ChElementShellANCF_3833ML_TR05_GQ332_test;
-    if (ChElementShellANCF_3833ML_TR05_GQ332_test.RunElementChecks(1))
+    if (ChElementShellANCF_3833ML_TR05_GQ332_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3833ML_TR05_GQ332 Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR05_GQ332 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR06, ChMaterialShellANCF_3833ML_TR06> ChElementShellANCF_3833ML_TR06_test;
-    if (ChElementShellANCF_3833ML_TR06_test.RunElementChecks(1))
+    if (ChElementShellANCF_3833ML_TR06_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3833ML_TR06 Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR06 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR06_GQ332, ChMaterialShellANCF_3833ML_TR06_GQ332> ChElementShellANCF_3833ML_TR06_GQ332_test;
-    if (ChElementShellANCF_3833ML_TR06_GQ332_test.RunElementChecks(1))
+    if (ChElementShellANCF_3833ML_TR06_GQ332_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3833ML_TR06_GQ332 Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR06_GQ332 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR07, ChMaterialShellANCF_3833ML_TR07> ChElementShellANCF_3833ML_TR07_test;
-    if (ChElementShellANCF_3833ML_TR07_test.RunElementChecks(1))
+    if (ChElementShellANCF_3833ML_TR07_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3833ML_TR07 Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR07 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR07B, ChMaterialShellANCF_3833ML_TR07B> ChElementShellANCF_3833ML_TR07B_test;
-    if (ChElementShellANCF_3833ML_TR07B_test.RunElementChecks(1))
+    if (ChElementShellANCF_3833ML_TR07B_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3833ML_TR07B Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR07B Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR07S, ChMaterialShellANCF_3833ML_TR07S> ChElementShellANCF_3833ML_TR07S_test;
-    if (ChElementShellANCF_3833ML_TR07S_test.RunElementChecks(1))
+    if (ChElementShellANCF_3833ML_TR07S_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3833ML_TR07S Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR07S Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR07S_GQ332, ChMaterialShellANCF_3833ML_TR07S_GQ332> ChElementShellANCF_3833ML_TR07S_GQ332_test;
-    if (ChElementShellANCF_3833ML_TR07S_GQ332_test.RunElementChecks(1))
+    if (ChElementShellANCF_3833ML_TR07S_GQ332_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3833ML_TR07S_GQ332 Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR07S_GQ332 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR08, ChMaterialShellANCF_3833ML_TR08> ChElementShellANCF_3833ML_TR08_test;
-    if (ChElementShellANCF_3833ML_TR08_test.RunElementChecks(1))
+    if (ChElementShellANCF_3833ML_TR08_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3833ML_TR08 Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR08 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR08S, ChMaterialShellANCF_3833ML_TR08S> ChElementShellANCF_3833ML_TR08S_test;
-    if (ChElementShellANCF_3833ML_TR08S_test.RunElementChecks(1))
+    if (ChElementShellANCF_3833ML_TR08S_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3833ML_TR08S Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR08S Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR08S_GQ332, ChMaterialShellANCF_3833ML_TR08S_GQ332> ChElementShellANCF_3833ML_TR08S_GQ332_test;
-    if (ChElementShellANCF_3833ML_TR08S_GQ332_test.RunElementChecks(1))
+    if (ChElementShellANCF_3833ML_TR08S_GQ332_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3833ML_TR08S_GQ332 Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR08S_GQ332 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR09, ChMaterialShellANCF_3833ML_TR09> ChElementShellANCF_3833ML_TR09_test;
-    if (ChElementShellANCF_3833ML_TR09_test.RunElementChecks(1))
+    if (ChElementShellANCF_3833ML_TR09_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3833ML_TR09 Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR09 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFShellMLTest<ChElementShellANCF_3833ML_TR10, ChMaterialShellANCF_3833ML_TR10> ChElementShellANCF_3833ML_TR10_test;
-    if (ChElementShellANCF_3833ML_TR10_test.RunElementChecks(1))
+    if (ChElementShellANCF_3833ML_TR10_test.RunElementChecks(0))
         print_green("ChElementShellANCF_3833ML_TR10 Element Checks = PASSED\n");
     else
         print_red("ChElementShellANCF_3833ML_TR10 Element Checks = FAILED\n");
