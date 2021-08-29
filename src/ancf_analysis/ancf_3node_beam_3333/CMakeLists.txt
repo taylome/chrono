@@ -2,6 +2,7 @@ set(TESTS
 	btest_FEA_ANCFbeam_3333_SmallDisplacement
 	btest_FEA_ANCFbeam_3333_InternalFrcKRM
 	btest_FEA_ANCFbeam_3333_LargeDisplacement_3DPendulum
+	btest_FEA_ANCFbeam_3333_Roofline
 	utest_FEA_ANCFbeam_3333_InternalFrcKRM
     )
 

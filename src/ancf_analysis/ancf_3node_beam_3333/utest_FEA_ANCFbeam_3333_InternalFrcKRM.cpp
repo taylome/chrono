@@ -22,11 +22,15 @@
 #include "chrono/solver/ChDirectSolverLS.h"
 
 #include "chrono/fea/ChElementBeamANCF.h"
+#include "chrono/fea/ChElementBeamANCF_3333.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR00.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR01.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR02.h"
+#include "chrono/fea/ChElementBeamANCF_3333_TR02_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR03.h"
+#include "chrono/fea/ChElementBeamANCF_3333_TR03_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR04.h"
+#include "chrono/fea/ChElementBeamANCF_3333_TR04_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR05.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR05_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR06.h"
@@ -183,7 +187,7 @@ ANCFBeamTest<ElementVersion, MaterialVersion>::ANCFBeamTest() {
     element->SetMaterial(material);
     element->SetAlphaDamp(0.0);
     element->SetGravityOn(false);  //Enable the efficient ANCF method for calculating the application of gravity to the element
-    element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
+    //element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
     mesh->AddElement(element);
 
     m_element = element;
@@ -1262,7 +1266,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::AxialDisplacementCheck(int m
         element->SetAlphaDamp(0.0);
         element->SetGravityOn(
             false);  // Enable the efficient ANCF method for calculating the application of gravity to the element
-        element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
+        //element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
         // element->SetStrainFormulation(ElementVersion::StrainFormulation::CMNoPoisson);
         mesh->AddElement(element);
 
@@ -1437,7 +1441,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::CantileverCheck(int msglvl) 
         element->SetAlphaDamp(0.0);
         element->SetGravityOn(
             false);  // Enable the efficient ANCF method for calculating the application of gravity to the element
-        element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
+        //element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
         // element->SetStrainFormulation(ElementVersion::StrainFormulation::CMNoPoisson);
         mesh->AddElement(element);
 
@@ -1613,7 +1617,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::AxialTwistCheck(int msglvl) 
         element->SetAlphaDamp(0.0);
         element->SetGravityOn(
             false);  // Enable the efficient ANCF method for calculating the application of gravity to the element
-        element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
+        //element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
         // element->SetStrainFormulation(ElementVersion::StrainFormulation::CMNoPoisson);
         mesh->AddElement(element);
 
@@ -1732,8 +1736,15 @@ int main(int argc, char* argv[]) {
 #endif
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3333<>, ChMaterialBeamANCF> ChElementBeamANCF_3333_test;
+    if (ChElementBeamANCF_3333_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3333 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3333 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF, ChMaterialBeamANCF> ChElementBeamANCF_test;
-    if (ChElementBeamANCF_test.RunElementChecks(0))
+    if (ChElementBeamANCF_test.RunElementChecks(1))
         print_green("ChElementBeamANCF Element Checks = PASSED\n");
     else
         print_red("ChElementBeamANCF Element Checks = FAILED\n");
@@ -1757,7 +1768,14 @@ int main(int argc, char* argv[]) {
     if (ChElementBeamANCF_3333_TR02_test.RunElementChecks(0))
         print_green("ChElementBeamANCF_3333_TR02 Element Checks = PASSED\n");
     else
-        print_red("ChElementBeamANCF_3333_TR02Element Checks = FAILED\n");
+        print_red("ChElementBeamANCF_3333_TR02 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3333_TR02_GQ322, ChMaterialBeamANCF_3333_TR02_GQ322> ChElementBeamANCF_3333_TR02_GQ322_test;
+    if (ChElementBeamANCF_3333_TR02_GQ322_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3333_TR02_GQ322 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3333_TR02_GQ322 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3333_TR03, ChMaterialBeamANCF_3333_TR03> ChElementBeamANCF_3333_TR03_test;
@@ -1767,11 +1785,25 @@ int main(int argc, char* argv[]) {
         print_red("ChElementBeamANCF_3333_TR03 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3333_TR03_GQ322, ChMaterialBeamANCF_3333_TR03_GQ322> ChElementBeamANCF_3333_TR03_GQ322_test;
+    if (ChElementBeamANCF_3333_TR03_GQ322_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3333_TR03_GQ322 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3333_TR03_GQ322 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3333_TR04, ChMaterialBeamANCF_3333_TR04> ChElementBeamANCF_3333_TR04_test;
     if (ChElementBeamANCF_3333_TR04_test.RunElementChecks(0))
         print_green("ChElementBeamANCF_3333_TR04 Element Checks = PASSED\n");
     else
         print_red("ChElementBeamANCF_3333_TR04 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3333_TR04_GQ322, ChMaterialBeamANCF_3333_TR04_GQ322> ChElementBeamANCF_3333_TR04_GQ322_test;
+    if (ChElementBeamANCF_3333_TR04_GQ322_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3333_TR04_GQ322 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3333_TR04_GQ322 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3333_TR05, ChMaterialBeamANCF_3333_TR05> ChElementBeamANCF_3333_TR05_test;
