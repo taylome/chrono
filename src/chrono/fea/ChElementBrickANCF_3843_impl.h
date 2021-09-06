@@ -47,6 +47,7 @@ ChElementBrickANCF_3843<NP>::ChElementBrickANCF_3843()
       m_Alpha(0),
       m_damping_enabled(false) {
     m_nodes.resize(8);
+    m_system = nullptr;
 }
 
 // ------------------------------------------------------------------------------
@@ -361,8 +362,10 @@ void ChElementBrickANCF_3843<NP>::SetupInitial(ChSystem* system) {
     // Store the initial nodal coordinates. These values define the reference configuration of the element.
     CalcCoordMatrix(m_ebar0);
 
-    // Compute and store the constant mass matrix and gravitational force vector
-    ComputeMassMatrixAndGravityForce(system->Get_G_acc());
+    // Compute and store the constant mass matrix and the matrix used to multiply the acceleration due to gravity to get
+    // the gravitational force vector
+    m_system = system;
+    ComputeMassMatrixAndGravityForce();
 
     // Compute any required matrices and vectors for the generalized internal force and Jacobian calculations
     PrecomputeInternalForceMatricesWeights();
@@ -478,7 +481,9 @@ void ChElementBrickANCF_3843<NP>::ComputeInternalForces(ChVectorDynamic<>& Fi) {
     }
 
     if (m_gravity_on) {
-        Fi += m_GravForce;
+        MatrixNx3 GravForceCompact = m_GravForceScale * m_system->Get_G_acc().eigen().transpose();
+        Eigen::Map<Vector3N> GravForce(GravForceCompact.data(), GravForceCompact.size());
+        Fi += GravForce;
     }
 }
 
@@ -761,11 +766,14 @@ double ChElementBrickANCF_3843<NP>::GetDensity() {
 // Mass Matrix & Generalized Force Due to Gravity Calculation
 // -----------------------------------------------------------------------------
 template <int NP>
-void ChElementBrickANCF_3843<NP>::ComputeMassMatrixAndGravityForce(const ChVector<>& g_acc) {
+void ChElementBrickANCF_3843<NP>::ComputeMassMatrixAndGravityForce() {
     // For this element, the mass matrix integrand is of order 7 in xi, 7 in eta, and 7 in zeta.
     // 4 GQ Points are needed in the xi, eta, and zeta directions for exact integration of the element's mass matrix,
-    // even if the reference configuration is not straight Since the major pieces of the generalized force due to
-    // gravity can also be used to calculate the mass matrix, these calculations are performed at the same time.
+    // even if the reference configuration is not straight.  Since the major pieces of the generalized force due to
+    // gravity can also be used to calculate the mass matrix, these calculations are performed at the same time.  Only
+    // the matrix that scales the acceleration due to gravity is calculated at this time so that any changes to the
+    // acceleration due to gravity in the system are correctly accounted for in the generalized internal force
+    // calculation.
 
     ChQuadratureTables* GQTable = GetStaticGQTables();
     unsigned int GQ_idx_xi_eta_zeta = 3;  // 4 Point Gauss-Quadrature;
@@ -776,7 +784,7 @@ void ChElementBrickANCF_3843<NP>::ComputeMassMatrixAndGravityForce(const ChVecto
 
     // Set these to zeros since they will be incremented as the vector/matrix is calculated
     MassMatrixCompactSquare.setZero();
-    m_GravForce.setZero();
+    m_GravForceScale.setZero();
 
     double rho = GetMaterial()->Get_rho();  // Density of the material for the element
 
@@ -795,15 +803,7 @@ void ChElementBrickANCF_3843<NP>::ComputeMassMatrixAndGravityForce(const ChVecto
                 VectorN Sxi_compact;  // Vector of the Unique Normalized Shape Functions
                 Calc_Sxi_compact(Sxi_compact, xi, eta, zeta);
 
-                ChMatrixNM<double, 3, 3 * NSF> Sxi;  // Normalized Shape Function Matrix in expanded full (sparse) form
-                Sxi.setZero();
-                for (unsigned int s = 0; s < Sxi_compact.size(); s++) {
-                    Sxi(0, 0 + (3 * s)) = Sxi_compact(s);
-                    Sxi(1, 1 + (3 * s)) = Sxi_compact(s);
-                    Sxi(2, 2 + (3 * s)) = Sxi_compact(s);
-                }
-
-                m_GravForce += (GQ_weight * rho * det_J_0xi) * Sxi.transpose() * g_acc.eigen();
+                m_GravForceScale += (GQ_weight * rho * det_J_0xi) * Sxi_compact;
                 MassMatrixCompactSquare += (GQ_weight * rho * det_J_0xi) * Sxi_compact * Sxi_compact.transpose();
             }
         }

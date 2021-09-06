@@ -112,7 +112,9 @@ class ChElementBeamANCF_3333 : public ChElementBeam, public ChLoadableU, public 
     virtual int GetNodeNdofs(int n) override { return 9; }
 
     /// Specify the nodes of this element.
-    void SetNodes(std::shared_ptr<ChNodeFEAxyzDD> nodeA, std::shared_ptr<ChNodeFEAxyzDD> nodeB, std::shared_ptr<ChNodeFEAxyzDD> nodeC);
+    void SetNodes(std::shared_ptr<ChNodeFEAxyzDD> nodeA,
+                  std::shared_ptr<ChNodeFEAxyzDD> nodeB,
+                  std::shared_ptr<ChNodeFEAxyzDD> nodeC);
 
     /// Specify the element dimensions.
     void SetDimensions(double lenX, double thicknessY, double thicknessZ);
@@ -312,7 +314,7 @@ class ChElementBeamANCF_3333 : public ChElementBeam, public ChLoadableU, public 
 
     /// Compute the mass matrix & generalized gravity force of the element.
     /// Note: in this implementation, a constant density material is assumed
-    void ComputeMassMatrixAndGravityForce(const ChVector<>& g_acc);
+    void ComputeMassMatrixAndGravityForce();
 
     /// Precalculate constant matrices and scalars for the internal force calculations.  This selects and calls the
     /// method for the style of internal force calculations that is currently selected.
@@ -402,16 +404,17 @@ class ChElementBeamANCF_3333 : public ChElementBeam, public ChLoadableU, public 
     /// Access a statically-allocated set of tables, from 0 to a 10th order, with precomputed tables.
     static ChQuadratureTables* GetStaticGQTables();
 
-    IntFrcMethod m_method;                           ///< Generalized internal force and Jacobian calculation method
-    std::shared_ptr<ChMaterialBeamANCF> m_material;  ///< material model
+    ChSystem* m_system;     ///< Systems containing this element (used to get the current value of the gravity vector)
+    IntFrcMethod m_method;  ///< Generalized internal force and Jacobian calculation method
+    std::shared_ptr<ChMaterialBeamANCF> m_material;        ///< material model
     std::vector<std::shared_ptr<ChNodeFEAxyzDD>> m_nodes;  ///< element nodes
-    double m_lenX;                                          ///< total element length along X
-    double m_thicknessY;                                    ///< total element length along Y
-    double m_thicknessZ;                                    ///< total element length along Z
-    double m_Alpha;                                         ///< structural damping
-    bool m_damping_enabled;                                 ///< Flag to run internal force damping calculations
-    bool m_gravity_on;                                      ///< enable/disable gravity calculation
-    Vector3N m_GravForce;                                   ///< Gravity Force
+    double m_lenX;                                         ///< total element length along X
+    double m_thicknessY;                                   ///< total element length along Y
+    double m_thicknessZ;                                   ///< total element length along Z
+    double m_Alpha;                                        ///< structural damping
+    bool m_damping_enabled;                                ///< Flag to run internal force damping calculations
+    bool m_gravity_on;                                     ///< enable/disable gravity calculation
+    VectorN m_GravForceScale;                              ///< Gravity Scaling Matrix to get the Generalized Force
     Matrix3xN m_ebar0;  ///< Element Position Coordinate Vector for the Reference Configuration
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
         m_SD;  ///< Precomputed corrected normalized shape function derivative matrices ordered by columns instead of

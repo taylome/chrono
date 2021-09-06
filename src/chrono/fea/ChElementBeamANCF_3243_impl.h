@@ -53,6 +53,7 @@ ChElementBeamANCF_3243<NP, NT>::ChElementBeamANCF_3243()
       m_Alpha(0),
       m_damping_enabled(false) {
     m_nodes.resize(2);
+    m_system = nullptr;
 }
 
 // ------------------------------------------------------------------------------
@@ -328,8 +329,10 @@ void ChElementBeamANCF_3243<NP, NT>::SetupInitial(ChSystem* system) {
     // Store the initial nodal coordinates. These values define the reference configuration of the element.
     CalcCoordMatrix(m_ebar0);
 
-    // Compute and store the constant mass matrix and gravitational force vector
-    ComputeMassMatrixAndGravityForce(system->Get_G_acc());
+    // Compute and store the constant mass matrix and the matrix used to multiply the acceleration due to gravity to get
+    // the gravitational force vector
+    m_system = system;
+    ComputeMassMatrixAndGravityForce();
 
     // Compute any required matrices and vectors for the generalized internal force and Jacobian calculations
     PrecomputeInternalForceMatricesWeights();
@@ -401,7 +404,9 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForces(ChVectorDynamic<>& Fi
     }
 
     if (m_gravity_on) {
-        Fi += m_GravForce;
+        MatrixNx3 GravForceCompact = m_GravForceScale * m_system->Get_G_acc().eigen().transpose();
+        Eigen::Map<Vector3N> GravForce(GravForceCompact.data(), GravForceCompact.size());
+        Fi += GravForce;
     }
 }
 
@@ -642,12 +647,14 @@ ChVector<> ChElementBeamANCF_3243<NP, NT>::ComputeTangent(const double xi) {
 // Mass Matrix & Generalized Force Due to Gravity Calculation
 // -----------------------------------------------------------------------------
 template <int NP, int NT>
-void ChElementBeamANCF_3243<NP, NT>::ComputeMassMatrixAndGravityForce(const ChVector<>& g_acc) {
+void ChElementBeamANCF_3243<NP, NT>::ComputeMassMatrixAndGravityForce() {
     // For this element, the mass matrix integrand is of order 10 in xi, 3 in eta, and 3 in zeta.
     // 4 GQ Points are needed in the xi direction and 2 GQ Points are needed in the eta and zeta directions for
-    // exact integration of the element's mass matrix, even if the reference configuration is not straight Since the
+    // exact integration of the element's mass matrix, even if the reference configuration is not straight. Since the
     // major pieces of the generalized force due to gravity can also be used to calculate the mass matrix, these
-    // calculations are performed at the same time.
+    // calculations are performed at the same time.  Only the matrix that scales the acceleration due to gravity is
+    // calculated at this time so that any changes to the acceleration due to gravity in the system are correctly
+    // accounted for in the generalized internal force calculation.
 
     ChQuadratureTables* GQTable = GetStaticGQTables();
     unsigned int GQ_idx_xi = 5;        // 6 Point Gauss-Quadrature;
@@ -659,7 +666,7 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeMassMatrixAndGravityForce(const ChVe
 
     // Set these to zeros since they will be incremented as the vector/matrix is calculated
     MassMatrixCompactSquare.setZero();
-    m_GravForce.setZero();
+    m_GravForceScale.setZero();
 
     double rho = GetMaterial()->Get_rho();  // Density of the material for the element
 
@@ -677,15 +684,7 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeMassMatrixAndGravityForce(const ChVe
                 VectorN Sxi_compact;  // Vector of the Unique Normalized Shape Functions
                 Calc_Sxi_compact(Sxi_compact, xi, eta, zeta);
 
-                ChMatrixNM<double, 3, 3 * NSF> Sxi;  // Normalized Shape Function Matrix in expanded full (sparse) form
-                Sxi.setZero();
-                for (unsigned int s = 0; s < Sxi_compact.size(); s++) {
-                    Sxi(0, 0 + (3 * s)) = Sxi_compact(s);
-                    Sxi(1, 1 + (3 * s)) = Sxi_compact(s);
-                    Sxi(2, 2 + (3 * s)) = Sxi_compact(s);
-                }
-
-                m_GravForce += (GQ_weight * rho * det_J_0xi) * Sxi.transpose() * g_acc.eigen();
+                m_GravForceScale += (GQ_weight * rho * det_J_0xi) * Sxi_compact;
                 MassMatrixCompactSquare += (GQ_weight * rho * det_J_0xi) * Sxi_compact * Sxi_compact.transpose();
             }
         }
@@ -1392,7 +1391,7 @@ void ChElementBeamANCF_3243<NP, NT>::ComputeInternalForcesContIntNoDamping(ChVec
     // The result is then scaled by minus the Gauss quadrature weight times the element Jacobian at the
     // corresponding Gauss point (m_kGQ) for efficiency. Since only the diagonal terms in the 6x6 stiffness matrix are
     // used, the 2nd Piola-Kirchoff stress can be calculated by simply scaling the vector of scaled Green-Lagrange
-    // strains in Voight notation by the corresponding diagonal entry in the stiffness matrix. 
+    // strains in Voight notation by the corresponding diagonal entry in the stiffness matrix.
     // Results are written in Voigt notation: epsilon = [E11,E22,E33,2*E23,2*E13,2*E12]
     //  kGQ*SPK2 = kGQ*[SPK2_11,SPK2_22,SPK2_33,SPK2_23,SPK2_13,SPK2_12] = D * E_Combined
     // =============================================================================
