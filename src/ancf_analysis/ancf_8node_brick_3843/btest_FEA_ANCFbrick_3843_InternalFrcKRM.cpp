@@ -23,17 +23,25 @@
 #include "chrono/physics/ChSystemSMC.h"
 #include "chrono/solver/ChDirectSolverLS.h"
 
+#include "chrono/fea/ChElementBrickANCF_3843.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR01.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR02.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR02_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR03.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR03_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR04.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR04_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR05.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR05_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR06.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR06_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR07.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR07s.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR07s_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR08.h"
-//#include "chrono/fea/ChElementBrickANCF_3843_TR08b.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR08s.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR08s_GQ444.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR08T_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR09.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR10.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR11.h"
@@ -254,57 +262,99 @@ int main(int argc, char* argv[]) {
                  "Calc Time (ms)"
               << std::endl;
     {
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843<>, ChMaterialBrickANCF> BrickTest;
+        std::cout << "ChElementBrickANCF_3843, ";
+        BrickTest.PrintTimingResults(num_steps);
+    }
+    {
         ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR01, ChMaterialBrickANCF_3843_TR01> BrickTest_TR01;
         std::cout << "ChElementBrickANCF_3843_TR01, ";
         BrickTest_TR01.PrintTimingResults(num_steps);
     }
+    //{
+    //    ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR02, ChMaterialBrickANCF_3843_TR02> BrickTest_TR02;
+    //    std::cout << "ChElementBrickANCF_3843_TR02, ";
+    //    BrickTest_TR02.PrintTimingResults(num_steps);
+    //}
     {
-        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR02, ChMaterialBrickANCF_3843_TR02> BrickTest_TR02;
-        std::cout << "ChElementBrickANCF_3843_TR02, ";
-        BrickTest_TR02.PrintTimingResults(num_steps);
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR02_GQ444, ChMaterialBrickANCF_3843_TR02_GQ444> BrickTest_TR02_GQ444;
+        std::cout << "ChElementBrickANCF_3843_TR02_GQ444, ";
+        BrickTest_TR02_GQ444.PrintTimingResults(num_steps);
+    }
+    //{
+    //    ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR03, ChMaterialBrickANCF_3843_TR03> BrickTest_TR03;
+    //    std::cout << "ChElementBrickANCF_3843_TR03, ";
+    //    BrickTest_TR03.PrintTimingResults(num_steps);
+    //}
+    {
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR03_GQ444, ChMaterialBrickANCF_3843_TR03_GQ444> BrickTest_TR03_GQ444;
+        std::cout << "ChElementBrickANCF_3843_TR03_GQ444, ";
+        BrickTest_TR03_GQ444.PrintTimingResults(num_steps);
+    }
+    //{
+    //    ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR04, ChMaterialBrickANCF_3843_TR04> BrickTest_TR04;
+    //    std::cout << "ChElementBrickANCF_3843_TR04, ";
+    //    BrickTest_TR04.PrintTimingResults(num_steps);
+    //}
+    {
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR04_GQ444, ChMaterialBrickANCF_3843_TR04_GQ444> BrickTest_TR04_GQ444;
+        std::cout << "ChElementBrickANCF_3843_TR04_GQ444, ";
+        BrickTest_TR04_GQ444.PrintTimingResults(num_steps);
+    }
+    //{
+    //    ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR05, ChMaterialBrickANCF_3843_TR05> BrickTest_TR05;
+    //    std::cout << "ChElementBrickANCF_3843_TR05, ";
+    //    BrickTest_TR05.PrintTimingResults(num_steps);
+    //}
+    {
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR05_GQ444, ChMaterialBrickANCF_3843_TR05_GQ444> BrickTest_TR05_GQ444;
+        std::cout << "ChElementBrickANCF_3843_TR05_GQ444, ";
+        BrickTest_TR05_GQ444.PrintTimingResults(num_steps);
+    }
+    //{
+    //    ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR06, ChMaterialBrickANCF_3843_TR06> BrickTest_TR06;
+    //    std::cout << "ChElementBrickANCF_3843_TR06, ";
+    //    BrickTest_TR06.PrintTimingResults(num_steps);
+    //}
+    {
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR06_GQ444, ChMaterialBrickANCF_3843_TR06_GQ444> BrickTest_TR06_GQ444;
+        std::cout << "ChElementBrickANCF_3843_TR06_GQ444, ";
+        BrickTest_TR06_GQ444.PrintTimingResults(num_steps);
+    }
+    //{
+    //    ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR07, ChMaterialBrickANCF_3843_TR07> BrickTest_TR07;
+    //    std::cout << "ChElementBrickANCF_3843_TR07, ";
+    //    BrickTest_TR07.PrintTimingResults(num_steps);
+    //}
+    //{
+    //    ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR07S, ChMaterialBrickANCF_3843_TR07S> BrickTest_TR07S;
+    //    std::cout << "ChElementBrickANCF_3843_TR07S, ";
+    //    BrickTest_TR07S.PrintTimingResults(num_steps);
+    //}
+    {
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR07S_GQ444, ChMaterialBrickANCF_3843_TR07S_GQ444> BrickTest_TR07S_GQ444;
+        std::cout << "ChElementBrickANCF_3843_TR07S_GQ444, ";
+        BrickTest_TR07S_GQ444.PrintTimingResults(num_steps);
+    }
+    //{
+    //    ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR08, ChMaterialBrickANCF_3843_TR08> BrickTest_TR08;
+    //    std::cout << "ChElementBrickANCF_3843_TR08, ";
+    //    BrickTest_TR08.PrintTimingResults(num_steps);
+    //}
+    //{
+    //    ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR08S, ChMaterialBrickANCF_3843_TR08S> BrickTest_TR08S;
+    //    std::cout << "ChElementBrickANCF_3843_TR08S, ";
+    //    BrickTest_TR08S.PrintTimingResults(num_steps);
+    //}
+    {
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR08S_GQ444, ChMaterialBrickANCF_3843_TR08S_GQ444> BrickTest_TR08S_GQ444;
+        std::cout << "ChElementBrickANCF_3843_TR08S_GQ444, ";
+        BrickTest_TR08S_GQ444.PrintTimingResults(num_steps);
     }
     {
-        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR03, ChMaterialBrickANCF_3843_TR03> BrickTest_TR03;
-        std::cout << "ChElementBrickANCF_3843_TR03, ";
-        BrickTest_TR03.PrintTimingResults(num_steps);
-    }
-    {
-        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR04, ChMaterialBrickANCF_3843_TR04> BrickTest_TR04;
-        std::cout << "ChElementBrickANCF_3843_TR04, ";
-        BrickTest_TR04.PrintTimingResults(num_steps);
-    }
-    {
-        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR05, ChMaterialBrickANCF_3843_TR05> BrickTest_TR05;
-        std::cout << "ChElementBrickANCF_3843_TR05, ";
-        BrickTest_TR05.PrintTimingResults(num_steps);
-    }
-    {
-        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR06, ChMaterialBrickANCF_3843_TR06> BrickTest_TR06;
-        std::cout << "ChElementBrickANCF_3843_TR06, ";
-        BrickTest_TR06.PrintTimingResults(num_steps);
-    }
-    {
-        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR07, ChMaterialBrickANCF_3843_TR07> BrickTest_TR07;
-        std::cout << "ChElementBrickANCF_3843_TR07, ";
-        BrickTest_TR07.PrintTimingResults(num_steps);
-    }
-    {
-        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR07S, ChMaterialBrickANCF_3843_TR07S> BrickTest_TR07S;
-        std::cout << "ChElementBrickANCF_3843_TR07S, ";
-        BrickTest_TR07S.PrintTimingResults(num_steps);
-    }
-    {
-        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR08, ChMaterialBrickANCF_3843_TR08> BrickTest_TR08;
-        std::cout << "ChElementBrickANCF_3843_TR08, ";
-        BrickTest_TR08.PrintTimingResults(num_steps);
-    }
-    //ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR08b, ChMaterialBrickANCF_3843_TR08b> BrickTest_TR08b;
-    //std::cout << "ChElementBrickANCF_3843_TR08b, ";
-    //BrickTest_TR08b.PrintTimingResults(num_steps);
-    {
-        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR08S, ChMaterialBrickANCF_3843_TR08S> BrickTest_TR08S;
-        std::cout << "ChElementBrickANCF_3843_TR08S, ";
-        BrickTest_TR08S.PrintTimingResults(num_steps);
+        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR08T_GQ444, ChMaterialBrickANCF_3843_TR08T_GQ444> BrickTest_TR08T_GQ444;
+        std::cout << "ChElementBrickANCF_3843_TR08T_GQ444, ";
+        BrickTest_TR08T_GQ444.PrintTimingResults(num_steps);
     }
     {
         ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR09, ChMaterialBrickANCF_3843_TR09> BrickTest_TR09;
@@ -316,11 +366,11 @@ int main(int argc, char* argv[]) {
         std::cout << "ChElementBrickANCF_3843_TR10, ";
         BrickTest_TR10.PrintTimingResults(num_steps);
     }
-    {
-        ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR11, ChMaterialBrickANCF_3843_TR11> BrickTest_TR11;
-        std::cout << "ChElementBrickANCF_3843_TR11, ";
-        BrickTest_TR11.PrintTimingResults(num_steps);
-    }
+    //{
+    //    ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR11, ChMaterialBrickANCF_3843_TR11> BrickTest_TR11;
+    //    std::cout << "ChElementBrickANCF_3843_TR11, ";
+    //    BrickTest_TR11.PrintTimingResults(num_steps);
+    //}
     {
         ANCFBrickTest<NUM_ELEMENTS, ChElementBrickANCF_3843_TR11S, ChMaterialBrickANCF_3843_TR11S> BrickTest_TR11S;
         std::cout << "ChElementBrickANCF_3843_TR11S, ";
