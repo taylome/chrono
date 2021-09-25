@@ -217,7 +217,7 @@ void ChElementShellANCF_3833ML_TR09::ComputeKRMmatricesGlobal(ChMatrixRef H,
         PI2.block<3, 24>(6, 24 * v) = e_bar.block<1, 3>(v, 0).transpose() * tempRow2;
     }
 
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>  K2 = -PI2 * m_O2;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>  K2 = -PI2 * m_O2;
 
     for (unsigned int k = 0; k < 24; k++) {
         for (unsigned int f = 0; f < 24; f++) {

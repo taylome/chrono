@@ -190,7 +190,7 @@ void ChElementShellANCF_3443ML_TR09::ComputeKRMmatricesGlobal(ChMatrixRef H,
         PI2.block<3, 16>(6, 16 * v) = e_bar.block<1, 3>(v, 0).transpose() * tempRow2;
     }
 
-    ChMatrixNM<double, 9, 256> K2 = -PI2 * m_O2;
+    ChMatrixNMc<double, 9, 256> K2 = -PI2 * m_O2;
 
     for (unsigned int k = 0; k < 16; k++) {
         for (unsigned int f = 0; f < 16; f++) {

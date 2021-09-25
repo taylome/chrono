@@ -156,7 +156,7 @@ void ChElementBeamANCF_3333_TR10::ComputeKRMmatricesGlobal(ChMatrixRef H, double
         }
     }
 
-    ChMatrixNM<double, 9, 81> K2 = -PI2 * O2;
+    ChMatrixNMc<double, 9, 81> K2 = -PI2 * O2;
     for (unsigned int k = 0; k < 9; k++) {
         for (unsigned int f = 0; f < 9; f++) {
             H.block<3, 1>(3 * k, 3 * f) = K2.block<3, 1>(0, 9 * f + k);

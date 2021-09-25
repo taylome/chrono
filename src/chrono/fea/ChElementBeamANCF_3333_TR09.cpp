@@ -147,7 +147,7 @@ void ChElementBeamANCF_3333_TR09::ComputeKRMmatricesGlobal(ChMatrixRef H, double
         PI2.block<3, 9>(6, 9 * v) = e_bar.block<1, 3>(v, 0).transpose() * tempRow2;
     }
 
-    ChMatrixNM<double, 9, 81> K2 = -PI2 * m_O2;
+    ChMatrixNMc<double, 9, 81> K2 = -PI2 * m_O2;
 
     for (unsigned int k = 0; k < 9; k++) {
         for (unsigned int f = 0; f < 9; f++) {

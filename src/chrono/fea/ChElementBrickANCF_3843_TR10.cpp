@@ -230,7 +230,7 @@ void ChElementBrickANCF_3843_TR10::ComputeKRMmatricesGlobal(ChMatrixRef H,
         }
     }
 
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>  K2 = -PI2 * O2;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>  K2 = -PI2 * O2;
 
     for (unsigned int k = 0; k < 32; k++) {
         for (unsigned int f = 0; f < 32; f++) {

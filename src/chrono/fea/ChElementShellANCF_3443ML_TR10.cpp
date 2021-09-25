@@ -200,7 +200,7 @@ void ChElementShellANCF_3443ML_TR10::ComputeKRMmatricesGlobal(ChMatrixRef H,
         }
     }
 
-    ChMatrixNM<double, 9, 256> K2 = -PI2 * O2;
+    ChMatrixNMc<double, 9, 256> K2 = -PI2 * O2;
 
     for (unsigned int k = 0; k < 16; k++) {
         for (unsigned int f = 0; f < 16; f++) {
