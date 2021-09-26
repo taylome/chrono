@@ -23,15 +23,21 @@
 #include "chrono/physics/ChSystemSMC.h"
 #include "chrono/solver/ChDirectSolverLS.h"
 
+#include "chrono/fea/ChElementBeamANCF_3243.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR01.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR02.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR02_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR03.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR03_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR04.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR04_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR05.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR05_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR06.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR06_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR07.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR07s.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR07s_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR08.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR08s.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR08s_GQ322.h"
@@ -41,16 +47,22 @@
 #include "chrono/fea/ChElementBeamANCF_3243_TR11s.h"
 
 #include "chrono/fea/ChElementBeamANCF.h"
+#include "chrono/fea/ChElementBeamANCF_3333.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR00.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR01.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR02.h"
+#include "chrono/fea/ChElementBeamANCF_3333_TR02_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR03.h"
+#include "chrono/fea/ChElementBeamANCF_3333_TR03_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR04.h"
+#include "chrono/fea/ChElementBeamANCF_3333_TR04_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR05.h"
+#include "chrono/fea/ChElementBeamANCF_3333_TR05_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR06.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR06_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR07.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR07s.h"
+#include "chrono/fea/ChElementBeamANCF_3333_TR07s_GQ322.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR08.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR08s.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR08s_GQ322.h"
@@ -74,17 +86,28 @@
 #include "chrono/fea/ChElementShellANCF_3443_TR11.h"
 #include "chrono/fea/ChElementShellANCF_3443_TR11s.h"
 
+#include "chrono/fea/ChElementShellANCF_3443.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR01.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR02.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR02_GQ332.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR02_GQ442.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR03.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR03_GQ332.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR03_GQ442.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR04.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR04_GQ332.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR04_GQ442.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR05.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR05_GQ332.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR05_GQ442.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR06.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR06_GQ332.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR06_GQ442.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR07.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR07b.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR07s.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR07s_GQ332.h"
+#include "chrono/fea/ChElementShellANCF_3443ML_TR07s_GQ442.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR08.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR08s.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR08s_GQ332.h"
@@ -95,6 +118,7 @@
 #include "chrono/fea/ChElementShellANCF_3443ML_TR11s.h"
 
 #include "chrono/fea/ChElementShellANCF_8.h"
+#include "chrono/fea/ChElementShellANCF_3833.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR00.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR01.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR02.h"
@@ -113,14 +137,19 @@
 
 #include "chrono/fea/ChElementShellANCF_3833ML_TR01.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR02.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR02_GQ332.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR03.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR03_GQ332.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR04.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR04_GQ332.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR05.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR05_GQ332.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR06.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR06_GQ332.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR07.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR07b.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR07s.h"
+#include "chrono/fea/ChElementShellANCF_3833ML_TR07s_GQ332.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR08.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR08s.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR08s_GQ332.h"
@@ -129,15 +158,21 @@
 #include "chrono/fea/ChElementShellANCF_3833ML_TR11.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR11s.h"
 
+#include "chrono/fea/ChElementBrickANCF_3843.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR01.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR02.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR02_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR03.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR03_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR04.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR04_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR05.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR05_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR06.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR06_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR07.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR07s.h"
+#include "chrono/fea/ChElementBrickANCF_3843_TR07s_GQ444.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR08.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR08s.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR08s_GQ444.h"
@@ -238,7 +273,7 @@ ANCFBeam3243Test<num_elements, ElementVersion, MaterialVersion>::ANCFBeam3243Tes
         element->SetAlphaDamp(0.01);
         element->SetGravityOn(
             false);  // Enable the efficient ANCF method for calculating the application of gravity to the element
-        element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
+        //element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
         // element->SetStrainFormulation(ElementVersion::StrainFormulation::CMNoPoisson);
         mesh->AddElement(element);
 
@@ -442,46 +477,66 @@ void Run_ANCFBeam_3243_Tests() {
         ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR01, ChMaterialBeamANCF_3243_TR01> Beam3243Test_TR01;
         Beam3243Test_TR01.PrintTimingResults("ChElementBeamANCF_3243_TR01", num_steps);
     }
+    //{
+    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR02, ChMaterialBeamANCF_3243_TR02> Beam3243Test_TR02;
+    //    Beam3243Test_TR02.PrintTimingResults("ChElementBeamANCF_3243_TR02", num_steps);
+    //}
     {
-        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR02, ChMaterialBeamANCF_3243_TR02> Beam3243Test_TR02;
-        Beam3243Test_TR02.PrintTimingResults("ChElementBeamANCF_3243_TR02", num_steps);
+        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR02_GQ322, ChMaterialBeamANCF_3243_TR02_GQ322> Beam3243Test_TR02_GQ322;
+        Beam3243Test_TR02_GQ322.PrintTimingResults("ChElementBeamANCF_3243_TR02_GQ322", num_steps);
     }
+    //{
+    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR03, ChMaterialBeamANCF_3243_TR03> Beam3243Test_TR03;
+    //    Beam3243Test_TR03.PrintTimingResults("ChElementBeamANCF_3243_TR03", num_steps);
+    //}
     {
-        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR03, ChMaterialBeamANCF_3243_TR03> Beam3243Test_TR03;
-        Beam3243Test_TR03.PrintTimingResults("ChElementBeamANCF_3243_TR03", num_steps);
+        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR03_GQ322, ChMaterialBeamANCF_3243_TR03_GQ322> Beam3243Test_TR03_GQ322;
+        Beam3243Test_TR03_GQ322.PrintTimingResults("ChElementBeamANCF_3243_TR03_GQ322", num_steps);
     }
+    //{
+    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR04, ChMaterialBeamANCF_3243_TR04> Beam3243Test_TR04;
+    //    Beam3243Test_TR04.PrintTimingResults("ChElementBeamANCF_3243_TR04", num_steps);
+    //}
     {
-        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR04, ChMaterialBeamANCF_3243_TR04> Beam3243Test_TR04;
-        Beam3243Test_TR04.PrintTimingResults("ChElementBeamANCF_3243_TR04", num_steps);
+        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR04_GQ322, ChMaterialBeamANCF_3243_TR04_GQ322> Beam3243Test_TR04_GQ322;
+        Beam3243Test_TR04_GQ322.PrintTimingResults("ChElementBeamANCF_3243_TR04_GQ322", num_steps);
     }
+    //{
+    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR05, ChMaterialBeamANCF_3243_TR05> Beam3243Test_TR05;
+    //    Beam3243Test_TR05.PrintTimingResults("ChElementBeamANCF_3243_TR05", num_steps);
+    //}
     {
-        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR05, ChMaterialBeamANCF_3243_TR05> Beam3243Test_TR05;
-        Beam3243Test_TR05.PrintTimingResults("ChElementBeamANCF_3243_TR05", num_steps);
+        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR05_GQ322, ChMaterialBeamANCF_3243_TR05_GQ322> Beam3243Test_TR05_GQ322;
+        Beam3243Test_TR05_GQ322.PrintTimingResults("ChElementBeamANCF_3243_TR05_GQ322", num_steps);
     }
-    {
-        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR06, ChMaterialBeamANCF_3243_TR06> Beam3243Test_TR06;
-        Beam3243Test_TR06.PrintTimingResults("ChElementBeamANCF_3243_TR06", num_steps);
-    }
+    //{
+    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR06, ChMaterialBeamANCF_3243_TR06> Beam3243Test_TR06;
+    //    Beam3243Test_TR06.PrintTimingResults("ChElementBeamANCF_3243_TR06", num_steps);
+    //}
     {
         ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR06_GQ322, ChMaterialBeamANCF_3243_TR06_GQ322> Beam3243Test_TR06_GQ322;
         Beam3243Test_TR06_GQ322.PrintTimingResults("ChElementBeamANCF_3243_TR06_GQ322", num_steps);
     }
+    //{
+    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR07, ChMaterialBeamANCF_3243_TR07> Beam3243Test_TR07;
+    //    Beam3243Test_TR07.PrintTimingResults("ChElementBeamANCF_3243_TR07", num_steps);
+    //}
+    //{
+    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR07S, ChMaterialBeamANCF_3243_TR07S> Beam3243Test_TR07S;
+    //    Beam3243Test_TR07S.PrintTimingResults("ChElementBeamANCF_3243_TR07S", num_steps);
+    //}
     {
-        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR07, ChMaterialBeamANCF_3243_TR07> Beam3243Test_TR07;
-        Beam3243Test_TR07.PrintTimingResults("ChElementBeamANCF_3243_TR07", num_steps);
+        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR07S_GQ322, ChMaterialBeamANCF_3243_TR07S_GQ322> Beam3243Test_TR07S_GQ322;
+        Beam3243Test_TR07S_GQ322.PrintTimingResults("ChElementBeamANCF_3243_TR07S_GQ322", num_steps);
     }
-    {
-        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR07S, ChMaterialBeamANCF_3243_TR07S> Beam3243Test_TR07S;
-        Beam3243Test_TR07S.PrintTimingResults("ChElementBeamANCF_3243_TR07S", num_steps);
-    }
-    {
-        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR08, ChMaterialBeamANCF_3243_TR08> Beam3243Test_TR08;
-        Beam3243Test_TR08.PrintTimingResults("ChElementBeamANCF_3243_TR08", num_steps);
-    }
-    {
-        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR08S, ChMaterialBeamANCF_3243_TR08S> Beam3243Test_TR08S;
-        Beam3243Test_TR08S.PrintTimingResults("ChElementBeamANCF_3243_TR08S", num_steps);
-    }
+    //{
+    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR08, ChMaterialBeamANCF_3243_TR08> Beam3243Test_TR08;
+    //    Beam3243Test_TR08.PrintTimingResults("ChElementBeamANCF_3243_TR08", num_steps);
+    //}
+    //{
+    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR08S, ChMaterialBeamANCF_3243_TR08S> Beam3243Test_TR08S;
+    //    Beam3243Test_TR08S.PrintTimingResults("ChElementBeamANCF_3243_TR08S", num_steps);
+    //}
     {
         ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR08S_GQ322, ChMaterialBeamANCF_3243_TR08S_GQ322> Beam3243Test_TR08S_GQ322;
         Beam3243Test_TR08S_GQ322.PrintTimingResults("ChElementBeamANCF_3243_TR08S_GQ322", num_steps);
@@ -494,13 +549,17 @@ void Run_ANCFBeam_3243_Tests() {
         ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR10, ChMaterialBeamANCF_3243_TR10> Beam3243Test_TR10;
         Beam3243Test_TR10.PrintTimingResults("ChElementBeamANCF_3243_TR10", num_steps);
     }
-    {
-        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR11, ChMaterialBeamANCF_3243_TR11> Beam3243Test_TR11;
-        Beam3243Test_TR11.PrintTimingResults("ChElementBeamANCF_3243_TR11", num_steps);
-    }
+    //{
+    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR11, ChMaterialBeamANCF_3243_TR11> Beam3243Test_TR11;
+    //    Beam3243Test_TR11.PrintTimingResults("ChElementBeamANCF_3243_TR11", num_steps);
+    //}
     {
         ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR11S, ChMaterialBeamANCF_3243_TR11S> Beam3243Test_TR11S;
         Beam3243Test_TR11S.PrintTimingResults("ChElementBeamANCF_3243_TR11S", num_steps);
+    }
+    {
+        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243<>, ChMaterialBeamANCF> Beam3243Test;
+        Beam3243Test.PrintTimingResults("ChElementBeamANCF_3243_Final", num_steps);
     }
 }
 
@@ -591,7 +650,7 @@ ANCFBeam3333Test<num_elements, ElementVersion, MaterialVersion>::ANCFBeam3333Tes
         element->SetAlphaDamp(0.01);
         element->SetGravityOn(
             false);  // Enable the efficient ANCF method for calculating the application of gravity to the element
-        element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
+        //element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
         // element->SetStrainFormulation(ElementVersion::StrainFormulation::CMNoPoisson);
         mesh->AddElement(element);
 
@@ -790,58 +849,74 @@ void Run_ANCFBeam_3333_Tests() {
     //const int num_elements = 8;
     //int num_steps = 1;
 
-    {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF, ChMaterialBeamANCF> Beam3333Test_TR01;
-        Beam3333Test_TR01.PrintTimingResults("ChElementBeamANCF_Org", num_steps);
-    }
-    {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR00, ChMaterialBeamANCF_3333_TR00> Beam3333Test_TR00;
-        Beam3333Test_TR00.PrintTimingResults("ChElementBeamANCF_3333_TR00", num_steps);
-    }
+    //{
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR00, ChMaterialBeamANCF_3333_TR00> Beam3333Test_TR00;
+    //    Beam3333Test_TR00.PrintTimingResults("ChElementBeamANCF_3333_TR00", num_steps);
+    //}
     {
         ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR01, ChMaterialBeamANCF_3333_TR01> Beam3333Test_TR01;
         Beam3333Test_TR01.PrintTimingResults("ChElementBeamANCF_3333_TR01", num_steps);
     }
+    //{
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR02, ChMaterialBeamANCF_3333_TR02> Beam3333Test_TR02;
+    //    Beam3333Test_TR02.PrintTimingResults("ChElementBeamANCF_3333_TR02", num_steps);
+    //}
     {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR02, ChMaterialBeamANCF_3333_TR02> Beam3333Test_TR02;
-        Beam3333Test_TR02.PrintTimingResults("ChElementBeamANCF_3333_TR02", num_steps);
+        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR02_GQ322, ChMaterialBeamANCF_3333_TR02_GQ322> Beam3333Test_TR02_GQ322;
+        Beam3333Test_TR02_GQ322.PrintTimingResults("ChElementBeamANCF_3333_TR02_GQ322", num_steps);
     }
+    //{
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR03, ChMaterialBeamANCF_3333_TR03> Beam3333Test_TR03;
+    //    Beam3333Test_TR03.PrintTimingResults("ChElementBeamANCF_3333_TR03", num_steps);
+    //}
     {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR03, ChMaterialBeamANCF_3333_TR03> Beam3333Test_TR03;
-        Beam3333Test_TR03.PrintTimingResults("ChElementBeamANCF_3333_TR03", num_steps);
+        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR03_GQ322, ChMaterialBeamANCF_3333_TR03_GQ322> Beam3333Test_TR03_GQ322;
+        Beam3333Test_TR03_GQ322.PrintTimingResults("ChElementBeamANCF_3333_TR03_GQ322", num_steps);
     }
+    //{
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR04, ChMaterialBeamANCF_3333_TR04> Beam3333Test_TR04;
+    //    Beam3333Test_TR04.PrintTimingResults("ChElementBeamANCF_3333_TR04", num_steps);
+    //}
     {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR04, ChMaterialBeamANCF_3333_TR04> Beam3333Test_TR04;
-        Beam3333Test_TR04.PrintTimingResults("ChElementBeamANCF_3333_TR04", num_steps);
+        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR04_GQ322, ChMaterialBeamANCF_3333_TR04_GQ322> Beam3333Test_TR04_GQ322;
+        Beam3333Test_TR04_GQ322.PrintTimingResults("ChElementBeamANCF_3333_TR04_GQ322", num_steps);
     }
+    //{
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR05, ChMaterialBeamANCF_3333_TR05> Beam3333Test_TR05;
+    //    Beam3333Test_TR05.PrintTimingResults("ChElementBeamANCF_3333_TR05", num_steps);
+    //}
     {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR05, ChMaterialBeamANCF_3333_TR05> Beam3333Test_TR05;
-        Beam3333Test_TR05.PrintTimingResults("ChElementBeamANCF_3333_TR05", num_steps);
+        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR05_GQ322, ChMaterialBeamANCF_3333_TR05_GQ322> Beam3333Test_TR05_GQ322;
+        Beam3333Test_TR05_GQ322.PrintTimingResults("ChElementBeamANCF_3333_TR05_GQ322", num_steps);
     }
-    {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR06, ChMaterialBeamANCF_3333_TR06> Beam3333Test_TR06;
-        Beam3333Test_TR06.PrintTimingResults("ChElementBeamANCF_3333_TR06", num_steps);
-    }
+    //{
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR06, ChMaterialBeamANCF_3333_TR06> Beam3333Test_TR06;
+    //    Beam3333Test_TR06.PrintTimingResults("ChElementBeamANCF_3333_TR06", num_steps);
+    //}
     {
         ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR06_GQ322, ChMaterialBeamANCF_3333_TR06_GQ322> Beam3333Test_TR06_GQ322;
         Beam3333Test_TR06_GQ322.PrintTimingResults("ChElementBeamANCF_3333_TR06_GQ322", num_steps);
     }
+    //{
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR07, ChMaterialBeamANCF_3333_TR07> Beam3333Test_TR07;
+    //    Beam3333Test_TR07.PrintTimingResults("ChElementBeamANCF_3333_TR07", num_steps);
+    //}
+    //{
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR07S, ChMaterialBeamANCF_3333_TR07S> Beam3333Test_TR07S;
+    //    Beam3333Test_TR07S.PrintTimingResults("ChElementBeamANCF_3333_TR07S", num_steps);
+    //}
     {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR07, ChMaterialBeamANCF_3333_TR07> Beam3333Test_TR07;
-        Beam3333Test_TR07.PrintTimingResults("ChElementBeamANCF_3333_TR07", num_steps);
+        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR07S_GQ322, ChMaterialBeamANCF_3333_TR07S_GQ322> Beam3333Test_TR07S_GQ322;
+        Beam3333Test_TR07S_GQ322.PrintTimingResults("ChElementBeamANCF_3333_TR07S_GQ322", num_steps);
     }
-    {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR07S, ChMaterialBeamANCF_3333_TR07S> Beam3333Test_TR07S;
-        Beam3333Test_TR07S.PrintTimingResults("ChElementBeamANCF_3333_TR07S", num_steps);
-    }
-    {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR08, ChMaterialBeamANCF_3333_TR08> Beam3333Test_TR08;
-        Beam3333Test_TR08.PrintTimingResults("ChElementBeamANCF_3333_TR08", num_steps);
-    }
-    {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR08S, ChMaterialBeamANCF_3333_TR08S> Beam3333Test_TR08S;
-        Beam3333Test_TR08S.PrintTimingResults("ChElementBeamANCF_3333_TR08S", num_steps);
-    }
+    //{
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR08, ChMaterialBeamANCF_3333_TR08> Beam3333Test_TR08;
+    //    Beam3333Test_TR08.PrintTimingResults("ChElementBeamANCF_3333_TR08", num_steps);
+    //}
+    //{
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR08S, ChMaterialBeamANCF_3333_TR08S> Beam3333Test_TR08S;
+    //    Beam3333Test_TR08S.PrintTimingResults("ChElementBeamANCF_3333_TR08S", num_steps);
+    //}
     {
         ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR08S_GQ322, ChMaterialBeamANCF_3333_TR08S_GQ322> Beam3333Test_TR08S_GQ322;
         Beam3333Test_TR08S_GQ322.PrintTimingResults("ChElementBeamANCF_3333_TR08S_GQ322", num_steps);
@@ -854,13 +929,21 @@ void Run_ANCFBeam_3333_Tests() {
         ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR10, ChMaterialBeamANCF_3333_TR10> Beam3333Test_TR10;
         Beam3333Test_TR10.PrintTimingResults("ChElementBeamANCF_3333_TR10", num_steps);
     }
-    {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR11, ChMaterialBeamANCF_3333_TR11> Beam3333Test_TR11;
-        Beam3333Test_TR11.PrintTimingResults("ChElementBeamANCF_3333_TR11", num_steps);
-    }
+    //{
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR11, ChMaterialBeamANCF_3333_TR11> Beam3333Test_TR11;
+    //    Beam3333Test_TR11.PrintTimingResults("ChElementBeamANCF_3333_TR11", num_steps);
+    //}
     {
         ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR11S, ChMaterialBeamANCF_3333_TR11S> Beam3333Test_TR11S;
         Beam3333Test_TR11S.PrintTimingResults("ChElementBeamANCF_3333_TR11S", num_steps);
+    }
+    {
+        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333<>, ChMaterialBeamANCF> Beam3333Test;
+        Beam3333Test.PrintTimingResults("ChElementBeamANCF_3333_Final", num_steps);
+    }
+    {
+        ANCFBeam3333Test<num_elements, ChElementBeamANCF, ChMaterialBeamANCF> Beam3333Test_TR01;
+        Beam3333Test_TR01.PrintTimingResults("ChElementBeamANCF_3333_Org", num_steps);
     }
 }
 
@@ -1150,7 +1233,7 @@ void ANCFShell3443Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
 
 void Run_ANCFShell_3443_Tests() {
     const int num_elements = 1024;
-    int num_steps = 10;
+    int num_steps = 100;
 
     //const int num_elements = 8;
     //int num_steps = 1;
@@ -1171,6 +1254,7 @@ void Run_ANCFShell_3443_Tests() {
         ANCFShell3443Test<num_elements, ChElementShellANCF_3443_TR04, ChMaterialShellANCF_3443_TR04> Shell3443Test_TR04;
         Shell3443Test_TR04.PrintTimingResults("ChElementShellANCF_3443_TR04", num_steps);
     }
+    num_steps = 1000;
     {
         ANCFShell3443Test<num_elements, ChElementShellANCF_3443_TR05, ChMaterialShellANCF_3443_TR05> Shell3443Test_TR05;
         Shell3443Test_TR05.PrintTimingResults("ChElementShellANCF_3443_TR05", num_steps);
@@ -1501,7 +1585,7 @@ void ANCFShell3443MLTest<num_elements, ElementVersion, MaterialVersion>::PrintTi
 
 void Run_ANCFShell_3443ML_Tests() {
     const int num_elements = 1024;
-    int num_steps = 10;
+    int num_steps = 100;
 
     //const int num_elements = 8;
     //int num_steps = 1;
@@ -1510,58 +1594,98 @@ void Run_ANCFShell_3443ML_Tests() {
         ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR01, ChMaterialShellANCF_3443ML_TR01> Shell3443MLTest_TR01(1);
         Shell3443MLTest_TR01.PrintTimingResults("ChElementShellANCF_3443ML_TR01", num_steps);
     }
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR02, ChMaterialShellANCF_3443ML_TR02> Shell3443MLTest_TR02(1);
+    //    Shell3443MLTest_TR02.PrintTimingResults("ChElementShellANCF_3443ML_TR02", num_steps);
+    //}
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR02_GQ332, ChMaterialShellANCF_3443ML_TR02_GQ332> Shell3443MLTest_TR02_GQ332(1);
+    //    Shell3443MLTest_TR02_GQ332.PrintTimingResults("ChElementShellANCF_3443ML_TR02_GQ332", num_steps);
+    //}
     {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR02, ChMaterialShellANCF_3443ML_TR02> Shell3443MLTest_TR02(1);
-        Shell3443MLTest_TR02.PrintTimingResults("ChElementShellANCF_3443ML_TR02", num_steps);
+        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR02_GQ442, ChMaterialShellANCF_3443ML_TR02_GQ442> Shell3443MLTest_TR02_GQ442(1);
+        Shell3443MLTest_TR02_GQ442.PrintTimingResults("ChElementShellANCF_3443ML_TR02_GQ442", num_steps);
     }
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR03, ChMaterialShellANCF_3443ML_TR03> Shell3443MLTest_TR03(1);
+    //    Shell3443MLTest_TR03.PrintTimingResults("ChElementShellANCF_3443ML_TR03", num_steps);
+    //}
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR03_GQ332, ChMaterialShellANCF_3443ML_TR03_GQ332> Shell3443MLTest_TR03_GQ332(1);
+    //    Shell3443MLTest_TR03_GQ332.PrintTimingResults("ChElementShellANCF_3443ML_TR03_GQ332", num_steps);
+    //}
     {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR03, ChMaterialShellANCF_3443ML_TR03> Shell3443MLTest_TR03(1);
-        Shell3443MLTest_TR03.PrintTimingResults("ChElementShellANCF_3443ML_TR03", num_steps);
+        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR03_GQ442, ChMaterialShellANCF_3443ML_TR03_GQ442> Shell3443MLTest_TR03_GQ442(1);
+        Shell3443MLTest_TR03_GQ442.PrintTimingResults("ChElementShellANCF_3443ML_TR03_GQ442", num_steps);
     }
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR04, ChMaterialShellANCF_3443ML_TR04> Shell3443MLTest_TR04(1);
+    //    Shell3443MLTest_TR04.PrintTimingResults("ChElementShellANCF_3443ML_TR04", num_steps);
+    //}
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR04_GQ332, ChMaterialShellANCF_3443ML_TR04_GQ332> Shell3443MLTest_TR04_GQ332(1);
+    //    Shell3443MLTest_TR04_GQ332.PrintTimingResults("ChElementShellANCF_3443ML_TR04_GQ332", num_steps);
+    //}
     {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR04, ChMaterialShellANCF_3443ML_TR04> Shell3443MLTest_TR04(1);
-        Shell3443MLTest_TR04.PrintTimingResults("ChElementShellANCF_3443ML_TR04", num_steps);
+        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR04_GQ442, ChMaterialShellANCF_3443ML_TR04_GQ442> Shell3443MLTest_TR04_GQ442(1);
+        Shell3443MLTest_TR04_GQ442.PrintTimingResults("ChElementShellANCF_3443ML_TR04_GQ442", num_steps);
     }
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR05, ChMaterialShellANCF_3443ML_TR05> Shell3443MLTest_TR05(1);
+    //    Shell3443MLTest_TR05.PrintTimingResults("ChElementShellANCF_3443ML_TR05", num_steps);
+    //}
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR05_GQ332, ChMaterialShellANCF_3443ML_TR05_GQ332> Shell3443MLTest_TR05_GQ332(1);
+    //    Shell3443MLTest_TR05_GQ332.PrintTimingResults("ChElementShellANCF_3443ML_TR05_GQ332", num_steps);
+    //}
     {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR05, ChMaterialShellANCF_3443ML_TR05> Shell3443MLTest_TR05(1);
-        Shell3443MLTest_TR05.PrintTimingResults("ChElementShellANCF_3443ML_TR05", num_steps);
+        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR05_GQ442, ChMaterialShellANCF_3443ML_TR05_GQ442> Shell3443MLTest_TR05_GQ442(1);
+        Shell3443MLTest_TR05_GQ442.PrintTimingResults("ChElementShellANCF_3443ML_TR05_GQ442", num_steps);
     }
-    {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR06, ChMaterialShellANCF_3443ML_TR06> Shell3443MLTest_TR06(1);
-        Shell3443MLTest_TR06.PrintTimingResults("ChElementShellANCF_3443ML_TR06", num_steps);
-    }
-    {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR06_GQ332, ChMaterialShellANCF_3443ML_TR06_GQ332> Shell3443MLTest_TR06_GQ332(1);
-        Shell3443MLTest_TR06_GQ332.PrintTimingResults("ChElementShellANCF_3443ML_TR06_GQ332", num_steps);
-    }
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR06, ChMaterialShellANCF_3443ML_TR06> Shell3443MLTest_TR06(1);
+    //    Shell3443MLTest_TR06.PrintTimingResults("ChElementShellANCF_3443ML_TR06", num_steps);
+    //}
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR06_GQ332, ChMaterialShellANCF_3443ML_TR06_GQ332> Shell3443MLTest_TR06_GQ332(1);
+    //    Shell3443MLTest_TR06_GQ332.PrintTimingResults("ChElementShellANCF_3443ML_TR06_GQ332", num_steps);
+    //}
     {
         ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR06_GQ442, ChMaterialShellANCF_3443ML_TR06_GQ442> Shell3443MLTest_TR06_GQ442(1);
         Shell3443MLTest_TR06_GQ442.PrintTimingResults("ChElementShellANCF_3443ML_TR06_GQ442", num_steps);
     }
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR07, ChMaterialShellANCF_3443ML_TR07> Shell3443MLTest_TR07(1);
+    //    Shell3443MLTest_TR07.PrintTimingResults("ChElementShellANCF_3443ML_TR07", num_steps);
+    //}
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR07B, ChMaterialShellANCF_3443ML_TR07B> Shell3443MLTest_TR07B(1);
+    //    Shell3443MLTest_TR07B.PrintTimingResults("ChElementShellANCF_3443ML_TR07B", num_steps);
+    //}
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR07S, ChMaterialShellANCF_3443ML_TR07S> Shell3443MLTest_TR07S(1);
+    //    Shell3443MLTest_TR07S.PrintTimingResults("ChElementShellANCF_3443ML_TR07S", num_steps);
+    //}
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR07S_GQ332, ChMaterialShellANCF_3443ML_TR07S_GQ332> Shell3443MLTest_TR07S_GQ332(1);
+    //    Shell3443MLTest_TR07S_GQ332.PrintTimingResults("ChElementShellANCF_3443ML_TR07S_GQ332", num_steps);
+    //}
     {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR07, ChMaterialShellANCF_3443ML_TR07> Shell3443MLTest_TR07(1);
-        Shell3443MLTest_TR07.PrintTimingResults("ChElementShellANCF_3443ML_TR07", num_steps);
+        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR07S_GQ442, ChMaterialShellANCF_3443ML_TR07S_GQ442> Shell3443MLTest_TR07S_GQ442(1);
+        Shell3443MLTest_TR07S_GQ442.PrintTimingResults("ChElementShellANCF_3443ML_TR07S_GQ442", num_steps);
     }
-    {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR07B, ChMaterialShellANCF_3443ML_TR07B> Shell3443MLTest_TR07B(1);
-        Shell3443MLTest_TR07B.PrintTimingResults("ChElementShellANCF_3443ML_TR07B", num_steps);
-    }
-    {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR07S, ChMaterialShellANCF_3443ML_TR07S> Shell3443MLTest_TR07S(1);
-        Shell3443MLTest_TR07S.PrintTimingResults("ChElementShellANCF_3443ML_TR07S", num_steps);
-    }
-    {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR08, ChMaterialShellANCF_3443ML_TR08> Shell3443MLTest_TR08(1);
-        Shell3443MLTest_TR08.PrintTimingResults("ChElementShellANCF_3443ML_TR08", num_steps);
-    }
-    {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR08S, ChMaterialShellANCF_3443ML_TR08S> Shell3443MLTest_TR08S(1);
-        Shell3443MLTest_TR08S.PrintTimingResults("ChElementShellANCF_3443ML_TR08S", num_steps);
-    }
-    {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR08S_GQ332, ChMaterialShellANCF_3443ML_TR08S_GQ332> Shell3443MLTest_TR08S_GQ332(1);
-        Shell3443MLTest_TR08S_GQ332.PrintTimingResults("ChElementShellANCF_3443ML_TR08S_GQ332", num_steps);
-    }
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR08, ChMaterialShellANCF_3443ML_TR08> Shell3443MLTest_TR08(1);
+    //    Shell3443MLTest_TR08.PrintTimingResults("ChElementShellANCF_3443ML_TR08", num_steps);
+    //}
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR08S, ChMaterialShellANCF_3443ML_TR08S> Shell3443MLTest_TR08S(1);
+    //    Shell3443MLTest_TR08S.PrintTimingResults("ChElementShellANCF_3443ML_TR08S", num_steps);
+    //}
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR08S_GQ332, ChMaterialShellANCF_3443ML_TR08S_GQ332> Shell3443MLTest_TR08S_GQ332(1);
+    //    Shell3443MLTest_TR08S_GQ332.PrintTimingResults("ChElementShellANCF_3443ML_TR08S_GQ332", num_steps);
+    //}
     {
         ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR08S_GQ442, ChMaterialShellANCF_3443ML_TR08S_GQ442> Shell3443MLTest_TR08S_GQ442(1);
         Shell3443MLTest_TR08S_GQ442.PrintTimingResults("ChElementShellANCF_3443ML_TR08S_GQ442", num_steps);
@@ -1574,13 +1698,17 @@ void Run_ANCFShell_3443ML_Tests() {
         ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR10, ChMaterialShellANCF_3443ML_TR10> Shell3443MLTest_TR10(1);
         Shell3443MLTest_TR10.PrintTimingResults("ChElementShellANCF_3443ML_TR10", num_steps);
     }
-    {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR11, ChMaterialShellANCF_3443ML_TR11> Shell3443MLTest_TR11(1);
-        Shell3443MLTest_TR11.PrintTimingResults("ChElementShellANCF_3443ML_TR11", num_steps);
-    }
+    //{
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR11, ChMaterialShellANCF_3443ML_TR11> Shell3443MLTest_TR11(1);
+    //    Shell3443MLTest_TR11.PrintTimingResults("ChElementShellANCF_3443ML_TR11", num_steps);
+    //}
     {
         ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR11S, ChMaterialShellANCF_3443ML_TR11S> Shell3443MLTest_TR11S(1);
         Shell3443MLTest_TR11S.PrintTimingResults("ChElementShellANCF_3443ML_TR11S", num_steps);
+    }
+    {
+        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443<4, 2>, ChMaterialShellANCF> Shell3443MLTest(1);
+        Shell3443MLTest.PrintTimingResults("ChElementShellANCF_3443_Final", num_steps);
     }
 }
 
@@ -1878,7 +2006,7 @@ void ANCFShell3833Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
 
 void Run_ANCFShell_3833_Tests() {
     const int num_elements = 1024;
-    int num_steps = 10;
+    int num_steps = 100;
 
     //const int num_elements = 8;
     //int num_steps = 1;
@@ -1899,6 +2027,7 @@ void Run_ANCFShell_3833_Tests() {
         ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR04, ChMaterialShellANCF_3833_TR04> Shell3833Test_TR04;
         Shell3833Test_TR04.PrintTimingResults("ChElementShellANCF_3833_TR04", num_steps);
     }
+    num_steps = 1000;
     {
         ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR05, ChMaterialShellANCF_3833_TR05> Shell3833Test_TR05;
         Shell3833Test_TR05.PrintTimingResults("ChElementShellANCF_3833_TR05", num_steps);
@@ -2237,67 +2366,83 @@ void ANCFShell3833MLTest<num_elements, ElementVersion, MaterialVersion>::PrintTi
 
 void Run_ANCFShell_3833ML_Tests() {
     const int num_elements = 1024;
-    int num_steps = 10;
+    int num_steps = 100;
 
     //const int num_elements = 8;
-    //int num_steps = 1;
+    //int num_steps = 10;
 
-    {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_8, ChMaterialShellANCF> Shell3833MLTest_8(1);
-        Shell3833MLTest_8.PrintTimingResults("ChElementShellANCF_8", num_steps);
-    }
-    {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833_TR00, ChMaterialShellANCF> Shell3833MLTest_TR00(1);
-        Shell3833MLTest_TR00.PrintTimingResults("ChElementShellANCF_3833_TR00", num_steps);
-    }
+    //{
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833_TR00, ChMaterialShellANCF> Shell3833MLTest_TR00(1);
+    //    Shell3833MLTest_TR00.PrintTimingResults("ChElementShellANCF_3833_TR00", num_steps);
+    //}
     {
         ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR01, ChMaterialShellANCF_3833ML_TR01> Shell3833MLTest_TR01(1);
         Shell3833MLTest_TR01.PrintTimingResults("ChElementShellANCF_3833ML_TR01", num_steps);
     }
+    //{
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR02, ChMaterialShellANCF_3833ML_TR02> Shell3833MLTest_TR02(1);
+    //    Shell3833MLTest_TR02.PrintTimingResults("ChElementShellANCF_3833ML_TR02", num_steps);
+    //}
     {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR02, ChMaterialShellANCF_3833ML_TR02> Shell3833MLTest_TR02(1);
-        Shell3833MLTest_TR02.PrintTimingResults("ChElementShellANCF_3833ML_TR02", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR02_GQ332, ChMaterialShellANCF_3833ML_TR02_GQ332> Shell3833MLTest_TR02_GQ332(1);
+        Shell3833MLTest_TR02_GQ332.PrintTimingResults("ChElementShellANCF_3833ML_TR02_GQ332", num_steps);
     }
+    //{
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR03, ChMaterialShellANCF_3833ML_TR03> Shell3833MLTest_TR03(1);
+    //    Shell3833MLTest_TR03.PrintTimingResults("ChElementShellANCF_3833ML_TR03", num_steps);
+    //}
     {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR03, ChMaterialShellANCF_3833ML_TR03> Shell3833MLTest_TR03(1);
-        Shell3833MLTest_TR03.PrintTimingResults("ChElementShellANCF_3833ML_TR03", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR03_GQ332, ChMaterialShellANCF_3833ML_TR03_GQ332> Shell3833MLTest_TR03_GQ332(1);
+        Shell3833MLTest_TR03_GQ332.PrintTimingResults("ChElementShellANCF_3833ML_TR03_GQ332", num_steps);
     }
+    //{
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR04, ChMaterialShellANCF_3833ML_TR04> Shell3833MLTest_TR04(1);
+    //    Shell3833MLTest_TR04.PrintTimingResults("ChElementShellANCF_3833ML_TR04", num_steps);
+    //}
     {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR04, ChMaterialShellANCF_3833ML_TR04> Shell3833MLTest_TR04(1);
-        Shell3833MLTest_TR04.PrintTimingResults("ChElementShellANCF_3833ML_TR04", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR04_GQ332, ChMaterialShellANCF_3833ML_TR04_GQ332> Shell3833MLTest_TR04_GQ332(1);
+        Shell3833MLTest_TR04_GQ332.PrintTimingResults("ChElementShellANCF_3833ML_TR04_GQ332", num_steps);
     }
+    //{
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR05, ChMaterialShellANCF_3833ML_TR05> Shell3833MLTest_TR05(1);
+    //    Shell3833MLTest_TR05.PrintTimingResults("ChElementShellANCF_3833ML_TR05", num_steps);
+    //}
     {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR05, ChMaterialShellANCF_3833ML_TR05> Shell3833MLTest_TR05(1);
-        Shell3833MLTest_TR05.PrintTimingResults("ChElementShellANCF_3833ML_TR05", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR05_GQ332, ChMaterialShellANCF_3833ML_TR05_GQ332> Shell3833MLTest_TR05_GQ332(1);
+        Shell3833MLTest_TR05_GQ332.PrintTimingResults("ChElementShellANCF_3833ML_TR05_GQ332", num_steps);
     }
-    {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR06, ChMaterialShellANCF_3833ML_TR06> Shell3833MLTest_TR06(1);
-        Shell3833MLTest_TR06.PrintTimingResults("ChElementShellANCF_3833ML_TR06", num_steps);
-    }
+    //{
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR06, ChMaterialShellANCF_3833ML_TR06> Shell3833MLTest_TR06(1);
+    //    Shell3833MLTest_TR06.PrintTimingResults("ChElementShellANCF_3833ML_TR06", num_steps);
+    //}
     {
         ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR06_GQ332, ChMaterialShellANCF_3833ML_TR06_GQ332> Shell3833MLTest_TR06_GQ332(1);
         Shell3833MLTest_TR06_GQ332.PrintTimingResults("ChElementShellANCF_3833ML_TR06_GQ332", num_steps);
     }
+    //{
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR07, ChMaterialShellANCF_3833ML_TR07> Shell3833MLTest_TR07(1);
+    //    Shell3833MLTest_TR07.PrintTimingResults("ChElementShellANCF_3833ML_TR07", num_steps);
+    //}
+    //{
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR07B, ChMaterialShellANCF_3833ML_TR07B> Shell3833MLTest_TR07B(1);
+    //    Shell3833MLTest_TR07B.PrintTimingResults("ChElementShellANCF_3833ML_TR07B", num_steps);
+    //}
+    //{
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR07S, ChMaterialShellANCF_3833ML_TR07S> Shell3833MLTest_TR07S(1);
+    //    Shell3833MLTest_TR07S.PrintTimingResults("ChElementShellANCF_3833ML_TR07S", num_steps);
+    //}
     {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR07, ChMaterialShellANCF_3833ML_TR07> Shell3833MLTest_TR07(1);
-        Shell3833MLTest_TR07.PrintTimingResults("ChElementShellANCF_3833ML_TR07", num_steps);
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR07S_GQ332, ChMaterialShellANCF_3833ML_TR07S_GQ332> Shell3833MLTest_TR07S_GQ332(1);
+        Shell3833MLTest_TR07S_GQ332.PrintTimingResults("ChElementShellANCF_3833ML_TR07S_GQ332", num_steps);
     }
-    {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR07B, ChMaterialShellANCF_3833ML_TR07B> Shell3833MLTest_TR07B(1);
-        Shell3833MLTest_TR07B.PrintTimingResults("ChElementShellANCF_3833ML_TR07B", num_steps);
-    }
-    {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR07S, ChMaterialShellANCF_3833ML_TR07S> Shell3833MLTest_TR07S(1);
-        Shell3833MLTest_TR07S.PrintTimingResults("ChElementShellANCF_3833ML_TR07S", num_steps);
-    }
-    {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR08, ChMaterialShellANCF_3833ML_TR08> Shell3833MLTest_TR08(1);
-        Shell3833MLTest_TR08.PrintTimingResults("ChElementShellANCF_3833ML_TR08", num_steps);
-    }
-    {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR08S, ChMaterialShellANCF_3833ML_TR08S> Shell3833MLTest_TR08S(1);
-        Shell3833MLTest_TR08S.PrintTimingResults("ChElementShellANCF_3833ML_TR08S", num_steps);
-    }
+    //{
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR08, ChMaterialShellANCF_3833ML_TR08> Shell3833MLTest_TR08(1);
+    //    Shell3833MLTest_TR08.PrintTimingResults("ChElementShellANCF_3833ML_TR08", num_steps);
+    //}
+    //{
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR08S, ChMaterialShellANCF_3833ML_TR08S> Shell3833MLTest_TR08S(1);
+    //    Shell3833MLTest_TR08S.PrintTimingResults("ChElementShellANCF_3833ML_TR08S", num_steps);
+    //}
     {
         ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR08S_GQ332, ChMaterialShellANCF_3833ML_TR08S_GQ332> Shell3833MLTest_TR08S_GQ332(1);
         Shell3833MLTest_TR08S_GQ332.PrintTimingResults("ChElementShellANCF_3833ML_TR08S_GQ332", num_steps);
@@ -2310,13 +2455,21 @@ void Run_ANCFShell_3833ML_Tests() {
         ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR10, ChMaterialShellANCF_3833ML_TR10> Shell3833MLTest_TR10(1);
         Shell3833MLTest_TR10.PrintTimingResults("ChElementShellANCF_3833ML_TR10", num_steps);
     }
-    {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR11, ChMaterialShellANCF_3833ML_TR11> Shell3833MLTest_TR11(1);
-        Shell3833MLTest_TR11.PrintTimingResults("ChElementShellANCF_3833ML_TR11", num_steps);
-    }
+    //{
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR11, ChMaterialShellANCF_3833ML_TR11> Shell3833MLTest_TR11(1);
+    //    Shell3833MLTest_TR11.PrintTimingResults("ChElementShellANCF_3833ML_TR11", num_steps);
+    //}
     {
         ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR11S, ChMaterialShellANCF_3833ML_TR11S> Shell3833MLTest_TR11S(1);
         Shell3833MLTest_TR11S.PrintTimingResults("ChElementShellANCF_3833ML_TR11S", num_steps);
+    }
+    {
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833<>, ChMaterialShellANCF> Shell3833MLTest(1);
+        Shell3833MLTest.PrintTimingResults("ChElementShellANCF_3833_Final", num_steps);
+    }
+    {
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_8, ChMaterialShellANCF> Shell3833MLTest_8(1);
+        Shell3833MLTest_8.PrintTimingResults("ChElementShellANCF_3833_Org", num_steps);
     }
 }
 
@@ -2615,55 +2768,75 @@ void ANCFBrick3843Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
 
 void Run_ANCFBrick_3843_Tests() {
     const int num_elements = 128;
-    int num_steps = 10;
+    int num_steps = 100;
 
-    //const int num_elements = 8;
-    //int num_steps = 1;
+    //const int num_elements = 24;
+    //int num_steps = 100;
 
     {
         ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR01, ChMaterialBrickANCF_3843_TR01> Brick3843Test_TR01;
         Brick3843Test_TR01.PrintTimingResults("ChElementBrickANCF_3843_TR01", num_steps);
     }
+    //{
+    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR02, ChMaterialBrickANCF_3843_TR02> Brick3843Test_TR02;
+    //    Brick3843Test_TR02.PrintTimingResults("ChElementBrickANCF_3843_TR02", num_steps);
+    //}
     {
-        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR02, ChMaterialBrickANCF_3843_TR02> Brick3843Test_TR02;
-        Brick3843Test_TR02.PrintTimingResults("ChElementBrickANCF_3843_TR02", num_steps);
+        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR02_GQ444, ChMaterialBrickANCF_3843_TR02_GQ444> Brick3843Test_TR02_GQ444;
+        Brick3843Test_TR02_GQ444.PrintTimingResults("ChElementBrickANCF_3843_TR02_GQ444", num_steps);
     }
+    //{
+    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR03, ChMaterialBrickANCF_3843_TR03> Brick3843Test_TR03;
+    //    Brick3843Test_TR03.PrintTimingResults("ChElementBrickANCF_3843_TR03", num_steps);
+    //}
     {
-        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR03, ChMaterialBrickANCF_3843_TR03> Brick3843Test_TR03;
-        Brick3843Test_TR03.PrintTimingResults("ChElementBrickANCF_3843_TR03", num_steps);
+        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR03_GQ444, ChMaterialBrickANCF_3843_TR03_GQ444> Brick3843Test_TR03_GQ444;
+        Brick3843Test_TR03_GQ444.PrintTimingResults("ChElementBrickANCF_3843_TR03_GQ444", num_steps);
     }
+    //{
+    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR04, ChMaterialBrickANCF_3843_TR04> Brick3843Test_TR04;
+    //    Brick3843Test_TR04.PrintTimingResults("ChElementBrickANCF_3843_TR04", num_steps);
+    //}
     {
-        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR04, ChMaterialBrickANCF_3843_TR04> Brick3843Test_TR04;
-        Brick3843Test_TR04.PrintTimingResults("ChElementBrickANCF_3843_TR04", num_steps);
+        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR04_GQ444, ChMaterialBrickANCF_3843_TR04_GQ444> Brick3843Test_TR04_GQ444;
+        Brick3843Test_TR04_GQ444.PrintTimingResults("ChElementBrickANCF_3843_TR04_GQ444", num_steps);
     }
+    //{
+    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR05, ChMaterialBrickANCF_3843_TR05> Brick3843Test_TR05;
+    //    Brick3843Test_TR05.PrintTimingResults("ChElementBrickANCF_3843_TR05", num_steps);
+    //}
     {
-        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR05, ChMaterialBrickANCF_3843_TR05> Brick3843Test_TR05;
-        Brick3843Test_TR05.PrintTimingResults("ChElementBrickANCF_3843_TR05", num_steps);
+        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR05_GQ444, ChMaterialBrickANCF_3843_TR05_GQ444> Brick3843Test_TR05_GQ444;
+        Brick3843Test_TR05_GQ444.PrintTimingResults("ChElementBrickANCF_3843_TR05_GQ444", num_steps);
     }
-    {
-        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR06, ChMaterialBrickANCF_3843_TR06> Brick3843Test_TR06;
-        Brick3843Test_TR06.PrintTimingResults("ChElementBrickANCF_3843_TR06", num_steps);
-    }
+    //{
+    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR06, ChMaterialBrickANCF_3843_TR06> Brick3843Test_TR06;
+    //    Brick3843Test_TR06.PrintTimingResults("ChElementBrickANCF_3843_TR06", num_steps);
+    //}
     {
         ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR06_GQ444, ChMaterialBrickANCF_3843_TR06_GQ444> Brick3843Test_TR06_GQ444;
         Brick3843Test_TR06_GQ444.PrintTimingResults("ChElementBrickANCF_3843_TR06_GQ444", num_steps);
     }
+    //{
+    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR07, ChMaterialBrickANCF_3843_TR07> Brick3843Test_TR07;
+    //    Brick3843Test_TR07.PrintTimingResults("ChElementBrickANCF_3843_TR07", num_steps);
+    //}
+    //{
+    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR07S, ChMaterialBrickANCF_3843_TR07S> Brick3843Test_TR07S;
+    //    Brick3843Test_TR07S.PrintTimingResults("ChElementBrickANCF_3843_TR07S", num_steps);
+    //}
     {
-        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR07, ChMaterialBrickANCF_3843_TR07> Brick3843Test_TR07;
-        Brick3843Test_TR07.PrintTimingResults("ChElementBrickANCF_3843_TR07", num_steps);
+        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR07S_GQ444, ChMaterialBrickANCF_3843_TR07S_GQ444> Brick3843Test_TR07S_GQ444;
+        Brick3843Test_TR07S_GQ444.PrintTimingResults("ChElementBrickANCF_3843_TR07S_GQ444", num_steps);
     }
-    {
-        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR07S, ChMaterialBrickANCF_3843_TR07S> Brick3843Test_TR07S;
-        Brick3843Test_TR07S.PrintTimingResults("ChElementBrickANCF_3843_TR07S", num_steps);
-    }
-    {
-        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR08, ChMaterialBrickANCF_3843_TR08> Brick3843Test_TR08;
-        Brick3843Test_TR08.PrintTimingResults("ChElementBrickANCF_3843_TR08", num_steps);
-    }
-    {
-        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR08S, ChMaterialBrickANCF_3843_TR08S> Brick3843Test_TR08S;
-        Brick3843Test_TR08S.PrintTimingResults("ChElementBrickANCF_3843_TR08S", num_steps);
-    }
+    //{
+    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR08, ChMaterialBrickANCF_3843_TR08> Brick3843Test_TR08;
+    //    Brick3843Test_TR08.PrintTimingResults("ChElementBrickANCF_3843_TR08", num_steps);
+    //}
+    //{
+    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR08S, ChMaterialBrickANCF_3843_TR08S> Brick3843Test_TR08S;
+    //    Brick3843Test_TR08S.PrintTimingResults("ChElementBrickANCF_3843_TR08S", num_steps);
+    //}
     {
         ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR08S_GQ444, ChMaterialBrickANCF_3843_TR08S_GQ444> Brick3843Test_TR08S_GQ444;
         Brick3843Test_TR08S_GQ444.PrintTimingResults("ChElementBrickANCF_3843_TR08S_GQ444", num_steps);
@@ -2680,13 +2853,17 @@ void Run_ANCFBrick_3843_Tests() {
         ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR10, ChMaterialBrickANCF_3843_TR10> Brick3843Test_TR10;
         Brick3843Test_TR10.PrintTimingResults("ChElementBrickANCF_3843_TR10", num_steps);
     }
-    {
-        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR11, ChMaterialBrickANCF_3843_TR11> Brick3843Test_TR11;
-        Brick3843Test_TR11.PrintTimingResults("ChElementBrickANCF_3843_TR11", num_steps);
-    }
+    //{
+    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR11, ChMaterialBrickANCF_3843_TR11> Brick3843Test_TR11;
+    //    Brick3843Test_TR11.PrintTimingResults("ChElementBrickANCF_3843_TR11", num_steps);
+    //}
     {
         ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR11S, ChMaterialBrickANCF_3843_TR11S> Brick3843Test_TR11S;
         Brick3843Test_TR11S.PrintTimingResults("ChElementBrickANCF_3843_TR11S", num_steps);
+    }
+    {
+        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843<>, ChMaterialBrickANCF> Brick3843Test;
+        Brick3843Test.PrintTimingResults("ChElementBrickANCF_3843_Final", num_steps);
     }
 }
 
@@ -2696,13 +2873,36 @@ int main(int argc, char* argv[]) {
     
     std::ios::sync_with_stdio(false);
 
-    Run_ANCFBeam_3243_Tests();
-    Run_ANCFBeam_3333_Tests();
-    Run_ANCFShell_3443_Tests();
-    Run_ANCFShell_3443ML_Tests();
-    Run_ANCFShell_3833_Tests();
-    Run_ANCFShell_3833ML_Tests();
-    Run_ANCFBrick_3843_Tests();
+    if (argc < 2) {
+        Run_ANCFBeam_3243_Tests();
+        Run_ANCFBeam_3333_Tests();
+        //Run_ANCFShell_3443_Tests();
+        Run_ANCFShell_3443ML_Tests();
+        //Run_ANCFShell_3833_Tests();
+        Run_ANCFShell_3833ML_Tests();
+        Run_ANCFBrick_3843_Tests();
+    }
+    else{
+        switch (argv[1][0]) {
+            case int('1'):
+                Run_ANCFBeam_3243_Tests();
+                break;
+            case int('2'):
+                Run_ANCFBeam_3333_Tests();
+                break;
+            case int('3'):
+                Run_ANCFShell_3443ML_Tests();
+                break;
+            case int('4'):
+                Run_ANCFShell_3833ML_Tests();
+                break;
+            case int('5'):
+                Run_ANCFBrick_3843_Tests();
+                break;
+            default:
+                std::cout << "Error: Unknown Input.\n";
+        }
+    }
 
     return (0);
 }
