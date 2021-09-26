@@ -4,6 +4,7 @@ set(TESTS
 	btest_FEA_ANCFbeam_3243_LargeDisplacement_3DPendulum
 	btest_FEA_ANCFbeam_3243_Roofline
 	utest_FEA_ANCFbeam_3243_InternalFrcKRM
+	utest_FEA_ANCFbeam_3243_Formulation
     )
 
 # ------------------------------------------------------------------------------

@@ -5,6 +5,7 @@ set(TESTS
 	btest_FEA_ANCFshell_3443_Roofline
 	utest_FEA_ANCFshell_3443_InternalFrcKRM
 	utest_FEA_ANCFshell_3443ML_InternalFrcKRM
+	utest_FEA_ANCFshell_3443_Formulation
 	btest_FEA_ANCFshell_3443ML_LargeDisplacement_3DPendulum
     )
 

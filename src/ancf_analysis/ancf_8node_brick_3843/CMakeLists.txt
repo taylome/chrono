@@ -3,6 +3,7 @@ set(TESTS
 	btest_FEA_ANCFbrick_3843_LargeDisplacement_3DPendulum
 	btest_FEA_ANCFbrick_3843_Roofline
 	utest_FEA_ANCFbrick_3843_InternalFrcKRM
+	utest_FEA_ANCFbrick_3843_Formulation
     )
 
 # ------------------------------------------------------------------------------
