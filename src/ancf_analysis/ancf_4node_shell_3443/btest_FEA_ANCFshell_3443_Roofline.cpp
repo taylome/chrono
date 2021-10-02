@@ -38,6 +38,7 @@
 #include "chrono/fea/ChElementShellANCF_3443_TR11.h"
 #include "chrono/fea/ChElementShellANCF_3443_TR11s.h"
 
+#include "chrono/fea/ChElementShellANCF_3443.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR01.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR02.h"
 #include "chrono/fea/ChElementShellANCF_3443ML_TR02_GQ332.h"
@@ -827,6 +828,10 @@ void Run_ANCFShell_3443ML_Tests() {
     {
         ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR11S, ChMaterialShellANCF_3443ML_TR11S> Shell3443MLTest_TR11S(1);
         Shell3443MLTest_TR11S.PrintTimingResults("ChElementShellANCF_3443ML_TR11S", num_steps);
+    }
+    {
+        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443<>, ChMaterialShellANCF> Shell3443MLTest(1);
+        Shell3443MLTest.PrintTimingResults("ChElementShellANCF_3443_Final", num_steps);
     }
 }
 

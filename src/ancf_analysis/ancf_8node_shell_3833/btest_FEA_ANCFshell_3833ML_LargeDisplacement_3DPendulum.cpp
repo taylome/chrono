@@ -567,10 +567,10 @@ int main(int argc, char* argv[]) {
 					ANCFShellTest<ChElementShellANCF_8, ChMaterialShellANCF> test(num_els(i), ls, NumThreads);
 					test.RunTimingTest(timing_stats, "ChElementShellANCF_8");
 				}
-                {
-					ANCFShellTest<ChElementShellANCF_3833_TR00, ChMaterialShellANCF> test(num_els(i), ls, NumThreads);
-					test.RunTimingTest(timing_stats, "ChElementShellANCF_3833_TR00");
-				}
+    //            {
+				//	ANCFShellTest<ChElementShellANCF_3833_TR00, ChMaterialShellANCF> test(num_els(i), ls, NumThreads);
+				//	test.RunTimingTest(timing_stats, "ChElementShellANCF_3833_TR00");
+				//}
                 if (i == 0) {
                     ANCFShellTest<ChElementShellANCF_3833ML_TR01, ChMaterialShellANCF_3833ML_TR01> test(num_els(i), ls, NumThreads);
                     test.RunTimingTest(timing_stats, "ChElementShellANCF_3833ML_TR01");

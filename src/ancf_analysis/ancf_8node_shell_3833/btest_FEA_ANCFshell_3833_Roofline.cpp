@@ -40,6 +40,7 @@
 #include "chrono/fea/ChElementShellANCF_3833_TR11.h"
 #include "chrono/fea/ChElementShellANCF_3833_TR11s.h"
 
+#include "chrono/fea/ChElementShellANCF_3833.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR01.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR02.h"
 #include "chrono/fea/ChElementShellANCF_3833ML_TR02_GQ332.h"
@@ -722,14 +723,14 @@ void Run_ANCFShell_3833ML_Tests() {
     //const int num_elements = 8;
     //int num_steps = 1;
 
-    {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_8, ChMaterialShellANCF> Shell3833MLTest_8(1);
-        Shell3833MLTest_8.PrintTimingResults("ChElementShellANCF_8", num_steps);
-    }
-    {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833_TR00, ChMaterialShellANCF> Shell3833MLTest_TR00(1);
-        Shell3833MLTest_TR00.PrintTimingResults("ChElementShellANCF_3833_TR00", num_steps);
-    }
+    //{
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_8, ChMaterialShellANCF> Shell3833MLTest_8(1);
+    //    Shell3833MLTest_8.PrintTimingResults("ChElementShellANCF_8", num_steps);
+    //}
+    //{
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833_TR00, ChMaterialShellANCF> Shell3833MLTest_TR00(1);
+    //    Shell3833MLTest_TR00.PrintTimingResults("ChElementShellANCF_3833_TR00", num_steps);
+    //}
     num_steps = 1;
     {
         ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR01, ChMaterialShellANCF_3833ML_TR01> Shell3833MLTest_TR01(1);
@@ -819,6 +820,14 @@ void Run_ANCFShell_3833ML_Tests() {
     {
         ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR11S, ChMaterialShellANCF_3833ML_TR11S> Shell3833MLTest_TR11S(1);
         Shell3833MLTest_TR11S.PrintTimingResults("ChElementShellANCF_3833ML_TR11S", num_steps);
+    }
+    {
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833<>, ChMaterialShellANCF> Shell3833MLTest(1);
+        Shell3833MLTest.PrintTimingResults("ChElementShellANCF_3833_Final", num_steps);
+    }
+    {
+        ANCFShell3833MLTest<num_elements, ChElementShellANCF_8, ChMaterialShellANCF> Shell3833MLTest_8(1);
+        Shell3833MLTest_8.PrintTimingResults("ChElementShellANCF_3833_Org", num_steps);
     }
 }
 

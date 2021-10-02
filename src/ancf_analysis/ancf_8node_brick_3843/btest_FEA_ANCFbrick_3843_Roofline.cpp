@@ -23,6 +23,7 @@
 #include "chrono/physics/ChSystemSMC.h"
 #include "chrono/solver/ChDirectSolverLS.h"
 
+#include "chrono/fea/ChElementBrickANCF_3843.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR01.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR02.h"
 #include "chrono/fea/ChElementBrickANCF_3843_TR02_GQ444.h"
@@ -437,6 +438,10 @@ void Run_ANCFBrick_3843_Tests() {
     {
         ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR11S, ChMaterialBrickANCF_3843_TR11S> Brick3843Test_TR11S;
         Brick3843Test_TR11S.PrintTimingResults("ChElementBrickANCF_3843_TR11S", num_steps);
+    }
+    {
+        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843<>, ChMaterialBrickANCF> Brick3843Test;
+        Brick3843Test.PrintTimingResults("ChElementBrickANCF_3843_Final", num_steps);
     }
 }
 

@@ -409,10 +409,10 @@ void Run_ANCFBeam_3243_Tests() {
         ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR09, ChMaterialBeamANCF_3243_TR09> Beam3243Test_TR09;
         Beam3243Test_TR09.PrintTimingResults("ChElementBeamANCF_3243_TR09", num_steps);
     }
-    //{
-    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR10, ChMaterialBeamANCF_3243_TR10> Beam3243Test_TR10;
-    //    Beam3243Test_TR10.PrintTimingResults("ChElementBeamANCF_3243_TR10", num_steps);
-    //}
+    {
+        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR10, ChMaterialBeamANCF_3243_TR10> Beam3243Test_TR10;
+        Beam3243Test_TR10.PrintTimingResults("ChElementBeamANCF_3243_TR10", num_steps);
+    }
     //{
     //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR11, ChMaterialBeamANCF_3243_TR11> Beam3243Test_TR11;
     //    Beam3243Test_TR11.PrintTimingResults("ChElementBeamANCF_3243_TR11", num_steps);
@@ -423,7 +423,7 @@ void Run_ANCFBeam_3243_Tests() {
     }
     {
         ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243<>, ChMaterialBeamANCF> Beam3243Test;
-        Beam3243Test.PrintTimingResults("ChElementBeamANCF_3243", num_steps);
+        Beam3243Test.PrintTimingResults("ChElementBeamANCF_3243_Final", num_steps);
     }
 }
 

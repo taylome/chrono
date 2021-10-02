@@ -557,70 +557,70 @@ int main(int argc, char* argv[]) {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR01, ChMaterialBeamANCF_3243_TR01> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR01");
                 }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_3243_TR02, ChMaterialBeamANCF_3243_TR02> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR02");
-                }
+                //{
+                //    ANCFBeamTest<ChElementBeamANCF_3243_TR02, ChMaterialBeamANCF_3243_TR02> test(num_els(i), ls, NumThreads, f);
+                //    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR02");
+                //}
                 {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR02_GQ322, ChMaterialBeamANCF_3243_TR02_GQ322> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR02_GQ322");
                 }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_3243_TR03, ChMaterialBeamANCF_3243_TR03> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR03");
-                }
+                //{
+                //    ANCFBeamTest<ChElementBeamANCF_3243_TR03, ChMaterialBeamANCF_3243_TR03> test(num_els(i), ls, NumThreads, f);
+                //    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR03");
+                //}
                 {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR03_GQ322, ChMaterialBeamANCF_3243_TR03_GQ322> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR03_GQ322");
                 }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_3243_TR04, ChMaterialBeamANCF_3243_TR04> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR04");
-                }
+                //{
+                //    ANCFBeamTest<ChElementBeamANCF_3243_TR04, ChMaterialBeamANCF_3243_TR04> test(num_els(i), ls, NumThreads, f);
+                //    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR04");
+                //}
                 {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR04_GQ322, ChMaterialBeamANCF_3243_TR04_GQ322> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR04_GQ322");
                 }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_3243_TR05, ChMaterialBeamANCF_3243_TR05> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR05");
-                }
+                //{
+                //    ANCFBeamTest<ChElementBeamANCF_3243_TR05, ChMaterialBeamANCF_3243_TR05> test(num_els(i), ls, NumThreads, f);
+                //    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR05");
+                //}
                 {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR05_GQ322, ChMaterialBeamANCF_3243_TR05_GQ322> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR05_GQ322");
                 }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_3243_TR06, ChMaterialBeamANCF_3243_TR06> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR06");
-                }
+                //{
+                //    ANCFBeamTest<ChElementBeamANCF_3243_TR06, ChMaterialBeamANCF_3243_TR06> test(num_els(i), ls, NumThreads, f);
+                //    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR06");
+                //}
                 {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR06_GQ322, ChMaterialBeamANCF_3243_TR06_GQ322> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR06_GQ322");
                 }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_3243_TR07, ChMaterialBeamANCF_3243_TR07> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR07");
-                }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_3243_TR07S, ChMaterialBeamANCF_3243_TR07S> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR07S");
-                }
+                //{
+                //    ANCFBeamTest<ChElementBeamANCF_3243_TR07, ChMaterialBeamANCF_3243_TR07> test(num_els(i), ls, NumThreads, f);
+                //    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR07");
+                //}
+                //{
+                //    ANCFBeamTest<ChElementBeamANCF_3243_TR07S, ChMaterialBeamANCF_3243_TR07S> test(num_els(i), ls, NumThreads, f);
+                //    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR07S");
+                //}
                 {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR07S_GQ322, ChMaterialBeamANCF_3243_TR07S_GQ322> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR07S_GQ322");
                 }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_3243_TR08, ChMaterialBeamANCF_3243_TR08> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08");
-                }
                 //{
-                //    ANCFBeamTest<ChElementBeamANCF_3243_TR08b, ChMaterialBeamANCF_3243_TR08b> test(num_els(i), ls, NumThreads, f);
-                //    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08b");
+                //    ANCFBeamTest<ChElementBeamANCF_3243_TR08, ChMaterialBeamANCF_3243_TR08> test(num_els(i), ls, NumThreads, f);
+                //    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08");
                 //}
-                {
-                    ANCFBeamTest<ChElementBeamANCF_3243_TR08S, ChMaterialBeamANCF_3243_TR08S> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08S");
-                }
+                ////{
+                ////    ANCFBeamTest<ChElementBeamANCF_3243_TR08b, ChMaterialBeamANCF_3243_TR08b> test(num_els(i), ls, NumThreads, f);
+                ////    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08b");
+                ////}
+                //{
+                //    ANCFBeamTest<ChElementBeamANCF_3243_TR08S, ChMaterialBeamANCF_3243_TR08S> test(num_els(i), ls, NumThreads, f);
+                //    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08S");
+                //}
                 {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR08S_GQ322, ChMaterialBeamANCF_3243_TR08S_GQ322> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR08S_GQ322");
@@ -633,10 +633,10 @@ int main(int argc, char* argv[]) {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR10, ChMaterialBeamANCF_3243_TR10> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR10");
                 }
-                {
-                    ANCFBeamTest<ChElementBeamANCF_3243_TR11, ChMaterialBeamANCF_3243_TR11> test(num_els(i), ls, NumThreads, f);
-                    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR11");
-                }
+                //{
+                //    ANCFBeamTest<ChElementBeamANCF_3243_TR11, ChMaterialBeamANCF_3243_TR11> test(num_els(i), ls, NumThreads, f);
+                //    test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR11");
+                //}
                 {
                     ANCFBeamTest<ChElementBeamANCF_3243_TR11S, ChMaterialBeamANCF_3243_TR11S> test(num_els(i), ls, NumThreads, f);
                     test.RunTimingTest(timing_stats, "ChElementBeamANCF_3243_TR11S");

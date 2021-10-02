@@ -24,6 +24,7 @@
 #include "chrono/solver/ChDirectSolverLS.h"
 
 #include "chrono/fea/ChElementBeamANCF.h"
+#include "chrono/fea/ChElementBeamANCF_3333.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR00.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR01.h"
 #include "chrono/fea/ChElementBeamANCF_3333_TR02.h"
@@ -140,7 +141,7 @@ ANCFBeam3333Test<num_elements, ElementVersion, MaterialVersion>::ANCFBeam3333Tes
         element->SetAlphaDamp(0.01);
         element->SetGravityOn(
             false);  // Enable the efficient ANCF method for calculating the application of gravity to the element
-        element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
+        //element->SetStrainFormulation(ElementVersion::StrainFormulation::CMPoisson);
         // element->SetStrainFormulation(ElementVersion::StrainFormulation::CMNoPoisson);
         mesh->AddElement(element);
 
@@ -339,12 +340,12 @@ void Run_ANCFBeam_3333_Tests() {
 
     {
         ANCFBeam3333Test<num_elements, ChElementBeamANCF, ChMaterialBeamANCF> Beam3333Test_TR01;
-        Beam3333Test_TR01.PrintTimingResults("ChElementBeamANCF_Org", num_steps);
+        Beam3333Test_TR01.PrintTimingResults("ChElementBeamANCF_3333_Org", num_steps);
     }
-    {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR00, ChMaterialBeamANCF_3333_TR00> Beam3333Test_TR00;
-        Beam3333Test_TR00.PrintTimingResults("ChElementBeamANCF_3333_TR00", num_steps);
-    }
+    //{
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR00, ChMaterialBeamANCF_3333_TR00> Beam3333Test_TR00;
+    //    Beam3333Test_TR00.PrintTimingResults("ChElementBeamANCF_3333_TR00", num_steps);
+    //}
     {
         ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR01, ChMaterialBeamANCF_3333_TR01> Beam3333Test_TR01;
         Beam3333Test_TR01.PrintTimingResults("ChElementBeamANCF_3333_TR01", num_steps);
@@ -418,10 +419,10 @@ void Run_ANCFBeam_3333_Tests() {
         ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR09, ChMaterialBeamANCF_3333_TR09> Beam3333Test_TR09;
         Beam3333Test_TR09.PrintTimingResults("ChElementBeamANCF_3333_TR09", num_steps);
     }
-    //{
-    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR10, ChMaterialBeamANCF_3333_TR10> Beam3333Test_TR10;
-    //    Beam3333Test_TR10.PrintTimingResults("ChElementBeamANCF_3333_TR10", num_steps);
-    //}
+    {
+        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR10, ChMaterialBeamANCF_3333_TR10> Beam3333Test_TR10;
+        Beam3333Test_TR10.PrintTimingResults("ChElementBeamANCF_3333_TR10", num_steps);
+    }
     //{
     //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR11, ChMaterialBeamANCF_3333_TR11> Beam3333Test_TR11;
     //    Beam3333Test_TR11.PrintTimingResults("ChElementBeamANCF_3333_TR11", num_steps);
@@ -429,6 +430,10 @@ void Run_ANCFBeam_3333_Tests() {
     {
         ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR11S, ChMaterialBeamANCF_3333_TR11S> Beam3333Test_TR11S;
         Beam3333Test_TR11S.PrintTimingResults("ChElementBeamANCF_3333_TR11S", num_steps);
+    }
+    {
+        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333<>, ChMaterialBeamANCF> Beam3333Test;
+        Beam3333Test.PrintTimingResults("ChElementBeamANCF_3333_Final", num_steps);
     }
 }
 
