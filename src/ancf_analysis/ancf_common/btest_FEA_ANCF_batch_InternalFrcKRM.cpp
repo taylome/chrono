@@ -473,34 +473,34 @@ void Run_ANCFBeam_3243_Tests() {
     //const int num_elements = 8;
     //int num_steps = 1;
 
-    {
-        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR01, ChMaterialBeamANCF_3243_TR01> Beam3243Test_TR01;
-        Beam3243Test_TR01.PrintTimingResults("ChElementBeamANCF_3243_TR01", num_steps);
-    }
     //{
-    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR02, ChMaterialBeamANCF_3243_TR02> Beam3243Test_TR02;
-    //    Beam3243Test_TR02.PrintTimingResults("ChElementBeamANCF_3243_TR02", num_steps);
+    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR01, ChMaterialBeamANCF_3243_TR01> Beam3243Test_TR01;
+    //    Beam3243Test_TR01.PrintTimingResults("ChElementBeamANCF_3243_TR01", num_steps);
     //}
-    {
-        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR02_GQ322, ChMaterialBeamANCF_3243_TR02_GQ322> Beam3243Test_TR02_GQ322;
-        Beam3243Test_TR02_GQ322.PrintTimingResults("ChElementBeamANCF_3243_TR02_GQ322", num_steps);
-    }
+    ////{
+    ////    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR02, ChMaterialBeamANCF_3243_TR02> Beam3243Test_TR02;
+    ////    Beam3243Test_TR02.PrintTimingResults("ChElementBeamANCF_3243_TR02", num_steps);
+    ////}
     //{
-    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR03, ChMaterialBeamANCF_3243_TR03> Beam3243Test_TR03;
-    //    Beam3243Test_TR03.PrintTimingResults("ChElementBeamANCF_3243_TR03", num_steps);
+    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR02_GQ322, ChMaterialBeamANCF_3243_TR02_GQ322> Beam3243Test_TR02_GQ322;
+    //    Beam3243Test_TR02_GQ322.PrintTimingResults("ChElementBeamANCF_3243_TR02_GQ322", num_steps);
     //}
-    {
-        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR03_GQ322, ChMaterialBeamANCF_3243_TR03_GQ322> Beam3243Test_TR03_GQ322;
-        Beam3243Test_TR03_GQ322.PrintTimingResults("ChElementBeamANCF_3243_TR03_GQ322", num_steps);
-    }
+    ////{
+    ////    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR03, ChMaterialBeamANCF_3243_TR03> Beam3243Test_TR03;
+    ////    Beam3243Test_TR03.PrintTimingResults("ChElementBeamANCF_3243_TR03", num_steps);
+    ////}
     //{
-    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR04, ChMaterialBeamANCF_3243_TR04> Beam3243Test_TR04;
-    //    Beam3243Test_TR04.PrintTimingResults("ChElementBeamANCF_3243_TR04", num_steps);
+    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR03_GQ322, ChMaterialBeamANCF_3243_TR03_GQ322> Beam3243Test_TR03_GQ322;
+    //    Beam3243Test_TR03_GQ322.PrintTimingResults("ChElementBeamANCF_3243_TR03_GQ322", num_steps);
     //}
-    {
-        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR04_GQ322, ChMaterialBeamANCF_3243_TR04_GQ322> Beam3243Test_TR04_GQ322;
-        Beam3243Test_TR04_GQ322.PrintTimingResults("ChElementBeamANCF_3243_TR04_GQ322", num_steps);
-    }
+    ////{
+    ////    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR04, ChMaterialBeamANCF_3243_TR04> Beam3243Test_TR04;
+    ////    Beam3243Test_TR04.PrintTimingResults("ChElementBeamANCF_3243_TR04", num_steps);
+    ////}
+    //{
+    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR04_GQ322, ChMaterialBeamANCF_3243_TR04_GQ322> Beam3243Test_TR04_GQ322;
+    //    Beam3243Test_TR04_GQ322.PrintTimingResults("ChElementBeamANCF_3243_TR04_GQ322", num_steps);
+    //}
     //{
     //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR05, ChMaterialBeamANCF_3243_TR05> Beam3243Test_TR05;
     //    Beam3243Test_TR05.PrintTimingResults("ChElementBeamANCF_3243_TR05", num_steps);
@@ -849,38 +849,38 @@ void Run_ANCFBeam_3333_Tests() {
     //const int num_elements = 8;
     //int num_steps = 1;
 
+    ////{
+    ////    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR00, ChMaterialBeamANCF_3333_TR00> Beam3333Test_TR00;
+    ////    Beam3333Test_TR00.PrintTimingResults("ChElementBeamANCF_3333_TR00", num_steps);
+    ////}
     //{
-    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR00, ChMaterialBeamANCF_3333_TR00> Beam3333Test_TR00;
-    //    Beam3333Test_TR00.PrintTimingResults("ChElementBeamANCF_3333_TR00", num_steps);
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR01, ChMaterialBeamANCF_3333_TR01> Beam3333Test_TR01;
+    //    Beam3333Test_TR01.PrintTimingResults("ChElementBeamANCF_3333_TR01", num_steps);
     //}
-    {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR01, ChMaterialBeamANCF_3333_TR01> Beam3333Test_TR01;
-        Beam3333Test_TR01.PrintTimingResults("ChElementBeamANCF_3333_TR01", num_steps);
-    }
+    ////{
+    ////    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR02, ChMaterialBeamANCF_3333_TR02> Beam3333Test_TR02;
+    ////    Beam3333Test_TR02.PrintTimingResults("ChElementBeamANCF_3333_TR02", num_steps);
+    ////}
     //{
-    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR02, ChMaterialBeamANCF_3333_TR02> Beam3333Test_TR02;
-    //    Beam3333Test_TR02.PrintTimingResults("ChElementBeamANCF_3333_TR02", num_steps);
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR02_GQ322, ChMaterialBeamANCF_3333_TR02_GQ322> Beam3333Test_TR02_GQ322;
+    //    Beam3333Test_TR02_GQ322.PrintTimingResults("ChElementBeamANCF_3333_TR02_GQ322", num_steps);
     //}
-    {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR02_GQ322, ChMaterialBeamANCF_3333_TR02_GQ322> Beam3333Test_TR02_GQ322;
-        Beam3333Test_TR02_GQ322.PrintTimingResults("ChElementBeamANCF_3333_TR02_GQ322", num_steps);
-    }
+    ////{
+    ////    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR03, ChMaterialBeamANCF_3333_TR03> Beam3333Test_TR03;
+    ////    Beam3333Test_TR03.PrintTimingResults("ChElementBeamANCF_3333_TR03", num_steps);
+    ////}
     //{
-    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR03, ChMaterialBeamANCF_3333_TR03> Beam3333Test_TR03;
-    //    Beam3333Test_TR03.PrintTimingResults("ChElementBeamANCF_3333_TR03", num_steps);
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR03_GQ322, ChMaterialBeamANCF_3333_TR03_GQ322> Beam3333Test_TR03_GQ322;
+    //    Beam3333Test_TR03_GQ322.PrintTimingResults("ChElementBeamANCF_3333_TR03_GQ322", num_steps);
     //}
-    {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR03_GQ322, ChMaterialBeamANCF_3333_TR03_GQ322> Beam3333Test_TR03_GQ322;
-        Beam3333Test_TR03_GQ322.PrintTimingResults("ChElementBeamANCF_3333_TR03_GQ322", num_steps);
-    }
+    ////{
+    ////    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR04, ChMaterialBeamANCF_3333_TR04> Beam3333Test_TR04;
+    ////    Beam3333Test_TR04.PrintTimingResults("ChElementBeamANCF_3333_TR04", num_steps);
+    ////}
     //{
-    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR04, ChMaterialBeamANCF_3333_TR04> Beam3333Test_TR04;
-    //    Beam3333Test_TR04.PrintTimingResults("ChElementBeamANCF_3333_TR04", num_steps);
+    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR04_GQ322, ChMaterialBeamANCF_3333_TR04_GQ322> Beam3333Test_TR04_GQ322;
+    //    Beam3333Test_TR04_GQ322.PrintTimingResults("ChElementBeamANCF_3333_TR04_GQ322", num_steps);
     //}
-    {
-        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR04_GQ322, ChMaterialBeamANCF_3333_TR04_GQ322> Beam3333Test_TR04_GQ322;
-        Beam3333Test_TR04_GQ322.PrintTimingResults("ChElementBeamANCF_3333_TR04_GQ322", num_steps);
-    }
     //{
     //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR05, ChMaterialBeamANCF_3333_TR05> Beam3333Test_TR05;
     //    Beam3333Test_TR05.PrintTimingResults("ChElementBeamANCF_3333_TR05", num_steps);
@@ -1590,46 +1590,46 @@ void Run_ANCFShell_3443ML_Tests() {
     //const int num_elements = 8;
     //int num_steps = 1;
 
-    {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR01, ChMaterialShellANCF_3443ML_TR01> Shell3443MLTest_TR01(1);
-        Shell3443MLTest_TR01.PrintTimingResults("ChElementShellANCF_3443ML_TR01", num_steps);
-    }
     //{
-    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR02, ChMaterialShellANCF_3443ML_TR02> Shell3443MLTest_TR02(1);
-    //    Shell3443MLTest_TR02.PrintTimingResults("ChElementShellANCF_3443ML_TR02", num_steps);
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR01, ChMaterialShellANCF_3443ML_TR01> Shell3443MLTest_TR01(1);
+    //    Shell3443MLTest_TR01.PrintTimingResults("ChElementShellANCF_3443ML_TR01", num_steps);
     //}
+    ////{
+    ////    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR02, ChMaterialShellANCF_3443ML_TR02> Shell3443MLTest_TR02(1);
+    ////    Shell3443MLTest_TR02.PrintTimingResults("ChElementShellANCF_3443ML_TR02", num_steps);
+    ////}
+    ////{
+    ////    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR02_GQ332, ChMaterialShellANCF_3443ML_TR02_GQ332> Shell3443MLTest_TR02_GQ332(1);
+    ////    Shell3443MLTest_TR02_GQ332.PrintTimingResults("ChElementShellANCF_3443ML_TR02_GQ332", num_steps);
+    ////}
     //{
-    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR02_GQ332, ChMaterialShellANCF_3443ML_TR02_GQ332> Shell3443MLTest_TR02_GQ332(1);
-    //    Shell3443MLTest_TR02_GQ332.PrintTimingResults("ChElementShellANCF_3443ML_TR02_GQ332", num_steps);
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR02_GQ442, ChMaterialShellANCF_3443ML_TR02_GQ442> Shell3443MLTest_TR02_GQ442(1);
+    //    Shell3443MLTest_TR02_GQ442.PrintTimingResults("ChElementShellANCF_3443ML_TR02_GQ442", num_steps);
     //}
-    {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR02_GQ442, ChMaterialShellANCF_3443ML_TR02_GQ442> Shell3443MLTest_TR02_GQ442(1);
-        Shell3443MLTest_TR02_GQ442.PrintTimingResults("ChElementShellANCF_3443ML_TR02_GQ442", num_steps);
-    }
+    ////{
+    ////    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR03, ChMaterialShellANCF_3443ML_TR03> Shell3443MLTest_TR03(1);
+    ////    Shell3443MLTest_TR03.PrintTimingResults("ChElementShellANCF_3443ML_TR03", num_steps);
+    ////}
+    ////{
+    ////    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR03_GQ332, ChMaterialShellANCF_3443ML_TR03_GQ332> Shell3443MLTest_TR03_GQ332(1);
+    ////    Shell3443MLTest_TR03_GQ332.PrintTimingResults("ChElementShellANCF_3443ML_TR03_GQ332", num_steps);
+    ////}
     //{
-    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR03, ChMaterialShellANCF_3443ML_TR03> Shell3443MLTest_TR03(1);
-    //    Shell3443MLTest_TR03.PrintTimingResults("ChElementShellANCF_3443ML_TR03", num_steps);
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR03_GQ442, ChMaterialShellANCF_3443ML_TR03_GQ442> Shell3443MLTest_TR03_GQ442(1);
+    //    Shell3443MLTest_TR03_GQ442.PrintTimingResults("ChElementShellANCF_3443ML_TR03_GQ442", num_steps);
     //}
+    ////{
+    ////    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR04, ChMaterialShellANCF_3443ML_TR04> Shell3443MLTest_TR04(1);
+    ////    Shell3443MLTest_TR04.PrintTimingResults("ChElementShellANCF_3443ML_TR04", num_steps);
+    ////}
+    ////{
+    ////    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR04_GQ332, ChMaterialShellANCF_3443ML_TR04_GQ332> Shell3443MLTest_TR04_GQ332(1);
+    ////    Shell3443MLTest_TR04_GQ332.PrintTimingResults("ChElementShellANCF_3443ML_TR04_GQ332", num_steps);
+    ////}
     //{
-    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR03_GQ332, ChMaterialShellANCF_3443ML_TR03_GQ332> Shell3443MLTest_TR03_GQ332(1);
-    //    Shell3443MLTest_TR03_GQ332.PrintTimingResults("ChElementShellANCF_3443ML_TR03_GQ332", num_steps);
+    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR04_GQ442, ChMaterialShellANCF_3443ML_TR04_GQ442> Shell3443MLTest_TR04_GQ442(1);
+    //    Shell3443MLTest_TR04_GQ442.PrintTimingResults("ChElementShellANCF_3443ML_TR04_GQ442", num_steps);
     //}
-    {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR03_GQ442, ChMaterialShellANCF_3443ML_TR03_GQ442> Shell3443MLTest_TR03_GQ442(1);
-        Shell3443MLTest_TR03_GQ442.PrintTimingResults("ChElementShellANCF_3443ML_TR03_GQ442", num_steps);
-    }
-    //{
-    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR04, ChMaterialShellANCF_3443ML_TR04> Shell3443MLTest_TR04(1);
-    //    Shell3443MLTest_TR04.PrintTimingResults("ChElementShellANCF_3443ML_TR04", num_steps);
-    //}
-    //{
-    //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR04_GQ332, ChMaterialShellANCF_3443ML_TR04_GQ332> Shell3443MLTest_TR04_GQ332(1);
-    //    Shell3443MLTest_TR04_GQ332.PrintTimingResults("ChElementShellANCF_3443ML_TR04_GQ332", num_steps);
-    //}
-    {
-        ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR04_GQ442, ChMaterialShellANCF_3443ML_TR04_GQ442> Shell3443MLTest_TR04_GQ442(1);
-        Shell3443MLTest_TR04_GQ442.PrintTimingResults("ChElementShellANCF_3443ML_TR04_GQ442", num_steps);
-    }
     //{
     //    ANCFShell3443MLTest<num_elements, ChElementShellANCF_3443ML_TR05, ChMaterialShellANCF_3443ML_TR05> Shell3443MLTest_TR05(1);
     //    Shell3443MLTest_TR05.PrintTimingResults("ChElementShellANCF_3443ML_TR05", num_steps);
@@ -2371,38 +2371,38 @@ void Run_ANCFShell_3833ML_Tests() {
     //const int num_elements = 8;
     //int num_steps = 10;
 
+    ////{
+    ////    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833_TR00, ChMaterialShellANCF> Shell3833MLTest_TR00(1);
+    ////    Shell3833MLTest_TR00.PrintTimingResults("ChElementShellANCF_3833_TR00", num_steps);
+    ////}
     //{
-    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833_TR00, ChMaterialShellANCF> Shell3833MLTest_TR00(1);
-    //    Shell3833MLTest_TR00.PrintTimingResults("ChElementShellANCF_3833_TR00", num_steps);
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR01, ChMaterialShellANCF_3833ML_TR01> Shell3833MLTest_TR01(1);
+    //    Shell3833MLTest_TR01.PrintTimingResults("ChElementShellANCF_3833ML_TR01", num_steps);
     //}
-    {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR01, ChMaterialShellANCF_3833ML_TR01> Shell3833MLTest_TR01(1);
-        Shell3833MLTest_TR01.PrintTimingResults("ChElementShellANCF_3833ML_TR01", num_steps);
-    }
+    ////{
+    ////    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR02, ChMaterialShellANCF_3833ML_TR02> Shell3833MLTest_TR02(1);
+    ////    Shell3833MLTest_TR02.PrintTimingResults("ChElementShellANCF_3833ML_TR02", num_steps);
+    ////}
     //{
-    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR02, ChMaterialShellANCF_3833ML_TR02> Shell3833MLTest_TR02(1);
-    //    Shell3833MLTest_TR02.PrintTimingResults("ChElementShellANCF_3833ML_TR02", num_steps);
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR02_GQ332, ChMaterialShellANCF_3833ML_TR02_GQ332> Shell3833MLTest_TR02_GQ332(1);
+    //    Shell3833MLTest_TR02_GQ332.PrintTimingResults("ChElementShellANCF_3833ML_TR02_GQ332", num_steps);
     //}
-    {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR02_GQ332, ChMaterialShellANCF_3833ML_TR02_GQ332> Shell3833MLTest_TR02_GQ332(1);
-        Shell3833MLTest_TR02_GQ332.PrintTimingResults("ChElementShellANCF_3833ML_TR02_GQ332", num_steps);
-    }
+    ////{
+    ////    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR03, ChMaterialShellANCF_3833ML_TR03> Shell3833MLTest_TR03(1);
+    ////    Shell3833MLTest_TR03.PrintTimingResults("ChElementShellANCF_3833ML_TR03", num_steps);
+    ////}
     //{
-    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR03, ChMaterialShellANCF_3833ML_TR03> Shell3833MLTest_TR03(1);
-    //    Shell3833MLTest_TR03.PrintTimingResults("ChElementShellANCF_3833ML_TR03", num_steps);
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR03_GQ332, ChMaterialShellANCF_3833ML_TR03_GQ332> Shell3833MLTest_TR03_GQ332(1);
+    //    Shell3833MLTest_TR03_GQ332.PrintTimingResults("ChElementShellANCF_3833ML_TR03_GQ332", num_steps);
     //}
-    {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR03_GQ332, ChMaterialShellANCF_3833ML_TR03_GQ332> Shell3833MLTest_TR03_GQ332(1);
-        Shell3833MLTest_TR03_GQ332.PrintTimingResults("ChElementShellANCF_3833ML_TR03_GQ332", num_steps);
-    }
+    ////{
+    ////    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR04, ChMaterialShellANCF_3833ML_TR04> Shell3833MLTest_TR04(1);
+    ////    Shell3833MLTest_TR04.PrintTimingResults("ChElementShellANCF_3833ML_TR04", num_steps);
+    ////}
     //{
-    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR04, ChMaterialShellANCF_3833ML_TR04> Shell3833MLTest_TR04(1);
-    //    Shell3833MLTest_TR04.PrintTimingResults("ChElementShellANCF_3833ML_TR04", num_steps);
+    //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR04_GQ332, ChMaterialShellANCF_3833ML_TR04_GQ332> Shell3833MLTest_TR04_GQ332(1);
+    //    Shell3833MLTest_TR04_GQ332.PrintTimingResults("ChElementShellANCF_3833ML_TR04_GQ332", num_steps);
     //}
-    {
-        ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR04_GQ332, ChMaterialShellANCF_3833ML_TR04_GQ332> Shell3833MLTest_TR04_GQ332(1);
-        Shell3833MLTest_TR04_GQ332.PrintTimingResults("ChElementShellANCF_3833ML_TR04_GQ332", num_steps);
-    }
     //{
     //    ANCFShell3833MLTest<num_elements, ChElementShellANCF_3833ML_TR05, ChMaterialShellANCF_3833ML_TR05> Shell3833MLTest_TR05(1);
     //    Shell3833MLTest_TR05.PrintTimingResults("ChElementShellANCF_3833ML_TR05", num_steps);
@@ -2773,34 +2773,34 @@ void Run_ANCFBrick_3843_Tests() {
     //const int num_elements = 24;
     //int num_steps = 100;
 
-    {
-        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR01, ChMaterialBrickANCF_3843_TR01> Brick3843Test_TR01;
-        Brick3843Test_TR01.PrintTimingResults("ChElementBrickANCF_3843_TR01", num_steps);
-    }
     //{
-    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR02, ChMaterialBrickANCF_3843_TR02> Brick3843Test_TR02;
-    //    Brick3843Test_TR02.PrintTimingResults("ChElementBrickANCF_3843_TR02", num_steps);
+    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR01, ChMaterialBrickANCF_3843_TR01> Brick3843Test_TR01;
+    //    Brick3843Test_TR01.PrintTimingResults("ChElementBrickANCF_3843_TR01", num_steps);
     //}
-    {
-        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR02_GQ444, ChMaterialBrickANCF_3843_TR02_GQ444> Brick3843Test_TR02_GQ444;
-        Brick3843Test_TR02_GQ444.PrintTimingResults("ChElementBrickANCF_3843_TR02_GQ444", num_steps);
-    }
+    ////{
+    ////    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR02, ChMaterialBrickANCF_3843_TR02> Brick3843Test_TR02;
+    ////    Brick3843Test_TR02.PrintTimingResults("ChElementBrickANCF_3843_TR02", num_steps);
+    ////}
     //{
-    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR03, ChMaterialBrickANCF_3843_TR03> Brick3843Test_TR03;
-    //    Brick3843Test_TR03.PrintTimingResults("ChElementBrickANCF_3843_TR03", num_steps);
+    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR02_GQ444, ChMaterialBrickANCF_3843_TR02_GQ444> Brick3843Test_TR02_GQ444;
+    //    Brick3843Test_TR02_GQ444.PrintTimingResults("ChElementBrickANCF_3843_TR02_GQ444", num_steps);
     //}
-    {
-        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR03_GQ444, ChMaterialBrickANCF_3843_TR03_GQ444> Brick3843Test_TR03_GQ444;
-        Brick3843Test_TR03_GQ444.PrintTimingResults("ChElementBrickANCF_3843_TR03_GQ444", num_steps);
-    }
+    ////{
+    ////    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR03, ChMaterialBrickANCF_3843_TR03> Brick3843Test_TR03;
+    ////    Brick3843Test_TR03.PrintTimingResults("ChElementBrickANCF_3843_TR03", num_steps);
+    ////}
     //{
-    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR04, ChMaterialBrickANCF_3843_TR04> Brick3843Test_TR04;
-    //    Brick3843Test_TR04.PrintTimingResults("ChElementBrickANCF_3843_TR04", num_steps);
+    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR03_GQ444, ChMaterialBrickANCF_3843_TR03_GQ444> Brick3843Test_TR03_GQ444;
+    //    Brick3843Test_TR03_GQ444.PrintTimingResults("ChElementBrickANCF_3843_TR03_GQ444", num_steps);
     //}
-    {
-        ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR04_GQ444, ChMaterialBrickANCF_3843_TR04_GQ444> Brick3843Test_TR04_GQ444;
-        Brick3843Test_TR04_GQ444.PrintTimingResults("ChElementBrickANCF_3843_TR04_GQ444", num_steps);
-    }
+    ////{
+    ////    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR04, ChMaterialBrickANCF_3843_TR04> Brick3843Test_TR04;
+    ////    Brick3843Test_TR04.PrintTimingResults("ChElementBrickANCF_3843_TR04", num_steps);
+    ////}
+    //{
+    //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR04_GQ444, ChMaterialBrickANCF_3843_TR04_GQ444> Brick3843Test_TR04_GQ444;
+    //    Brick3843Test_TR04_GQ444.PrintTimingResults("ChElementBrickANCF_3843_TR04_GQ444", num_steps);
+    //}
     //{
     //    ANCFBrick3843Test<num_elements, ChElementBrickANCF_3843_TR05, ChMaterialBrickANCF_3843_TR05> Brick3843Test_TR05;
     //    Brick3843Test_TR05.PrintTimingResults("ChElementBrickANCF_3843_TR05", num_steps);
