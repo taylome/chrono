@@ -660,6 +660,7 @@ add_subdirectory(chrono_fsi)
 add_subdirectory(chrono_sensor)
 add_subdirectory(chrono_synchrono)
 add_subdirectory(chrono_csharp)
+add_subdirectory(ancf_analysis)
 
 # Add directories for model libraries
 add_subdirectory(chrono_models)

@@ -437,6 +437,7 @@ set(ChronoEngine_fea_HEADERS
     fea/ChMaterialBeamANCF.h
     fea/ChMaterialShellANCF.h
     fea/ChMaterialHexaANCF.h
+	fea/ChMaterialHexaANCF_MR.h
     fea/ChMaterialShellReissner.h
 	fea/ChMaterialShellKirchhoff.h
 )
@@ -488,6 +489,13 @@ set(ChronoEngine_fea_elements_SOURCES
     fea/ChElementHexaANCF_3813.cpp
     fea/ChElementHexaANCF_3813_9.cpp
     fea/ChElementHexaANCF_3843.cpp
+	fea/ChElementHexaANCF_3843_MR_V1.cpp
+	fea/ChElementHexaANCF_3843_MR_V2.cpp
+	fea/ChElementHexaANCF_3843_MR_V3.cpp
+	fea/ChElementHexaANCF_3843_MR_V4.cpp
+	fea/ChElementHexaANCF_3843_MR_V5.cpp
+	fea/ChElementHexaANCF_3843_MR_V6.cpp
+	fea/ChElementHexaANCF_3843_MR_V7.cpp
     fea/ChElementBeamANCF_3243.cpp
     fea/ChElementBeamANCF_3333.cpp
     fea/ChElementShellANCF_3423.cpp
@@ -520,6 +528,13 @@ set(ChronoEngine_fea_elements_HEADERS
     fea/ChElementHexaCorot_8.h
     fea/ChElementHexaCorot_20.h
     fea/ChElementHexaANCF_3843.h
+	fea/ChElementHexaANCF_3843_MR_V1.h
+	fea/ChElementHexaANCF_3843_MR_V2.h
+	fea/ChElementHexaANCF_3843_MR_V3.h
+	fea/ChElementHexaANCF_3843_MR_V4.h
+	fea/ChElementHexaANCF_3843_MR_V5.h
+	fea/ChElementHexaANCF_3843_MR_V6.h
+	fea/ChElementHexaANCF_3843_MR_V7.h
     fea/ChElementShell.h
     fea/ChElementShellANCF_3423.h
     fea/ChElementShellANCF_3443.h
