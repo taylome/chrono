@@ -877,8 +877,7 @@ void ChElementShellANCF_3443_TR03::ComputeInternalForcesSingleGQPnt(Vector3N& Qi
     ChMatrixNMc<double, 3, 3> Fdot = ebardot * Sbar_xi_D;
 
     // Calculate the Green-Lagrange strain tensor at the current point in Voigt notation as well as the time derivative
-    // of the Green-Lagrange strain tensor in Voigt notation and then multiply it by the elasticity matrix (diagonal)
-    // time the element Jacobian to get the scaled combined second Piola-Kirchhoff tensor in Voigt notation
+    // of the Green-Lagrange strain tensor in Voigt notation and then multiply it by the element Jacobian
     ChVectorN<double, 6> epsilon_combined;
     epsilon_combined(0) = 0.5 * (F.col(0).dot(F.col(0)) - 1) + m_Alpha * F.col(0).dot(Fdot.col(0));
     epsilon_combined(1) = 0.5 * (F.col(1).dot(F.col(1)) - 1) + m_Alpha * F.col(1).dot(Fdot.col(1));

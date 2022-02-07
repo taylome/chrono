@@ -11,24 +11,23 @@
 // =============================================================================
 // Authors: Michael Taylor, Antonio Recuero, Radu Serban
 // =============================================================================
-// Higher order ANCF shell element with 8 nodes. Description of this element (3833_TR03) and its internal forces may be
-// found in: Henrik Ebel, Marko K Matikainen, Vesa-Ville Hurskainen, and Aki Mikkola. Analysis of high-order
-// quadrilateral plate elements based on the absolute nodal coordinate formulation for three - dimensional
-// elasticity.Advances in Mechanical Engineering, 9(6) : 1687814017705069, 2017.
+// Fully Parameterized ANCF shell element with 4 nodes (48DOF). A Description of this element can be found in: Aki M
+// Mikkola and Ahmed A Shabana. A non-incremental finite element procedure for the analysis of large deformation of
+// plates and shells in mechanical system applications. Multibody System Dynamics, 9(3) : 283–309, 2003.
 // =============================================================================
 //
 // =============================================================================
-// TR03 = TR02 + Dense Math
+// TR04 = Gerstmayr and Shabana without Precomputation
 // =============================================================================
 // Mass Matrix = Full 3Nx3N
 // Reduced Number of GQ Points
 // Nodal Coordinates in Matrix Form
-// Textbook Mathematics
+// PK1 Stress
 // No Precomputing Quantities
 // Numeric Jacobian
 // =============================================================================
 
-#include "chrono/fea/ChElementShellANCF_3833_TR03.h"
+#include "chrono/fea/ChElementShellANCF_3443_TR04.h"
 #include "chrono/physics/ChSystem.h"
 
 namespace chrono {
@@ -37,66 +36,47 @@ namespace fea {
 // ------------------------------------------------------------------------------
 // Constructor
 // ------------------------------------------------------------------------------
-ChElementShellANCF_3833_TR03::ChElementShellANCF_3833_TR03()
+
+ChElementShellANCF_3443_TR04::ChElementShellANCF_3443_TR04()
     : m_numLayers(0), m_lenX(0), m_lenY(0), m_thicknessZ(0), m_midsurfoffset(0), m_Alpha(0), m_damping_enabled(false) {
-    m_nodes.resize(8);
+    m_nodes.resize(4);
 }
 
 // ------------------------------------------------------------------------------
 // Set element nodes
 // ------------------------------------------------------------------------------
 
-void ChElementShellANCF_3833_TR03::SetNodes(std::shared_ptr<ChNodeFEAxyzDD> nodeA,
-                                            std::shared_ptr<ChNodeFEAxyzDD> nodeB,
-                                            std::shared_ptr<ChNodeFEAxyzDD> nodeC,
-                                            std::shared_ptr<ChNodeFEAxyzDD> nodeD,
-                                            std::shared_ptr<ChNodeFEAxyzDD> nodeE,
-                                            std::shared_ptr<ChNodeFEAxyzDD> nodeF,
-                                            std::shared_ptr<ChNodeFEAxyzDD> nodeG,
-                                            std::shared_ptr<ChNodeFEAxyzDD> nodeH) {
+void ChElementShellANCF_3443_TR04::SetNodes(std::shared_ptr<ChNodeFEAxyzDDD> nodeA,
+                                            std::shared_ptr<ChNodeFEAxyzDDD> nodeB,
+                                            std::shared_ptr<ChNodeFEAxyzDDD> nodeC,
+                                            std::shared_ptr<ChNodeFEAxyzDDD> nodeD) {
     assert(nodeA);
     assert(nodeB);
     assert(nodeC);
     assert(nodeD);
-    assert(nodeE);
-    assert(nodeF);
-    assert(nodeG);
-    assert(nodeH);
 
     m_nodes[0] = nodeA;
     m_nodes[1] = nodeB;
     m_nodes[2] = nodeC;
     m_nodes[3] = nodeD;
-    m_nodes[4] = nodeE;
-    m_nodes[5] = nodeF;
-    m_nodes[6] = nodeG;
-    m_nodes[7] = nodeH;
 
     std::vector<ChVariables*> mvars;
     mvars.push_back(&m_nodes[0]->Variables());
     mvars.push_back(&m_nodes[0]->Variables_D());
     mvars.push_back(&m_nodes[0]->Variables_DD());
+    mvars.push_back(&m_nodes[0]->Variables_DDD());
     mvars.push_back(&m_nodes[1]->Variables());
     mvars.push_back(&m_nodes[1]->Variables_D());
     mvars.push_back(&m_nodes[1]->Variables_DD());
+    mvars.push_back(&m_nodes[1]->Variables_DDD());
     mvars.push_back(&m_nodes[2]->Variables());
     mvars.push_back(&m_nodes[2]->Variables_D());
     mvars.push_back(&m_nodes[2]->Variables_DD());
+    mvars.push_back(&m_nodes[2]->Variables_DDD());
     mvars.push_back(&m_nodes[3]->Variables());
     mvars.push_back(&m_nodes[3]->Variables_D());
     mvars.push_back(&m_nodes[3]->Variables_DD());
-    mvars.push_back(&m_nodes[4]->Variables());
-    mvars.push_back(&m_nodes[4]->Variables_D());
-    mvars.push_back(&m_nodes[4]->Variables_DD());
-    mvars.push_back(&m_nodes[5]->Variables());
-    mvars.push_back(&m_nodes[5]->Variables_D());
-    mvars.push_back(&m_nodes[5]->Variables_DD());
-    mvars.push_back(&m_nodes[6]->Variables());
-    mvars.push_back(&m_nodes[6]->Variables_D());
-    mvars.push_back(&m_nodes[6]->Variables_DD());
-    mvars.push_back(&m_nodes[7]->Variables());
-    mvars.push_back(&m_nodes[7]->Variables_D());
-    mvars.push_back(&m_nodes[7]->Variables_DD());
+    mvars.push_back(&m_nodes[3]->Variables_DDD());
 
     Kmatr.SetVariables(mvars);
 
@@ -109,7 +89,7 @@ void ChElementShellANCF_3833_TR03::SetNodes(std::shared_ptr<ChNodeFEAxyzDD> node
 // Add a layer.
 // -----------------------------------------------------------------------------
 
-void ChElementShellANCF_3833_TR03::AddLayer(double thickness,
+void ChElementShellANCF_3443_TR04::AddLayer(double thickness,
                                             double theta,
                                             std::shared_ptr<ChMaterialShellANCF> material) {
     m_layers.push_back(Layer(thickness, theta, material));
@@ -124,7 +104,7 @@ void ChElementShellANCF_3833_TR03::AddLayer(double thickness,
 
 // Specify the element dimensions.
 
-void ChElementShellANCF_3833_TR03::SetDimensions(double lenX, double lenY) {
+void ChElementShellANCF_3443_TR04::SetDimensions(double lenX, double lenY) {
     m_lenX = lenX;
     m_lenY = lenY;
 }
@@ -132,13 +112,13 @@ void ChElementShellANCF_3833_TR03::SetDimensions(double lenX, double lenY) {
 // Offset the midsurface of the composite shell element.  A positive value shifts the element's midsurface upward
 // along the elements zeta direction.  The offset should be provided in model units.
 
-void ChElementShellANCF_3833_TR03::SetMidsurfaceOffset(const double offset) {
+void ChElementShellANCF_3443_TR04::SetMidsurfaceOffset(const double offset) {
     m_midsurfoffset = offset;
 }
 
 // Set the value for the single term structural damping coefficient.
 
-void ChElementShellANCF_3833_TR03::SetAlphaDamp(double a) {
+void ChElementShellANCF_3443_TR04::SetAlphaDamp(double a) {
     m_Alpha = a;
     if (std::abs(m_Alpha) > 1e-10)
         m_damping_enabled = true;
@@ -156,7 +136,7 @@ void ChElementShellANCF_3833_TR03::SetAlphaDamp(double a) {
 
 // Get the Green-Lagrange strain tensor at the normalized element coordinates (xi, eta, zeta) [-1...1]
 
-ChMatrix33<> ChElementShellANCF_3833_TR03::GetGreenLagrangeStrain(const double xi,
+ChMatrix33<> ChElementShellANCF_3443_TR04::GetGreenLagrangeStrain(const double xi,
                                                                   const double eta,
                                                                   const double zeta) {
     MatrixNx3c Sxi_D;  // Matrix of normalized shape function derivatives
@@ -183,7 +163,7 @@ ChMatrix33<> ChElementShellANCF_3833_TR03::GetGreenLagrangeStrain(const double x
 // state of the element for the specified layer number (0 indexed) since the stress can be discontinuous at the layer
 // boundary.   "layer_zeta" spans -1 to 1 from the bottom surface to the top surface
 
-ChMatrix33<> ChElementShellANCF_3833_TR03::GetPK2Stress(const double layer,
+ChMatrix33<> ChElementShellANCF_3443_TR04::GetPK2Stress(const double layer,
                                                         const double xi,
                                                         const double eta,
                                                         const double layer_zeta) {
@@ -257,7 +237,7 @@ ChMatrix33<> ChElementShellANCF_3833_TR03::GetPK2Stress(const double layer,
 // of the element for the specified layer number (0 indexed) since the stress can be discontinuous at the layer
 // boundary.  "layer_zeta" spans -1 to 1 from the bottom surface to the top surface
 
-double ChElementShellANCF_3833_TR03::GetVonMissesStress(const double layer,
+double ChElementShellANCF_3443_TR04::GetVonMissesStress(const double layer,
                                                         const double xi,
                                                         const double eta,
                                                         const double layer_zeta) {
@@ -340,7 +320,7 @@ double ChElementShellANCF_3833_TR03::GetVonMissesStress(const double layer,
 
 // Initial element setup.
 
-void ChElementShellANCF_3833_TR03::SetupInitial(ChSystem* system) {
+void ChElementShellANCF_3443_TR04::SetupInitial(ChSystem* system) {
     // Store the initial nodal coordinates. These values define the reference configuration of the element.
     CalcCoordMatrix(m_ebar0);
 
@@ -351,74 +331,52 @@ void ChElementShellANCF_3833_TR03::SetupInitial(ChSystem* system) {
 
 // Fill the D vector with the current field values at the element nodes.
 
-void ChElementShellANCF_3833_TR03::GetStateBlock(ChVectorDynamic<>& mD) {
+void ChElementShellANCF_3443_TR04::GetStateBlock(ChVectorDynamic<>& mD) {
     mD.segment(0, 3) = m_nodes[0]->GetPos().eigen();
     mD.segment(3, 3) = m_nodes[0]->GetD().eigen();
     mD.segment(6, 3) = m_nodes[0]->GetDD().eigen();
-    mD.segment(9, 3) = m_nodes[1]->GetPos().eigen();
-    mD.segment(12, 3) = m_nodes[1]->GetD().eigen();
-    mD.segment(15, 3) = m_nodes[1]->GetDD().eigen();
-    mD.segment(18, 3) = m_nodes[2]->GetPos().eigen();
-    mD.segment(21, 3) = m_nodes[2]->GetD().eigen();
-    mD.segment(24, 3) = m_nodes[2]->GetDD().eigen();
-    mD.segment(27, 3) = m_nodes[3]->GetPos().eigen();
-    mD.segment(30, 3) = m_nodes[3]->GetD().eigen();
-    mD.segment(33, 3) = m_nodes[3]->GetDD().eigen();
-    mD.segment(36, 3) = m_nodes[4]->GetPos().eigen();
-    mD.segment(39, 3) = m_nodes[4]->GetD().eigen();
-    mD.segment(42, 3) = m_nodes[4]->GetDD().eigen();
-    mD.segment(45, 3) = m_nodes[5]->GetPos().eigen();
-    mD.segment(48, 3) = m_nodes[5]->GetD().eigen();
-    mD.segment(51, 3) = m_nodes[5]->GetDD().eigen();
-    mD.segment(54, 3) = m_nodes[6]->GetPos().eigen();
-    mD.segment(57, 3) = m_nodes[6]->GetD().eigen();
-    mD.segment(60, 3) = m_nodes[6]->GetDD().eigen();
-    mD.segment(63, 3) = m_nodes[7]->GetPos().eigen();
-    mD.segment(66, 3) = m_nodes[7]->GetD().eigen();
-    mD.segment(69, 3) = m_nodes[7]->GetDD().eigen();
+    mD.segment(9, 3) = m_nodes[0]->GetDDD().eigen();
+
+    mD.segment(12, 3) = m_nodes[1]->GetPos().eigen();
+    mD.segment(15, 3) = m_nodes[1]->GetD().eigen();
+    mD.segment(18, 3) = m_nodes[1]->GetDD().eigen();
+    mD.segment(21, 3) = m_nodes[1]->GetDDD().eigen();
+
+    mD.segment(24, 3) = m_nodes[2]->GetPos().eigen();
+    mD.segment(27, 3) = m_nodes[2]->GetD().eigen();
+    mD.segment(30, 3) = m_nodes[2]->GetDD().eigen();
+    mD.segment(33, 3) = m_nodes[2]->GetDDD().eigen();
+
+    mD.segment(36, 3) = m_nodes[3]->GetPos().eigen();
+    mD.segment(39, 3) = m_nodes[3]->GetD().eigen();
+    mD.segment(42, 3) = m_nodes[3]->GetDD().eigen();
+    mD.segment(45, 3) = m_nodes[3]->GetDDD().eigen();
 }
 
 // State update.
 
-void ChElementShellANCF_3833_TR03::Update() {
+void ChElementShellANCF_3443_TR04::Update() {
     ChElementGeneric::Update();
 }
 
 // Return the mass matrix in full sparse form.
 
-void ChElementShellANCF_3833_TR03::ComputeMmatrixGlobal(ChMatrixRef M) {
+void ChElementShellANCF_3443_TR04::ComputeMmatrixGlobal(ChMatrixRef M) {
     M = m_MassMatrix;
 }
 
 // This class computes and adds corresponding masses to ElementGeneric member m_TotalMass
 
-void ChElementShellANCF_3833_TR03::ComputeNodalMass() {
-    m_nodes[0]->m_TotalMass += m_MassMatrix(0, 0) + m_MassMatrix(0, 9) + m_MassMatrix(0, 18) + m_MassMatrix(0, 27) +
-                               m_MassMatrix(0, 36) + m_MassMatrix(0, 45) + m_MassMatrix(0, 54) + m_MassMatrix(0, 63);
-    m_nodes[1]->m_TotalMass += m_MassMatrix(9, 0) + m_MassMatrix(9, 9) + m_MassMatrix(9, 18) + m_MassMatrix(9, 27) +
-                               m_MassMatrix(9, 36) + m_MassMatrix(9, 45) + m_MassMatrix(9, 54) + m_MassMatrix(9, 63);
-    m_nodes[2]->m_TotalMass += m_MassMatrix(18, 0) + m_MassMatrix(18, 9) + m_MassMatrix(18, 18) + m_MassMatrix(18, 27) +
-                               m_MassMatrix(18, 36) + m_MassMatrix(18, 45) + m_MassMatrix(18, 54) +
-                               m_MassMatrix(18, 63);
-    m_nodes[3]->m_TotalMass += m_MassMatrix(27, 0) + m_MassMatrix(27, 9) + m_MassMatrix(27, 18) + m_MassMatrix(27, 27) +
-                               m_MassMatrix(27, 36) + m_MassMatrix(27, 45) + m_MassMatrix(27, 54) +
-                               m_MassMatrix(27, 63);
-    m_nodes[4]->m_TotalMass += m_MassMatrix(36, 0) + m_MassMatrix(36, 9) + m_MassMatrix(36, 18) + m_MassMatrix(36, 27) +
-                               m_MassMatrix(36, 36) + m_MassMatrix(36, 45) + m_MassMatrix(36, 54) +
-                               m_MassMatrix(36, 63);
-    m_nodes[5]->m_TotalMass += m_MassMatrix(45, 0) + m_MassMatrix(45, 9) + m_MassMatrix(45, 18) + m_MassMatrix(45, 27) +
-                               m_MassMatrix(45, 36) + m_MassMatrix(45, 45) + m_MassMatrix(45, 54) +
-                               m_MassMatrix(45, 63);
-    m_nodes[6]->m_TotalMass += m_MassMatrix(54, 0) + m_MassMatrix(54, 9) + m_MassMatrix(54, 18) + m_MassMatrix(54, 27) +
-                               m_MassMatrix(56, 36) + m_MassMatrix(54, 45) + m_MassMatrix(54, 54) +
-                               m_MassMatrix(54, 63);
-    m_nodes[7]->m_TotalMass += m_MassMatrix(63, 0) + m_MassMatrix(63, 9) + m_MassMatrix(63, 18) + m_MassMatrix(63, 27) +
-                               m_MassMatrix(0, 36) + m_MassMatrix(63, 45) + m_MassMatrix(63, 54) + m_MassMatrix(63, 63);
+void ChElementShellANCF_3443_TR04::ComputeNodalMass() {
+    m_nodes[0]->m_TotalMass += m_MassMatrix(0, 0) + m_MassMatrix(0, 12) + m_MassMatrix(0, 24) + m_MassMatrix(0, 36);
+    m_nodes[1]->m_TotalMass += m_MassMatrix(12, 0) + m_MassMatrix(12, 12) + m_MassMatrix(12, 24) + m_MassMatrix(12, 36);
+    m_nodes[2]->m_TotalMass += m_MassMatrix(24, 0) + m_MassMatrix(24, 12) + m_MassMatrix(24, 24) + m_MassMatrix(24, 36);
+    m_nodes[3]->m_TotalMass += m_MassMatrix(36, 0) + m_MassMatrix(36, 12) + m_MassMatrix(36, 24) + m_MassMatrix(36, 36);
 }
 
 // Compute the generalized internal force vector for the current nodal coordinates and set the value in the Fi vector.
 
-void ChElementShellANCF_3833_TR03::ComputeInternalForces(ChVectorDynamic<>& Fi) {
+void ChElementShellANCF_3443_TR04::ComputeInternalForces(ChVectorDynamic<>& Fi) {
     assert(Fi.size() == 3 * NSF);
 
     Matrix3xN ebar;
@@ -432,7 +390,7 @@ void ChElementShellANCF_3833_TR03::ComputeInternalForces(ChVectorDynamic<>& Fi) 
 // Calculate the global matrix H as a linear combination of K, R, and M:
 //   H = Mfactor * [M] + Kfactor * [K] + Rfactor * [R]
 
-void ChElementShellANCF_3833_TR03::ComputeKRMmatricesGlobal(ChMatrixRef H,
+void ChElementShellANCF_3443_TR04::ComputeKRMmatricesGlobal(ChMatrixRef H,
                                                             double Kfactor,
                                                             double Rfactor,
                                                             double Mfactor) {
@@ -471,7 +429,7 @@ void ChElementShellANCF_3833_TR03::ComputeKRMmatricesGlobal(ChMatrixRef H,
 }
 
 // Compute the generalized force vector due to gravity using the efficient ANCF specific method
-void ChElementShellANCF_3833_TR03::ComputeGravityForces(ChVectorDynamic<>& Fg, const ChVector<>& G_acc) {
+void ChElementShellANCF_3443_TR04::ComputeGravityForces(ChVectorDynamic<>& Fg, const ChVector<>& G_acc) {
     assert(Fg.size() == 3 * NSF);
 
     // Calculate and add the generalized force due to gravity to the generalized internal force vector for the element.
@@ -488,7 +446,7 @@ void ChElementShellANCF_3833_TR03::ComputeGravityForces(ChVectorDynamic<>& Fg, c
 // Interface to ChElementShell base class
 // -----------------------------------------------------------------------------
 
-void ChElementShellANCF_3833_TR03::EvaluateSectionFrame(const double xi,
+void ChElementShellANCF_3443_TR04::EvaluateSectionFrame(const double xi,
                                                         const double eta,
                                                         ChVector<>& point,
                                                         ChQuaternion<>& rot) {
@@ -520,7 +478,7 @@ void ChElementShellANCF_3833_TR03::EvaluateSectionFrame(const double xi,
     rot = msect.Get_A_quaternion();
 }
 
-void ChElementShellANCF_3833_TR03::EvaluateSectionPoint(const double xi, const double eta, ChVector<>& point) {
+void ChElementShellANCF_3443_TR04::EvaluateSectionPoint(const double xi, const double eta, ChVector<>& point) {
     VectorN Sxi_compact;
     Calc_Sxi_compact(Sxi_compact, xi, eta, 0, m_thicknessZ, m_midsurfoffset);
 
@@ -531,7 +489,7 @@ void ChElementShellANCF_3833_TR03::EvaluateSectionPoint(const double xi, const d
     point = e_bar * Sxi_compact;
 }
 
-void ChElementShellANCF_3833_TR03::EvaluateSectionVelNorm(const double xi, const double eta, ChVector<>& Result) {
+void ChElementShellANCF_3443_TR04::EvaluateSectionVelNorm(const double xi, const double eta, ChVector<>& Result) {
     VectorN Sxi_compact;
     Calc_Sxi_compact(Sxi_compact, xi, eta, 0, m_thicknessZ, m_midsurfoffset);
 
@@ -548,95 +506,73 @@ void ChElementShellANCF_3833_TR03::EvaluateSectionVelNorm(const double xi, const
 
 // Gets all the DOFs packed in a single vector (position part).
 
-void ChElementShellANCF_3833_TR03::LoadableGetStateBlock_x(int block_offset, ChState& mD) {
+void ChElementShellANCF_3443_TR04::LoadableGetStateBlock_x(int block_offset, ChState& mD) {
     mD.segment(block_offset + 0, 3) = m_nodes[0]->GetPos().eigen();
     mD.segment(block_offset + 3, 3) = m_nodes[0]->GetD().eigen();
     mD.segment(block_offset + 6, 3) = m_nodes[0]->GetDD().eigen();
+    mD.segment(block_offset + 9, 3) = m_nodes[0]->GetDDD().eigen();
 
-    mD.segment(block_offset + 9, 3) = m_nodes[1]->GetPos().eigen();
-    mD.segment(block_offset + 12, 3) = m_nodes[1]->GetD().eigen();
-    mD.segment(block_offset + 15, 3) = m_nodes[1]->GetDD().eigen();
+    mD.segment(block_offset + 12, 3) = m_nodes[1]->GetPos().eigen();
+    mD.segment(block_offset + 15, 3) = m_nodes[1]->GetD().eigen();
+    mD.segment(block_offset + 18, 3) = m_nodes[1]->GetDD().eigen();
+    mD.segment(block_offset + 21, 3) = m_nodes[1]->GetDDD().eigen();
 
-    mD.segment(block_offset + 18, 3) = m_nodes[2]->GetPos().eigen();
-    mD.segment(block_offset + 21, 3) = m_nodes[2]->GetD().eigen();
-    mD.segment(block_offset + 24, 3) = m_nodes[2]->GetDD().eigen();
+    mD.segment(block_offset + 24, 3) = m_nodes[2]->GetPos().eigen();
+    mD.segment(block_offset + 27, 3) = m_nodes[2]->GetD().eigen();
+    mD.segment(block_offset + 30, 3) = m_nodes[2]->GetDD().eigen();
+    mD.segment(block_offset + 33, 3) = m_nodes[2]->GetDDD().eigen();
 
-    mD.segment(block_offset + 27, 3) = m_nodes[3]->GetPos().eigen();
-    mD.segment(block_offset + 30, 3) = m_nodes[3]->GetD().eigen();
-    mD.segment(block_offset + 33, 3) = m_nodes[3]->GetDD().eigen();
-
-    mD.segment(block_offset + 36, 3) = m_nodes[4]->GetPos().eigen();
-    mD.segment(block_offset + 39, 3) = m_nodes[4]->GetD().eigen();
-    mD.segment(block_offset + 42, 3) = m_nodes[4]->GetDD().eigen();
-
-    mD.segment(block_offset + 45, 3) = m_nodes[5]->GetPos().eigen();
-    mD.segment(block_offset + 48, 3) = m_nodes[5]->GetD().eigen();
-    mD.segment(block_offset + 51, 3) = m_nodes[5]->GetDD().eigen();
-
-    mD.segment(block_offset + 54, 3) = m_nodes[6]->GetPos().eigen();
-    mD.segment(block_offset + 57, 3) = m_nodes[6]->GetD().eigen();
-    mD.segment(block_offset + 60, 3) = m_nodes[6]->GetDD().eigen();
-
-    mD.segment(block_offset + 63, 3) = m_nodes[7]->GetPos().eigen();
-    mD.segment(block_offset + 66, 3) = m_nodes[7]->GetD().eigen();
-    mD.segment(block_offset + 69, 3) = m_nodes[7]->GetDD().eigen();
+    mD.segment(block_offset + 36, 3) = m_nodes[3]->GetPos().eigen();
+    mD.segment(block_offset + 39, 3) = m_nodes[3]->GetD().eigen();
+    mD.segment(block_offset + 42, 3) = m_nodes[3]->GetDD().eigen();
+    mD.segment(block_offset + 45, 3) = m_nodes[3]->GetDDD().eigen();
 }
 
 // Gets all the DOFs packed in a single vector (velocity part).
 
-void ChElementShellANCF_3833_TR03::LoadableGetStateBlock_w(int block_offset, ChStateDelta& mD) {
+void ChElementShellANCF_3443_TR04::LoadableGetStateBlock_w(int block_offset, ChStateDelta& mD) {
     mD.segment(block_offset + 0, 3) = m_nodes[0]->GetPos_dt().eigen();
     mD.segment(block_offset + 3, 3) = m_nodes[0]->GetD_dt().eigen();
     mD.segment(block_offset + 6, 3) = m_nodes[0]->GetDD_dt().eigen();
+    mD.segment(block_offset + 9, 3) = m_nodes[0]->GetDDD_dt().eigen();
 
-    mD.segment(block_offset + 9, 3) = m_nodes[1]->GetPos_dt().eigen();
-    mD.segment(block_offset + 12, 3) = m_nodes[1]->GetD_dt().eigen();
-    mD.segment(block_offset + 15, 3) = m_nodes[1]->GetDD_dt().eigen();
+    mD.segment(block_offset + 12, 3) = m_nodes[1]->GetPos_dt().eigen();
+    mD.segment(block_offset + 15, 3) = m_nodes[1]->GetD_dt().eigen();
+    mD.segment(block_offset + 18, 3) = m_nodes[1]->GetDD_dt().eigen();
+    mD.segment(block_offset + 21, 3) = m_nodes[1]->GetDDD_dt().eigen();
 
-    mD.segment(block_offset + 18, 3) = m_nodes[2]->GetPos_dt().eigen();
-    mD.segment(block_offset + 21, 3) = m_nodes[2]->GetD_dt().eigen();
-    mD.segment(block_offset + 24, 3) = m_nodes[2]->GetDD_dt().eigen();
+    mD.segment(block_offset + 24, 3) = m_nodes[2]->GetPos_dt().eigen();
+    mD.segment(block_offset + 27, 3) = m_nodes[2]->GetD_dt().eigen();
+    mD.segment(block_offset + 30, 3) = m_nodes[2]->GetDD_dt().eigen();
+    mD.segment(block_offset + 33, 3) = m_nodes[2]->GetDDD_dt().eigen();
 
-    mD.segment(block_offset + 27, 3) = m_nodes[3]->GetPos_dt().eigen();
-    mD.segment(block_offset + 30, 3) = m_nodes[3]->GetD_dt().eigen();
-    mD.segment(block_offset + 33, 3) = m_nodes[3]->GetDD_dt().eigen();
-
-    mD.segment(block_offset + 36, 3) = m_nodes[4]->GetPos_dt().eigen();
-    mD.segment(block_offset + 39, 3) = m_nodes[4]->GetD_dt().eigen();
-    mD.segment(block_offset + 42, 3) = m_nodes[4]->GetDD_dt().eigen();
-
-    mD.segment(block_offset + 45, 3) = m_nodes[5]->GetPos_dt().eigen();
-    mD.segment(block_offset + 48, 3) = m_nodes[5]->GetD_dt().eigen();
-    mD.segment(block_offset + 51, 3) = m_nodes[5]->GetDD_dt().eigen();
-
-    mD.segment(block_offset + 54, 3) = m_nodes[6]->GetPos_dt().eigen();
-    mD.segment(block_offset + 57, 3) = m_nodes[6]->GetD_dt().eigen();
-    mD.segment(block_offset + 60, 3) = m_nodes[6]->GetDD_dt().eigen();
-
-    mD.segment(block_offset + 63, 3) = m_nodes[7]->GetPos_dt().eigen();
-    mD.segment(block_offset + 66, 3) = m_nodes[7]->GetD_dt().eigen();
-    mD.segment(block_offset + 69, 3) = m_nodes[7]->GetDD_dt().eigen();
+    mD.segment(block_offset + 36, 3) = m_nodes[3]->GetPos_dt().eigen();
+    mD.segment(block_offset + 39, 3) = m_nodes[3]->GetD_dt().eigen();
+    mD.segment(block_offset + 42, 3) = m_nodes[3]->GetDD_dt().eigen();
+    mD.segment(block_offset + 45, 3) = m_nodes[3]->GetDDD_dt().eigen();
 }
 
 /// Increment all DOFs using a delta.
 
-void ChElementShellANCF_3833_TR03::LoadableStateIncrement(const unsigned int off_x,
+void ChElementShellANCF_3443_TR04::LoadableStateIncrement(const unsigned int off_x,
                                                           ChState& x_new,
                                                           const ChState& x,
                                                           const unsigned int off_v,
                                                           const ChStateDelta& Dv) {
-    for (int i = 0; i < 8; i++) {
-        this->m_nodes[i]->NodeIntStateIncrement(off_x + 9 * i, x_new, x, off_v + 9 * i, Dv);
-    }
+    m_nodes[0]->NodeIntStateIncrement(off_x, x_new, x, off_v, Dv);
+    m_nodes[1]->NodeIntStateIncrement(off_x + 12, x_new, x, off_v + 12, Dv);
+    m_nodes[2]->NodeIntStateIncrement(off_x + 24, x_new, x, off_v + 24, Dv);
+    m_nodes[3]->NodeIntStateIncrement(off_x + 36, x_new, x, off_v + 36, Dv);
 }
 
 // Get the pointers to the contained ChVariables, appending to the mvars vector.
 
-void ChElementShellANCF_3833_TR03::LoadableGetVariables(std::vector<ChVariables*>& mvars) {
+void ChElementShellANCF_3443_TR04::LoadableGetVariables(std::vector<ChVariables*>& mvars) {
     for (int i = 0; i < m_nodes.size(); ++i) {
         mvars.push_back(&m_nodes[i]->Variables());
         mvars.push_back(&m_nodes[i]->Variables_D());
         mvars.push_back(&m_nodes[i]->Variables_DD());
+        mvars.push_back(&m_nodes[i]->Variables_DDD());
     }
 }
 
@@ -645,7 +581,7 @@ void ChElementShellANCF_3833_TR03::LoadableGetVariables(std::vector<ChVariables*
 // For this ANCF element, only the first 6 entries in F are used in the calculation.  The first three entries is
 // the applied force in global coordinates and the second 3 entries is the applied moment in global space.
 
-void ChElementShellANCF_3833_TR03::ComputeNF(
+void ChElementShellANCF_3443_TR04::ComputeNF(
     const double xi,             // parametric coordinate in surface
     const double eta,            // parametric coordinate in surface
     ChVectorDynamic<>& Qi,       // Return result of Q = N'*F  here
@@ -713,7 +649,7 @@ void ChElementShellANCF_3833_TR03::ComputeNF(
 // For this ANCF element, only the first 6 entries in F are used in the calculation.  The first three entries is
 // the applied force in global coordinates and the second 3 entries is the applied moment in global space.
 
-void ChElementShellANCF_3833_TR03::ComputeNF(
+void ChElementShellANCF_3443_TR04::ComputeNF(
     const double xi,             // parametric coordinate in volume
     const double eta,            // parametric coordinate in volume
     const double zeta,           // parametric coordinate in volume
@@ -779,7 +715,7 @@ void ChElementShellANCF_3833_TR03::ComputeNF(
 
 // Calculate the average element density (needed for ChLoaderVolumeGravity).
 
-double ChElementShellANCF_3833_TR03::GetDensity() {
+double ChElementShellANCF_3443_TR04::GetDensity() {
     double tot_density = 0;
     for (int kl = 0; kl < m_numLayers; kl++) {
         double rho = m_layers[kl].GetMaterial()->Get_rho();
@@ -791,7 +727,7 @@ double ChElementShellANCF_3833_TR03::GetDensity() {
 
 // Calculate normal to the midsurface at coordinates (xi, eta).
 
-ChVector<> ChElementShellANCF_3833_TR03::ComputeNormal(const double xi, const double eta) {
+ChVector<> ChElementShellANCF_3443_TR04::ComputeNormal(const double xi, const double eta) {
     VectorN Sxi_zeta_compact;
     Calc_Sxi_zeta_compact(Sxi_zeta_compact, xi, eta, 0, m_thicknessZ, m_midsurfoffset);
 
@@ -808,18 +744,18 @@ ChVector<> ChElementShellANCF_3833_TR03::ComputeNormal(const double xi, const do
 // Mass Matrix & Generalized Force Due to Gravity Calculation
 // -----------------------------------------------------------------------------
 
-void ChElementShellANCF_3833_TR03::ComputeMassMatrixAndGravityForce() {
-    // For this element, the mass matrix integrand is of order 9 in xi, 9 in eta, and 9 in zeta.
-    // 5 GQ Points are needed in the xi, eta, and zeta directions for exact integration of the element's mass matrix,
-    // even if the reference configuration is not straight. Since the major pieces of the generalized force due to
-    // gravity can also be used to calculate the mass matrix, these calculations are performed at the same time.  Only
-    // the matrix that scales the acceleration due to gravity is calculated at this time so that any changes to the
-    // acceleration due to gravity in the system are correctly accounted for in the generalized internal force
-    // calculation.
+void ChElementShellANCF_3443_TR04::ComputeMassMatrixAndGravityForce() {
+    // For this element, the mass matrix integrand is of order 12 in xi, 12 in eta, and 4 in zeta.
+    // 7 GQ Points are needed in the xi & eta directions and 3 GQ Points are needed in the zeta direction for
+    // exact integration of the element's mass matrix, even if the reference configuration is not straight. Since the
+    // major pieces of the generalized force due to gravity can also be used to calculate the mass matrix, these
+    // calculations are performed at the same time.  Only the matrix that scales the acceleration due to gravity is
+    // calculated at this time so that any changes to the acceleration due to gravity in the system are correctly
+    // accounted for in the generalized internal force calculation.
 
     ChQuadratureTables* GQTable = GetStaticGQTables();
-    unsigned int GQ_idx_xi_eta = 4;  // 5 Point Gauss-Quadrature;
-    unsigned int GQ_idx_zeta = 4;    // 5 Point Gauss-Quadrature;
+    unsigned int GQ_idx_xi_eta = 6;  // 7 Point Gauss-Quadrature;
+    unsigned int GQ_idx_zeta = 2;    // 3 Point Gauss-Quadrature;
 
     // Mass Matrix in its compact matrix form.  Since the mass matrix is symmetric, just the upper diagonal entries will
     // be stored.
@@ -873,7 +809,7 @@ void ChElementShellANCF_3833_TR03::ComputeMassMatrixAndGravityForce() {
 // Elastic force calculation
 // -----------------------------------------------------------------------------
 
-void ChElementShellANCF_3833_TR03::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
+void ChElementShellANCF_3443_TR04::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
                                                                 const Matrix3xN& ebar,
                                                                 const Matrix3xN& ebardot) {
     // Set Fi to zero since the results from each GQ point will be added to this vector
@@ -913,7 +849,7 @@ void ChElementShellANCF_3833_TR03::ComputeInternalForcesAtState(ChVectorDynamic<
     }
 }
 
-void ChElementShellANCF_3833_TR03::ComputeInternalForcesSingleGQPnt(Vector3N& Qi,
+void ChElementShellANCF_3443_TR04::ComputeInternalForcesSingleGQPnt(Vector3N& Qi,
                                                                     double xi,
                                                                     double eta,
                                                                     double zeta,
@@ -951,30 +887,24 @@ void ChElementShellANCF_3833_TR03::ComputeInternalForcesSingleGQPnt(Vector3N& Qi
     epsilon_combined(5) = F.col(0).dot(F.col(1)) + m_Alpha * (F.col(0).dot(Fdot.col(1)) + Fdot.col(0).dot(F.col(1)));
     epsilon_combined *= -J_0xi.determinant();
 
-    // Calculate the partial derivative of the Green-Lagrange strain tensor in Voigt notation with respect to the
-    // element position coordinates.
-    ChMatrixNMc<double, 3 * NSF, 6> depsilon_de;
+    // Calculate the 2nd Piola Kirchhoff Stress tensor in Voigt notation
+    ChVectorN<double, 6> sigmaPK2_combined = D * epsilon_combined;
 
-    Eigen::Map<MatrixNx3> depsilon_de_col0(depsilon_de.col(0).data(), NSF, 3);
-    depsilon_de_col0.noalias() = Sbar_xi_D.col(0) * F.col(0).transpose();
-
-    Eigen::Map<MatrixNx3> depsilon_de_col1(depsilon_de.col(1).data(), NSF, 3);
-    depsilon_de_col1.noalias() = Sbar_xi_D.col(1) * F.col(1).transpose();
-
-    Eigen::Map<MatrixNx3> depsilon_de_col2(depsilon_de.col(2).data(), NSF, 3);
-    depsilon_de_col2.noalias() = Sbar_xi_D.col(2) * F.col(2).transpose();
-
-    Eigen::Map<MatrixNx3> depsilon_de_col3(depsilon_de.col(3).data(), NSF, 3);
-    depsilon_de_col3.noalias() = Sbar_xi_D.col(1) * F.col(2).transpose() + Sbar_xi_D.col(2) * F.col(1).transpose();
-
-    Eigen::Map<MatrixNx3> depsilon_de_col4(depsilon_de.col(4).data(), NSF, 3);
-    depsilon_de_col4.noalias() = Sbar_xi_D.col(0) * F.col(2).transpose() + Sbar_xi_D.col(2) * F.col(0).transpose();
-
-    Eigen::Map<MatrixNx3> depsilon_de_col5(depsilon_de.col(5).data(), NSF, 3);
-    depsilon_de_col5.noalias() = Sbar_xi_D.col(0) * F.col(1).transpose() + Sbar_xi_D.col(1) * F.col(0).transpose();
+    // 2nd Piola Kirchhoff Stress tensor in tensor form
+    ChMatrixNM<double, 3, 3> SPK2;
+    SPK2(0, 0) = sigmaPK2_combined(0);
+    SPK2(1, 1) = sigmaPK2_combined(1);
+    SPK2(2, 2) = sigmaPK2_combined(2);
+    SPK2(1, 2) = sigmaPK2_combined(3);
+    SPK2(2, 1) = sigmaPK2_combined(3);
+    SPK2(0, 2) = sigmaPK2_combined(4);
+    SPK2(2, 0) = sigmaPK2_combined(4);
+    SPK2(0, 1) = sigmaPK2_combined(5);
+    SPK2(1, 0) = sigmaPK2_combined(5);
 
     // Calculate the generalized internal force integrand for a Linear Kelvin-Voigt Viscoelastic material model
-    Qi.noalias() = depsilon_de * (D * epsilon_combined);
+    Eigen::Map<MatrixNx3> QiMatrixForm(Qi.data(), NSF, 3);
+    QiMatrixForm.noalias() = Sbar_xi_D * (SPK2 * F.transpose());
 }
 
 // -----------------------------------------------------------------------------
@@ -984,202 +914,127 @@ void ChElementShellANCF_3833_TR03::ComputeInternalForcesSingleGQPnt(Vector3N& Qi
 // Nx1 Vector Form of the Normalized Shape Functions
 // [s1; s2; s3; ...]
 
-void ChElementShellANCF_3833_TR03::Calc_Sxi_compact(VectorN& Sxi_compact,
+void ChElementShellANCF_3443_TR04::Calc_Sxi_compact(VectorN& Sxi_compact,
                                                     double xi,
                                                     double eta,
                                                     double zeta,
                                                     double thickness,
                                                     double zoffset) {
-    Sxi_compact(0) = (-0.25) * (xi - 1) * (eta - 1) * (eta + xi + 1);
-    Sxi_compact(1) =
-        (0.125) * (xi - 1) * (eta - 1) * (eta + xi + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_compact(2) = (-0.03125) * (xi - 1) * (eta - 1) * (eta + xi + 1) *
-                     (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                     (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_compact(3) = (0.25) * (xi + 1) * (eta - 1) * (eta - xi + 1);
-    Sxi_compact(4) =
-        (-0.125) * (xi + 1) * (eta - 1) * (eta - xi + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_compact(5) = (0.03125) * (xi + 1) * (eta - 1) * (eta - xi + 1) *
-                     (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                     (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_compact(6) = (0.25) * (xi + 1) * (eta + 1) * (eta + xi - 1);
-    Sxi_compact(7) =
-        (-0.125) * (xi + 1) * (eta + 1) * (eta + xi - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_compact(8) = (0.03125) * (xi + 1) * (eta + 1) * (eta + xi - 1) *
-                     (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                     (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_compact(9) = (-0.25) * (xi - 1) * (eta + 1) * (eta - xi - 1);
-    Sxi_compact(10) =
-        (0.125) * (xi - 1) * (eta + 1) * (eta - xi - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_compact(11) = (-0.03125) * (xi - 1) * (eta + 1) * (eta - xi - 1) *
-                      (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                      (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_compact(12) = (0.5) * (xi - 1) * (xi + 1) * (eta - 1);
-    Sxi_compact(13) =
-        (-0.25) * (xi - 1) * (xi + 1) * (eta - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_compact(14) = (0.0625) * (xi - 1) * (xi + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                      (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (eta - 1);
-    Sxi_compact(15) = (-0.5) * (eta - 1) * (eta + 1) * (xi + 1);
-    Sxi_compact(16) =
-        (0.25) * (eta - 1) * (eta + 1) * (xi + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_compact(17) = (-0.0625) * (eta - 1) * (eta + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                      (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (xi + 1);
-    Sxi_compact(18) = (-0.5) * (xi - 1) * (xi + 1) * (eta + 1);
-    Sxi_compact(19) =
-        (0.25) * (xi - 1) * (xi + 1) * (eta + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_compact(20) = (-0.0625) * (xi - 1) * (xi + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                      (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (eta + 1);
-    Sxi_compact(21) = (0.5) * (eta - 1) * (eta + 1) * (xi - 1);
-    Sxi_compact(22) =
-        (-0.25) * (eta - 1) * (eta + 1) * (xi - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_compact(23) = (0.0625) * (eta - 1) * (eta + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                      (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (xi - 1);
+    Sxi_compact(0) = -0.125 * (xi - 1) * (eta - 1) * (eta * eta + eta + xi * xi + xi - 2);
+    Sxi_compact(1) = -0.0625 * m_lenX * (xi + 1) * (xi - 1) * (xi - 1) * (eta - 1);
+    Sxi_compact(2) = -0.0625 * m_lenY * (eta + 1) * (eta - 1) * (eta - 1) * (xi - 1);
+    Sxi_compact(3) = -0.125 * (xi - 1) * (eta - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+
+    Sxi_compact(4) = 0.125 * (xi + 1) * (eta - 1) * (eta * eta + eta + xi * xi - xi - 2);
+    Sxi_compact(5) = -0.0625 * m_lenX * (xi - 1) * (xi + 1) * (xi + 1) * (eta - 1);
+    Sxi_compact(6) = 0.0625 * m_lenY * (eta + 1) * (eta - 1) * (eta - 1) * (xi + 1);
+    Sxi_compact(7) = 0.125 * (xi + 1) * (eta - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+
+    Sxi_compact(8) = -0.125 * (xi + 1) * (eta + 1) * (eta * eta - eta + xi * xi - xi - 2);
+    Sxi_compact(9) = 0.0625 * m_lenX * (xi - 1) * (xi + 1) * (xi + 1) * (eta + 1);
+    Sxi_compact(10) = 0.0625 * m_lenY * (eta - 1) * (eta + 1) * (eta + 1) * (xi + 1);
+    Sxi_compact(11) = -0.125 * (xi + 1) * (eta + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+
+    Sxi_compact(12) = 0.125 * (xi - 1) * (eta + 1) * (eta * eta - eta + xi * xi + xi - 2);
+    Sxi_compact(13) = 0.0625 * m_lenX * (xi + 1) * (xi - 1) * (xi - 1) * (eta + 1);
+    Sxi_compact(14) = -0.0625 * m_lenY * (eta - 1) * (eta + 1) * (eta + 1) * (xi - 1);
+    Sxi_compact(15) = 0.125 * (xi - 1) * (eta + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
 }
 
 // Nx1 Vector Form of the partial derivatives of Normalized Shape Functions with respect to xi
 // [s1; s2; s3; ...]
 
-void ChElementShellANCF_3833_TR03::Calc_Sxi_xi_compact(VectorN& Sxi_xi_compact,
+void ChElementShellANCF_3443_TR04::Calc_Sxi_xi_compact(VectorN& Sxi_xi_compact,
                                                        double xi,
                                                        double eta,
                                                        double zeta,
                                                        double thickness,
                                                        double zoffset) {
-    Sxi_xi_compact(0) = (-0.25) * (eta - 1) * (eta + 2 * xi);
-    Sxi_xi_compact(1) =
-        (0.125) * (eta - 1) * (eta + 2 * xi) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_xi_compact(2) = (-0.03125) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                        (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (eta - 1) * (eta + 2 * xi);
-    Sxi_xi_compact(3) = (0.25) * (eta - 1) * (eta - 2 * xi);
-    Sxi_xi_compact(4) =
-        (-0.125) * (eta - 1) * (eta - 2 * xi) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_xi_compact(5) = (0.03125) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                        (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (eta - 1) * (eta - 2 * xi);
-    Sxi_xi_compact(6) = (0.25) * (eta + 1) * (eta + 2 * xi);
-    Sxi_xi_compact(7) =
-        (-0.125) * (eta + 1) * (eta + 2 * xi) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_xi_compact(8) = (0.03125) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                        (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (eta + 1) * (eta + 2 * xi);
-    Sxi_xi_compact(9) = (-0.25) * (eta + 1) * (eta - 2 * xi);
-    Sxi_xi_compact(10) =
-        (0.125) * (eta + 1) * (eta - 2 * xi) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_xi_compact(11) = (-0.03125) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                         (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (eta + 1) * (eta - 2 * xi);
-    Sxi_xi_compact(12) = (xi) * (eta - 1);
-    Sxi_xi_compact(13) = (-0.5) * (xi) * (eta - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_xi_compact(14) = (0.125) * (xi) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                         (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (eta - 1);
-    Sxi_xi_compact(15) = (-0.5) * (eta - 1) * (eta + 1);
-    Sxi_xi_compact(16) = (0.25) * (eta - 1) * (eta + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_xi_compact(17) = (-0.0625) * (eta - 1) * (eta + 1) *
-                         (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                         (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_xi_compact(18) = (-1) * (xi) * (eta + 1);
-    Sxi_xi_compact(19) = (0.5) * (xi) * (eta + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_xi_compact(20) = (-0.125) * (xi) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                         (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (eta + 1);
-    Sxi_xi_compact(21) = (0.5) * (eta - 1) * (eta + 1);
-    Sxi_xi_compact(22) = (-0.25) * (eta - 1) * (eta + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_xi_compact(23) = (0.0625) * (eta - 1) * (eta + 1) *
-                         (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                         (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+    Sxi_xi_compact(0) = -0.125 * (eta - 1) * (eta * eta + eta + 3 * xi * xi - 3);
+    Sxi_xi_compact(1) = -0.0625 * m_lenX * (3 * xi + 1) * (xi - 1) * (eta - 1);
+    Sxi_xi_compact(2) = -0.0625 * m_lenY * (eta + 1) * (eta - 1) * (eta - 1);
+    Sxi_xi_compact(3) = -0.125 * (eta - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+
+    Sxi_xi_compact(4) = 0.125 * (eta - 1) * (eta * eta + eta + 3 * xi * xi - 3);
+    Sxi_xi_compact(5) = -0.0625 * m_lenX * (xi + 1) * (3 * xi - 1) * (eta - 1);
+    Sxi_xi_compact(6) = 0.0625 * m_lenY * (eta + 1) * (eta - 1) * (eta - 1);
+    Sxi_xi_compact(7) = 0.125 * (eta - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+
+    Sxi_xi_compact(8) = -0.125 * (eta + 1) * (eta * eta - eta + 3 * xi * xi - 3);
+    Sxi_xi_compact(9) = 0.0625 * m_lenX * (xi + 1) * (3 * xi - 1) * (eta + 1);
+    Sxi_xi_compact(10) = 0.0625 * m_lenY * (eta - 1) * (eta + 1) * (eta + 1);
+    Sxi_xi_compact(11) = -0.125 * (eta + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+
+    Sxi_xi_compact(12) = 0.125 * (eta + 1) * (eta * eta - eta + 3 * xi * xi - 3);
+    Sxi_xi_compact(13) = 0.0625 * m_lenX * (3 * xi + 1) * (xi - 1) * (eta + 1);
+    Sxi_xi_compact(14) = -0.0625 * m_lenY * (eta - 1) * (eta + 1) * (eta + 1);
+    Sxi_xi_compact(15) = 0.125 * (eta + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
 }
 
 // Nx1 Vector Form of the partial derivatives of Normalized Shape Functions with respect to eta
 // [s1; s2; s3; ...]
 
-void ChElementShellANCF_3833_TR03::Calc_Sxi_eta_compact(VectorN& Sxi_eta_compact,
+void ChElementShellANCF_3443_TR04::Calc_Sxi_eta_compact(VectorN& Sxi_eta_compact,
                                                         double xi,
                                                         double eta,
                                                         double zeta,
                                                         double thickness,
                                                         double zoffset) {
-    Sxi_eta_compact(0) = (-0.25) * (xi - 1) * (2 * eta + xi);
-    Sxi_eta_compact(1) =
-        (0.125) * (xi - 1) * (2 * eta + xi) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_eta_compact(2) = (-0.03125) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                         (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (xi - 1) * (2 * eta + xi);
-    Sxi_eta_compact(3) = (0.25) * (xi + 1) * (2 * eta - xi);
-    Sxi_eta_compact(4) =
-        (-0.125) * (xi + 1) * (2 * eta - xi) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_eta_compact(5) = (0.03125) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                         (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (xi + 1) * (2 * eta - xi);
-    Sxi_eta_compact(6) = (0.25) * (xi + 1) * (2 * eta + xi);
-    Sxi_eta_compact(7) =
-        (-0.125) * (xi + 1) * (2 * eta + xi) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_eta_compact(8) = (0.03125) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                         (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (xi + 1) * (2 * eta + xi);
-    Sxi_eta_compact(9) = (-0.25) * (xi - 1) * (2 * eta - xi);
-    Sxi_eta_compact(10) =
-        (0.125) * (xi - 1) * (2 * eta - xi) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_eta_compact(11) = (-0.03125) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                          (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (xi - 1) * (2 * eta - xi);
-    Sxi_eta_compact(12) = (0.5) * (xi - 1) * (xi + 1);
-    Sxi_eta_compact(13) = (-0.25) * (xi - 1) * (xi + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_eta_compact(14) = (0.0625) * (xi - 1) * (xi + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                          (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_eta_compact(15) = (-1) * (eta) * (xi + 1);
-    Sxi_eta_compact(16) = (0.5) * (eta) * (xi + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_eta_compact(17) = (-0.125) * (eta) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                          (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (xi + 1);
-    Sxi_eta_compact(18) = (-0.5) * (xi - 1) * (xi + 1);
-    Sxi_eta_compact(19) = (0.25) * (xi - 1) * (xi + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_eta_compact(20) = (-0.0625) * (xi - 1) * (xi + 1) *
-                          (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                          (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_eta_compact(21) = (eta) * (xi - 1);
-    Sxi_eta_compact(22) = (-0.5) * (eta) * (xi - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_eta_compact(23) = (0.125) * (eta) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) *
-                          (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta) * (xi - 1);
+    Sxi_eta_compact(0) = -0.125 * (xi - 1) * (3 * eta * eta + xi * xi + xi - 3);
+    Sxi_eta_compact(1) = -0.0625 * m_lenX * (xi + 1) * (xi - 1) * (xi - 1);
+    Sxi_eta_compact(2) = -0.0625 * m_lenY * (3 * eta + 1) * (eta - 1) * (xi - 1);
+    Sxi_eta_compact(3) = -0.125 * (xi - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+
+    Sxi_eta_compact(4) = 0.125 * (xi + 1) * (3 * eta * eta + xi * xi - xi - 3);
+    Sxi_eta_compact(5) = -0.0625 * m_lenX * (xi - 1) * (xi + 1) * (xi + 1);
+    Sxi_eta_compact(6) = 0.0625 * m_lenY * (3 * eta + 1) * (eta - 1) * (xi + 1);
+    Sxi_eta_compact(7) = 0.125 * (xi + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+
+    Sxi_eta_compact(8) = -0.125 * (xi + 1) * (3 * eta * eta + xi * xi - xi - 3);
+    Sxi_eta_compact(9) = 0.0625 * m_lenX * (xi - 1) * (xi + 1) * (xi + 1);
+    Sxi_eta_compact(10) = 0.0625 * m_lenY * (eta + 1) * (3 * eta - 1) * (xi + 1);
+    Sxi_eta_compact(11) = -0.125 * (xi + 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+
+    Sxi_eta_compact(12) = 0.125 * (xi - 1) * (3 * eta * eta + xi * xi + xi - 3);
+    Sxi_eta_compact(13) = 0.0625 * m_lenX * (xi + 1) * (xi - 1) * (xi - 1);
+    Sxi_eta_compact(14) = -0.0625 * m_lenY * (eta + 1) * (3 * eta - 1) * (xi - 1);
+    Sxi_eta_compact(15) = 0.125 * (xi - 1) * (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
 }
 
 // Nx1 Vector Form of the partial derivatives of Normalized Shape Functions with respect to zeta
 // [s1; s2; s3; ...]
 
-void ChElementShellANCF_3833_TR03::Calc_Sxi_zeta_compact(VectorN& Sxi_zeta_compact,
+void ChElementShellANCF_3443_TR04::Calc_Sxi_zeta_compact(VectorN& Sxi_zeta_compact,
                                                          double xi,
                                                          double eta,
                                                          double zeta,
                                                          double thickness,
                                                          double zoffset) {
-    Sxi_zeta_compact(0) = 0;
-    Sxi_zeta_compact(1) = (-0.125) * (thickness) * (xi - 1) * (eta - 1) * (eta + xi + 1);
-    Sxi_zeta_compact(2) = (0.0625) * (thickness) * (xi - 1) * (eta - 1) * (eta + xi + 1) *
-                          (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_zeta_compact(3) = 0;
-    Sxi_zeta_compact(4) = (0.125) * (thickness) * (xi + 1) * (eta - 1) * (eta - xi + 1);
-    Sxi_zeta_compact(5) = (-0.0625) * (thickness) * (xi + 1) * (eta - 1) * (eta - xi + 1) *
-                          (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_zeta_compact(6) = 0;
-    Sxi_zeta_compact(7) = (0.125) * (thickness) * (xi + 1) * (eta + 1) * (eta + xi - 1);
-    Sxi_zeta_compact(8) = (-0.0625) * (thickness) * (xi + 1) * (eta + 1) * (eta + xi - 1) *
-                          (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_zeta_compact(9) = 0;
-    Sxi_zeta_compact(10) = (-0.125) * (thickness) * (xi - 1) * (eta + 1) * (eta - xi - 1);
-    Sxi_zeta_compact(11) = (0.0625) * (thickness) * (xi - 1) * (eta + 1) * (eta - xi - 1) *
-                           (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_zeta_compact(12) = 0;
-    Sxi_zeta_compact(13) = (0.25) * (thickness) * (xi - 1) * (xi + 1) * (eta - 1);
-    Sxi_zeta_compact(14) = (-0.125) * (thickness) * (xi - 1) * (xi + 1) * (eta - 1) *
-                           (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_zeta_compact(15) = 0;
-    Sxi_zeta_compact(16) = (-0.25) * (thickness) * (eta - 1) * (eta + 1) * (xi + 1);
-    Sxi_zeta_compact(17) = (0.125) * (thickness) * (eta - 1) * (eta + 1) * (xi + 1) *
-                           (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_zeta_compact(18) = 0;
-    Sxi_zeta_compact(19) = (-0.25) * (thickness) * (xi - 1) * (xi + 1) * (eta + 1);
-    Sxi_zeta_compact(20) = (0.125) * (thickness) * (xi - 1) * (xi + 1) * (eta + 1) *
-                           (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
-    Sxi_zeta_compact(21) = 0;
-    Sxi_zeta_compact(22) = (0.25) * (thickness) * (eta - 1) * (eta + 1) * (xi - 1);
-    Sxi_zeta_compact(23) = (-0.125) * (thickness) * (eta - 1) * (eta + 1) * (xi - 1) *
-                           (m_thicknessZ - 2 * zoffset - thickness - thickness * zeta);
+    Sxi_zeta_compact(0) = 0.0;
+    Sxi_zeta_compact(1) = 0.0;
+    Sxi_zeta_compact(2) = 0.0;
+    Sxi_zeta_compact(3) = 0.125 * thickness * (xi - 1) * (eta - 1);
+
+    Sxi_zeta_compact(4) = 0.0;
+    Sxi_zeta_compact(5) = 0.0;
+    Sxi_zeta_compact(6) = 0.0;
+    Sxi_zeta_compact(7) = -0.125 * thickness * (xi + 1) * (eta - 1);
+
+    Sxi_zeta_compact(8) = 0.0;
+    Sxi_zeta_compact(9) = 0.0;
+    Sxi_zeta_compact(10) = 0.0;
+    Sxi_zeta_compact(11) = 0.125 * thickness * (xi + 1) * (eta + 1);
+
+    Sxi_zeta_compact(12) = 0.0;
+    Sxi_zeta_compact(13) = 0.0;
+    Sxi_zeta_compact(14) = 0.0;
+    Sxi_zeta_compact(15) = -0.125 * thickness * (xi - 1) * (eta + 1);
 }
 
 // Nx3 compact form of the partial derivatives of Normalized Shape Functions with respect to xi, eta, and zeta by
 // columns
 
-void ChElementShellANCF_3833_TR03::Calc_Sxi_D(MatrixNx3c& Sxi_D,
+void ChElementShellANCF_3443_TR04::Calc_Sxi_D(MatrixNx3c& Sxi_D,
                                               double xi,
                                               double eta,
                                               double zeta,
@@ -1200,203 +1055,135 @@ void ChElementShellANCF_3833_TR03::Calc_Sxi_D(MatrixNx3c& Sxi_D,
 // Helper functions
 // -----------------------------------------------------------------------------
 
-void ChElementShellANCF_3833_TR03::CalcCoordVector(Vector3N& e) {
+void ChElementShellANCF_3443_TR04::CalcCoordVector(Vector3N& e) {
     e.segment(0, 3) = m_nodes[0]->GetPos().eigen();
     e.segment(3, 3) = m_nodes[0]->GetD().eigen();
     e.segment(6, 3) = m_nodes[0]->GetDD().eigen();
+    e.segment(9, 3) = m_nodes[0]->GetDDD().eigen();
 
-    e.segment(9, 3) = m_nodes[1]->GetPos().eigen();
-    e.segment(12, 3) = m_nodes[1]->GetD().eigen();
-    e.segment(15, 3) = m_nodes[1]->GetDD().eigen();
+    e.segment(12, 3) = m_nodes[1]->GetPos().eigen();
+    e.segment(15, 3) = m_nodes[1]->GetD().eigen();
+    e.segment(18, 3) = m_nodes[1]->GetDD().eigen();
+    e.segment(21, 3) = m_nodes[1]->GetDDD().eigen();
 
-    e.segment(18, 3) = m_nodes[2]->GetPos().eigen();
-    e.segment(21, 3) = m_nodes[2]->GetD().eigen();
-    e.segment(24, 3) = m_nodes[2]->GetDD().eigen();
+    e.segment(24, 3) = m_nodes[2]->GetPos().eigen();
+    e.segment(27, 3) = m_nodes[2]->GetD().eigen();
+    e.segment(30, 3) = m_nodes[2]->GetDD().eigen();
+    e.segment(33, 3) = m_nodes[2]->GetDDD().eigen();
 
-    e.segment(27, 3) = m_nodes[3]->GetPos().eigen();
-    e.segment(30, 3) = m_nodes[3]->GetD().eigen();
-    e.segment(33, 3) = m_nodes[3]->GetDD().eigen();
-
-    e.segment(36, 3) = m_nodes[4]->GetPos().eigen();
-    e.segment(39, 3) = m_nodes[4]->GetD().eigen();
-    e.segment(42, 3) = m_nodes[4]->GetDD().eigen();
-
-    e.segment(45, 3) = m_nodes[5]->GetPos().eigen();
-    e.segment(48, 3) = m_nodes[5]->GetD().eigen();
-    e.segment(51, 3) = m_nodes[5]->GetDD().eigen();
-
-    e.segment(54, 3) = m_nodes[6]->GetPos().eigen();
-    e.segment(57, 3) = m_nodes[6]->GetD().eigen();
-    e.segment(60, 3) = m_nodes[6]->GetDD().eigen();
-
-    e.segment(63, 3) = m_nodes[7]->GetPos().eigen();
-    e.segment(66, 3) = m_nodes[7]->GetD().eigen();
-    e.segment(69, 3) = m_nodes[7]->GetDD().eigen();
+    e.segment(36, 3) = m_nodes[3]->GetPos().eigen();
+    e.segment(39, 3) = m_nodes[3]->GetD().eigen();
+    e.segment(42, 3) = m_nodes[3]->GetDD().eigen();
+    e.segment(45, 3) = m_nodes[3]->GetDDD().eigen();
 }
 
-void ChElementShellANCF_3833_TR03::CalcCoordMatrix(Matrix3xN& ebar) {
+void ChElementShellANCF_3443_TR04::CalcCoordMatrix(Matrix3xN& ebar) {
     ebar.col(0) = m_nodes[0]->GetPos().eigen();
     ebar.col(1) = m_nodes[0]->GetD().eigen();
     ebar.col(2) = m_nodes[0]->GetDD().eigen();
+    ebar.col(3) = m_nodes[0]->GetDDD().eigen();
 
-    ebar.col(3) = m_nodes[1]->GetPos().eigen();
-    ebar.col(4) = m_nodes[1]->GetD().eigen();
-    ebar.col(5) = m_nodes[1]->GetDD().eigen();
+    ebar.col(4) = m_nodes[1]->GetPos().eigen();
+    ebar.col(5) = m_nodes[1]->GetD().eigen();
+    ebar.col(6) = m_nodes[1]->GetDD().eigen();
+    ebar.col(7) = m_nodes[1]->GetDDD().eigen();
 
-    ebar.col(6) = m_nodes[2]->GetPos().eigen();
-    ebar.col(7) = m_nodes[2]->GetD().eigen();
-    ebar.col(8) = m_nodes[2]->GetDD().eigen();
+    ebar.col(8) = m_nodes[2]->GetPos().eigen();
+    ebar.col(9) = m_nodes[2]->GetD().eigen();
+    ebar.col(10) = m_nodes[2]->GetDD().eigen();
+    ebar.col(11) = m_nodes[2]->GetDDD().eigen();
 
-    ebar.col(9) = m_nodes[3]->GetPos().eigen();
-    ebar.col(10) = m_nodes[3]->GetD().eigen();
-    ebar.col(11) = m_nodes[3]->GetDD().eigen();
-
-    ebar.col(12) = m_nodes[4]->GetPos().eigen();
-    ebar.col(13) = m_nodes[4]->GetD().eigen();
-    ebar.col(14) = m_nodes[4]->GetDD().eigen();
-
-    ebar.col(15) = m_nodes[5]->GetPos().eigen();
-    ebar.col(16) = m_nodes[5]->GetD().eigen();
-    ebar.col(17) = m_nodes[5]->GetDD().eigen();
-
-    ebar.col(18) = m_nodes[6]->GetPos().eigen();
-    ebar.col(19) = m_nodes[6]->GetD().eigen();
-    ebar.col(20) = m_nodes[6]->GetDD().eigen();
-
-    ebar.col(21) = m_nodes[7]->GetPos().eigen();
-    ebar.col(22) = m_nodes[7]->GetD().eigen();
-    ebar.col(23) = m_nodes[7]->GetDD().eigen();
+    ebar.col(12) = m_nodes[3]->GetPos().eigen();
+    ebar.col(13) = m_nodes[3]->GetD().eigen();
+    ebar.col(14) = m_nodes[3]->GetDD().eigen();
+    ebar.col(15) = m_nodes[3]->GetDDD().eigen();
 }
 
-void ChElementShellANCF_3833_TR03::CalcCoordDerivVector(Vector3N& edot) {
+void ChElementShellANCF_3443_TR04::CalcCoordDerivVector(Vector3N& edot) {
     edot.segment(0, 3) = m_nodes[0]->GetPos_dt().eigen();
     edot.segment(3, 3) = m_nodes[0]->GetD_dt().eigen();
     edot.segment(6, 3) = m_nodes[0]->GetDD_dt().eigen();
+    edot.segment(9, 3) = m_nodes[0]->GetDDD_dt().eigen();
 
-    edot.segment(9, 3) = m_nodes[1]->GetPos_dt().eigen();
-    edot.segment(12, 3) = m_nodes[1]->GetD_dt().eigen();
-    edot.segment(15, 3) = m_nodes[1]->GetDD_dt().eigen();
+    edot.segment(12, 3) = m_nodes[1]->GetPos_dt().eigen();
+    edot.segment(15, 3) = m_nodes[1]->GetD_dt().eigen();
+    edot.segment(18, 3) = m_nodes[1]->GetDD_dt().eigen();
+    edot.segment(21, 3) = m_nodes[1]->GetDDD_dt().eigen();
 
-    edot.segment(18, 3) = m_nodes[2]->GetPos_dt().eigen();
-    edot.segment(21, 3) = m_nodes[2]->GetD_dt().eigen();
-    edot.segment(24, 3) = m_nodes[2]->GetDD_dt().eigen();
+    edot.segment(24, 3) = m_nodes[2]->GetPos_dt().eigen();
+    edot.segment(27, 3) = m_nodes[2]->GetD_dt().eigen();
+    edot.segment(30, 3) = m_nodes[2]->GetDD_dt().eigen();
+    edot.segment(33, 3) = m_nodes[2]->GetDDD_dt().eigen();
 
-    edot.segment(27, 3) = m_nodes[3]->GetPos_dt().eigen();
-    edot.segment(30, 3) = m_nodes[3]->GetD_dt().eigen();
-    edot.segment(33, 3) = m_nodes[3]->GetDD_dt().eigen();
-
-    edot.segment(36, 3) = m_nodes[4]->GetPos_dt().eigen();
-    edot.segment(39, 3) = m_nodes[4]->GetD_dt().eigen();
-    edot.segment(42, 3) = m_nodes[4]->GetDD_dt().eigen();
-
-    edot.segment(45, 3) = m_nodes[5]->GetPos_dt().eigen();
-    edot.segment(48, 3) = m_nodes[5]->GetD_dt().eigen();
-    edot.segment(51, 3) = m_nodes[5]->GetDD_dt().eigen();
-
-    edot.segment(54, 3) = m_nodes[6]->GetPos_dt().eigen();
-    edot.segment(57, 3) = m_nodes[6]->GetD_dt().eigen();
-    edot.segment(60, 3) = m_nodes[6]->GetDD_dt().eigen();
-
-    edot.segment(63, 3) = m_nodes[7]->GetPos_dt().eigen();
-    edot.segment(66, 3) = m_nodes[7]->GetD_dt().eigen();
-    edot.segment(69, 3) = m_nodes[7]->GetDD_dt().eigen();
+    edot.segment(36, 3) = m_nodes[3]->GetPos_dt().eigen();
+    edot.segment(39, 3) = m_nodes[3]->GetD_dt().eigen();
+    edot.segment(42, 3) = m_nodes[3]->GetDD_dt().eigen();
+    edot.segment(45, 3) = m_nodes[3]->GetDDD_dt().eigen();
 }
 
-void ChElementShellANCF_3833_TR03::CalcCoordDerivMatrix(Matrix3xN& ebardot) {
+void ChElementShellANCF_3443_TR04::CalcCoordDerivMatrix(Matrix3xN& ebardot) {
     ebardot.col(0) = m_nodes[0]->GetPos_dt().eigen();
     ebardot.col(1) = m_nodes[0]->GetD_dt().eigen();
     ebardot.col(2) = m_nodes[0]->GetDD_dt().eigen();
+    ebardot.col(3) = m_nodes[0]->GetDDD_dt().eigen();
 
-    ebardot.col(3) = m_nodes[1]->GetPos_dt().eigen();
-    ebardot.col(4) = m_nodes[1]->GetD_dt().eigen();
-    ebardot.col(5) = m_nodes[1]->GetDD_dt().eigen();
+    ebardot.col(4) = m_nodes[1]->GetPos_dt().eigen();
+    ebardot.col(5) = m_nodes[1]->GetD_dt().eigen();
+    ebardot.col(6) = m_nodes[1]->GetDD_dt().eigen();
+    ebardot.col(7) = m_nodes[1]->GetDDD_dt().eigen();
 
-    ebardot.col(6) = m_nodes[2]->GetPos_dt().eigen();
-    ebardot.col(7) = m_nodes[2]->GetD_dt().eigen();
-    ebardot.col(8) = m_nodes[2]->GetDD_dt().eigen();
+    ebardot.col(8) = m_nodes[2]->GetPos_dt().eigen();
+    ebardot.col(9) = m_nodes[2]->GetD_dt().eigen();
+    ebardot.col(10) = m_nodes[2]->GetDD_dt().eigen();
+    ebardot.col(11) = m_nodes[2]->GetDDD_dt().eigen();
 
-    ebardot.col(9) = m_nodes[3]->GetPos_dt().eigen();
-    ebardot.col(10) = m_nodes[3]->GetD_dt().eigen();
-    ebardot.col(11) = m_nodes[3]->GetDD_dt().eigen();
-
-    ebardot.col(12) = m_nodes[4]->GetPos_dt().eigen();
-    ebardot.col(13) = m_nodes[4]->GetD_dt().eigen();
-    ebardot.col(14) = m_nodes[4]->GetDD_dt().eigen();
-
-    ebardot.col(15) = m_nodes[5]->GetPos_dt().eigen();
-    ebardot.col(16) = m_nodes[5]->GetD_dt().eigen();
-    ebardot.col(17) = m_nodes[5]->GetDD_dt().eigen();
-
-    ebardot.col(18) = m_nodes[6]->GetPos_dt().eigen();
-    ebardot.col(19) = m_nodes[6]->GetD_dt().eigen();
-    ebardot.col(20) = m_nodes[6]->GetDD_dt().eigen();
-
-    ebardot.col(21) = m_nodes[7]->GetPos_dt().eigen();
-    ebardot.col(22) = m_nodes[7]->GetD_dt().eigen();
-    ebardot.col(23) = m_nodes[7]->GetDD_dt().eigen();
+    ebardot.col(12) = m_nodes[3]->GetPos_dt().eigen();
+    ebardot.col(13) = m_nodes[3]->GetD_dt().eigen();
+    ebardot.col(14) = m_nodes[3]->GetDD_dt().eigen();
+    ebardot.col(15) = m_nodes[3]->GetDDD_dt().eigen();
 }
 
-void ChElementShellANCF_3833_TR03::CalcCombinedCoordMatrix(MatrixNx6& ebar_ebardot) {
+void ChElementShellANCF_3443_TR04::CalcCombinedCoordMatrix(MatrixNx6& ebar_ebardot) {
     ebar_ebardot.template block<1, 3>(0, 0) = m_nodes[0]->GetPos().eigen();
     ebar_ebardot.template block<1, 3>(0, 3) = m_nodes[0]->GetPos_dt().eigen();
     ebar_ebardot.template block<1, 3>(1, 0) = m_nodes[0]->GetD().eigen();
     ebar_ebardot.template block<1, 3>(1, 3) = m_nodes[0]->GetD_dt().eigen();
     ebar_ebardot.template block<1, 3>(2, 0) = m_nodes[0]->GetDD().eigen();
     ebar_ebardot.template block<1, 3>(2, 3) = m_nodes[0]->GetDD_dt().eigen();
+    ebar_ebardot.template block<1, 3>(3, 0) = m_nodes[0]->GetDDD().eigen();
+    ebar_ebardot.template block<1, 3>(3, 3) = m_nodes[0]->GetDDD_dt().eigen();
 
-    ebar_ebardot.template block<1, 3>(3, 0) = m_nodes[1]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(3, 3) = m_nodes[1]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(4, 0) = m_nodes[1]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(4, 3) = m_nodes[1]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(5, 0) = m_nodes[1]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(5, 3) = m_nodes[1]->GetDD_dt().eigen();
+    ebar_ebardot.template block<1, 3>(4, 0) = m_nodes[1]->GetPos().eigen();
+    ebar_ebardot.template block<1, 3>(4, 3) = m_nodes[1]->GetPos_dt().eigen();
+    ebar_ebardot.template block<1, 3>(5, 0) = m_nodes[1]->GetD().eigen();
+    ebar_ebardot.template block<1, 3>(5, 3) = m_nodes[1]->GetD_dt().eigen();
+    ebar_ebardot.template block<1, 3>(6, 0) = m_nodes[1]->GetDD().eigen();
+    ebar_ebardot.template block<1, 3>(6, 3) = m_nodes[1]->GetDD_dt().eigen();
+    ebar_ebardot.template block<1, 3>(7, 0) = m_nodes[1]->GetDDD().eigen();
+    ebar_ebardot.template block<1, 3>(7, 3) = m_nodes[1]->GetDDD_dt().eigen();
 
-    ebar_ebardot.template block<1, 3>(6, 0) = m_nodes[2]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(6, 3) = m_nodes[2]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(7, 0) = m_nodes[2]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(7, 3) = m_nodes[2]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(8, 0) = m_nodes[2]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(8, 3) = m_nodes[2]->GetDD_dt().eigen();
+    ebar_ebardot.template block<1, 3>(8, 0) = m_nodes[2]->GetPos().eigen();
+    ebar_ebardot.template block<1, 3>(8, 3) = m_nodes[2]->GetPos_dt().eigen();
+    ebar_ebardot.template block<1, 3>(9, 0) = m_nodes[2]->GetD().eigen();
+    ebar_ebardot.template block<1, 3>(9, 3) = m_nodes[2]->GetD_dt().eigen();
+    ebar_ebardot.template block<1, 3>(10, 0) = m_nodes[2]->GetDD().eigen();
+    ebar_ebardot.template block<1, 3>(10, 3) = m_nodes[2]->GetDD_dt().eigen();
+    ebar_ebardot.template block<1, 3>(11, 0) = m_nodes[2]->GetDDD().eigen();
+    ebar_ebardot.template block<1, 3>(11, 3) = m_nodes[2]->GetDDD_dt().eigen();
 
-    ebar_ebardot.template block<1, 3>(9, 0) = m_nodes[3]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(9, 3) = m_nodes[3]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(10, 0) = m_nodes[3]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(10, 3) = m_nodes[3]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(11, 0) = m_nodes[3]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(11, 3) = m_nodes[3]->GetDD_dt().eigen();
-
-    ebar_ebardot.template block<1, 3>(12, 0) = m_nodes[4]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(12, 3) = m_nodes[4]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(13, 0) = m_nodes[4]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(13, 3) = m_nodes[4]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(14, 0) = m_nodes[4]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(14, 3) = m_nodes[4]->GetDD_dt().eigen();
-
-    ebar_ebardot.template block<1, 3>(15, 0) = m_nodes[5]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(15, 3) = m_nodes[5]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(16, 0) = m_nodes[5]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(16, 3) = m_nodes[5]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(17, 0) = m_nodes[5]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(17, 3) = m_nodes[5]->GetDD_dt().eigen();
-
-    ebar_ebardot.template block<1, 3>(18, 0) = m_nodes[6]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(18, 3) = m_nodes[6]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(19, 0) = m_nodes[6]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(19, 3) = m_nodes[6]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(20, 0) = m_nodes[6]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(20, 3) = m_nodes[6]->GetDD_dt().eigen();
-
-    ebar_ebardot.template block<1, 3>(21, 0) = m_nodes[7]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(21, 3) = m_nodes[7]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(22, 0) = m_nodes[7]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(22, 3) = m_nodes[7]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(23, 0) = m_nodes[7]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(23, 3) = m_nodes[7]->GetDD_dt().eigen();
+    ebar_ebardot.template block<1, 3>(12, 0) = m_nodes[3]->GetPos().eigen();
+    ebar_ebardot.template block<1, 3>(12, 3) = m_nodes[3]->GetPos_dt().eigen();
+    ebar_ebardot.template block<1, 3>(13, 0) = m_nodes[3]->GetD().eigen();
+    ebar_ebardot.template block<1, 3>(13, 3) = m_nodes[3]->GetD_dt().eigen();
+    ebar_ebardot.template block<1, 3>(14, 0) = m_nodes[3]->GetDD().eigen();
+    ebar_ebardot.template block<1, 3>(14, 3) = m_nodes[3]->GetDD_dt().eigen();
+    ebar_ebardot.template block<1, 3>(15, 0) = m_nodes[3]->GetDDD().eigen();
+    ebar_ebardot.template block<1, 3>(15, 3) = m_nodes[3]->GetDDD_dt().eigen();
 }
 
 // Calculate the 3x3 Element Jacobian at the given point (xi,eta,zeta) in the element
 
-void ChElementShellANCF_3833_TR03::Calc_J_0xi(ChMatrix33<double>& J_0xi,
+void ChElementShellANCF_3443_TR04::Calc_J_0xi(ChMatrix33<double>& J_0xi,
                                               double xi,
                                               double eta,
                                               double zeta,
@@ -1410,7 +1197,7 @@ void ChElementShellANCF_3833_TR03::Calc_J_0xi(ChMatrix33<double>& J_0xi,
 
 // Calculate the determinant of the 3x3 Element Jacobian at the given point (xi,eta,zeta) in the element
 
-double ChElementShellANCF_3833_TR03::Calc_det_J_0xi(double xi,
+double ChElementShellANCF_3443_TR04::Calc_det_J_0xi(double xi,
                                                     double eta,
                                                     double zeta,
                                                     double thickness,
@@ -1421,7 +1208,7 @@ double ChElementShellANCF_3833_TR03::Calc_det_J_0xi(double xi,
     return (J_0xi.determinant());
 }
 
-void ChElementShellANCF_3833_TR03::RotateReorderStiffnessMatrix(ChMatrixNM<double, 6, 6>& D, double theta) {
+void ChElementShellANCF_3443_TR04::RotateReorderStiffnessMatrix(ChMatrixNM<double, 6, 6>& D, double theta) {
     // Reorder the stiffness matrix from the order assumed in ChMaterialShellANCF.h
     //  E = [E11,E22,2*E12,E33,2*E13,2*E23]
     // to the order assumed in this element formulation
@@ -1452,22 +1239,22 @@ void ChElementShellANCF_3833_TR03::RotateReorderStiffnessMatrix(ChMatrixNM<doubl
 
 //#ifndef CH_QUADRATURE_STATIC_TABLES
 #define CH_QUADRATURE_STATIC_TABLES 10
-ChQuadratureTables static_tables_3833_TR03(1, CH_QUADRATURE_STATIC_TABLES);
+ChQuadratureTables static_tables_3443_TR04(1, CH_QUADRATURE_STATIC_TABLES);
 //#endif // !CH_QUADRATURE_STATIC_TABLES
 
-ChQuadratureTables* ChElementShellANCF_3833_TR03::GetStaticGQTables() {
-    return &static_tables_3833_TR03;
+ChQuadratureTables* ChElementShellANCF_3443_TR04::GetStaticGQTables() {
+    return &static_tables_3443_TR04;
 }
 
 ////////////////////////////////////////////////////////////////
 
 // ============================================================================
-// Implementation of ChElementShellANCF_3833_TR03::Layer methods
+// Implementation of ChElementShellANCF_3443_TR04::Layer methods
 // ============================================================================
 
 // Private constructor (a layer can be created only by adding it to an element)
 
-ChElementShellANCF_3833_TR03::Layer::Layer(double thickness,
+ChElementShellANCF_3443_TR04::Layer::Layer(double thickness,
                                            double theta,
                                            std::shared_ptr<ChMaterialShellANCF> material)
     : m_thickness(thickness), m_theta(theta), m_material(material) {}
