@@ -361,9 +361,9 @@ class ChApi ChElementBeamANCF_3243_TR11 : public ChElementBeam, public ChLoadabl
     Matrix3xN m_ebar0;         ///< Element Position Coordinate Vector for the Reference Configuration
     ChVectorN<double, (NSF * (NSF + 1)) / 2>
         m_MassMatrix;  /// Mass Matrix in extra compact form (Upper Triangular Part only)
-    ChMatrixNMc<double, NSF*((NSF * (NSF + 1)) / 2), NSF> m_Ccompact;
-    Matrix3Nx3N m_K1;
-    Matrix3Nx3N m_K2;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> m_Ccompact;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> m_K1;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> m_K2;
 
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

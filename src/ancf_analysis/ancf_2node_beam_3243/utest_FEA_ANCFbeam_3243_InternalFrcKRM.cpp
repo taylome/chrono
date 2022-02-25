@@ -21,9 +21,29 @@
 #include "chrono/physics/ChSystemSMC.h"
 #include "chrono/solver/ChDirectSolverLS.h"
 
+#include "chrono/fea/ChElementBeamANCF_3243.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR01.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR01B.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR02.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR02B.h"
 #include "chrono/fea/ChElementBeamANCF_3243_TR03.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR03B.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR04.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR04B.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR05.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR05B.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR06.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR06B.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR07.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR07B.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR08.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR08B.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR09.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR09B.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR10.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR10B.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR11.h"
+#include "chrono/fea/ChElementBeamANCF_3243_TR11B.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -114,8 +134,6 @@ class ANCFBeamTest {
 
 template <typename ElementVersion, typename MaterialVersion>
 ANCFBeamTest<ElementVersion, MaterialVersion>::ANCFBeamTest() {
-    bool verbose = false;
-
     m_system = new ChSystemSMC();
     m_system->Set_G_acc(ChVector<>(0, 0, -9.80665));
 
@@ -1634,7 +1652,7 @@ bool ANCFBeamTest<ElementVersion, MaterialVersion>::CantileverGravityCheck(int m
     nodeEndPoint = nodeA;
 
     // Find the static solution for the system (final displacement)
-    system->DoStaticNonlinear(50);
+    system->DoStaticNonlinear(100);
 
     // Calculate the displacement of the end of the ANCF beam mesh
     ChVector<> point;
@@ -1879,6 +1897,13 @@ int main(int argc, char* argv[]) {
         print_red("ChElementBeamANCF_3243_TR01 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR01B, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR01B_test;
+    if (ChElementBeamANCF_3243_TR01B_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR01B Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR01B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3243_TR02, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR02_test;
     if (ChElementBeamANCF_3243_TR02_test.RunElementChecks(0))
         print_green("ChElementBeamANCF_3243_TR02 Element Checks = PASSED\n");
@@ -1886,11 +1911,144 @@ int main(int argc, char* argv[]) {
         print_red("ChElementBeamANCF_3243_TR02 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR02B, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR02B_test;
+    if (ChElementBeamANCF_3243_TR02B_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR02B Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR02B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFBeamTest<ChElementBeamANCF_3243_TR03, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR03_test;
     if (ChElementBeamANCF_3243_TR03_test.RunElementChecks(0))
         print_green("ChElementBeamANCF_3243_TR03 Element Checks = PASSED\n");
     else
         print_red("ChElementBeamANCF_3243_TR03 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR03B, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR03B_test;
+    if (ChElementBeamANCF_3243_TR03B_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR03B Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR03B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR04, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR04_test;
+    if (ChElementBeamANCF_3243_TR04_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR04 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR04 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR04B, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR04B_test;
+    if (ChElementBeamANCF_3243_TR04B_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR04B Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR04B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR05, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR05_test;
+    if (ChElementBeamANCF_3243_TR05_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR05 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR05 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR05B, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR05B_test;
+    if (ChElementBeamANCF_3243_TR05B_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR05B Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR05B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR06, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR06_test;
+    if (ChElementBeamANCF_3243_TR06_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR06 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR06 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR06B, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR06B_test;
+    if (ChElementBeamANCF_3243_TR06B_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR06B Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR06B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR07, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR07_test;
+    if (ChElementBeamANCF_3243_TR07_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR07 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR07 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR07B, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR07B_test;
+    if (ChElementBeamANCF_3243_TR07B_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR07B Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR07B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR08, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR08_test;
+    if (ChElementBeamANCF_3243_TR08_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR08 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR08 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR08B, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR08B_test;
+    if (ChElementBeamANCF_3243_TR08B_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR08B Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR08B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR09, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR09_test;
+    if (ChElementBeamANCF_3243_TR09_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR09 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR09 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR09B, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR09B_test;
+    if (ChElementBeamANCF_3243_TR09B_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR09B Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR09B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR10, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR10_test;
+    if (ChElementBeamANCF_3243_TR10_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR10 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR10 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR10B, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR10B_test;
+    if (ChElementBeamANCF_3243_TR10B_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR10B Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR10B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR11, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR11_test;
+    if (ChElementBeamANCF_3243_TR11_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR11 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR11 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243_TR11B, ChMaterialBeamANCF> ChElementBeamANCF_3243_TR11B_test;
+    if (ChElementBeamANCF_3243_TR11B_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243_TR11B Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243_TR11B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBeamTest<ChElementBeamANCF_3243, ChMaterialBeamANCF> ChElementBeamANCF_3243_test;
+    if (ChElementBeamANCF_3243_test.RunElementChecks(0))
+        print_green("ChElementBeamANCF_3243 Element Checks = PASSED\n");
+    else
+        print_red("ChElementBeamANCF_3243 Element Checks = FAILED\n");
 
     return 0;
 }

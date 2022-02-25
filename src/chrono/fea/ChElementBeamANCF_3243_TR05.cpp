@@ -24,7 +24,7 @@
 // =============================================================================
 // TR05 = Gerstmayr and Shabana with Precomputation
 // =============================================================================
-// Mass Matrix = Full 3Nx3N
+// Mass Matrix = Compact Upper Triangular
 // Reduced Number of GQ Points
 // Nodal Coordinates in Matrix Form
 // PK1 Stress
@@ -312,14 +312,31 @@ void ChElementBeamANCF_3243_TR05::Update() {
 // Return the mass matrix in full sparse form.
 
 void ChElementBeamANCF_3243_TR05::ComputeMmatrixGlobal(ChMatrixRef M) {
-    M = m_MassMatrix;
+    M.setZero();
+
+    // Mass Matrix is Stored in Compact Upper Triangular Form
+    // Expand it out into its Full Sparse Symmetric Form
+    unsigned int idx = 0;
+    for (unsigned int i = 0; i < NSF; i++) {
+        for (unsigned int j = i; j < NSF; j++) {
+            M(3 * i, 3 * j) = m_MassMatrix(idx);
+            M(3 * i + 1, 3 * j + 1) = m_MassMatrix(idx);
+            M(3 * i + 2, 3 * j + 2) = m_MassMatrix(idx);
+            if (i != j) {
+                M(3 * j, 3 * i) = m_MassMatrix(idx);
+                M(3 * j + 1, 3 * i + 1) = m_MassMatrix(idx);
+                M(3 * j + 2, 3 * i + 2) = m_MassMatrix(idx);
+            }
+            idx++;
+        }
+    }
 }
 
 // This class computes and adds corresponding masses to ElementGeneric member m_TotalMass
 
 void ChElementBeamANCF_3243_TR05::ComputeNodalMass() {
-    m_nodes[0]->m_TotalMass += m_MassMatrix(0, 0) + m_MassMatrix(0, 12);
-    m_nodes[1]->m_TotalMass += m_MassMatrix(12, 0) + m_MassMatrix(12, 12);
+    m_nodes[0]->m_TotalMass += m_MassMatrix(0) + m_MassMatrix(4);
+    m_nodes[1]->m_TotalMass += m_MassMatrix(4) + m_MassMatrix(26);
 }
 
 // Compute the generalized internal force vector for the current nodal coordinates and set the value in the Fi vector.
@@ -344,8 +361,6 @@ void ChElementBeamANCF_3243_TR05::ComputeKRMmatricesGlobal(ChMatrixRef H,
                                                            double Mfactor) {
     assert((H.rows() == 3 * NSF) && (H.cols() == 3 * NSF));
 
-    H.setZero();
-
     ChVectorDynamic<double> FiOrignal(3 * NSF);
     ChVectorDynamic<double> FiDelta(3 * NSF);
     Matrix3xN ebar;
@@ -356,6 +371,8 @@ void ChElementBeamANCF_3243_TR05::ComputeKRMmatricesGlobal(ChMatrixRef H,
 
     double delta = 1e-6;
 
+    Matrix3Nx3N Jac;
+
     // Compute the Jacobian via numerical differentiation of the generalized internal force vector
     // Since the generalized force vector due to gravity is a constant, it doesn't affect this
     // Jacobian calculation
@@ -363,17 +380,32 @@ void ChElementBeamANCF_3243_TR05::ComputeKRMmatricesGlobal(ChMatrixRef H,
     for (unsigned int i = 0; i < (3 * NSF); i++) {
         ebar(i % 3, i / 3) += delta;
         ComputeInternalForcesAtState(FiDelta, ebar, ebardot);
-        H.col(i).noalias() = -Kfactor / delta * (FiDelta - FiOrignal);
+        Jac.col(i).noalias() = -Kfactor / delta * (FiDelta - FiOrignal);
         ebar(i % 3, i / 3) -= delta;
 
         ebardot(i % 3, i / 3) += delta;
         ComputeInternalForcesAtState(FiDelta, ebar, ebardot);
-        H.col(i).noalias() += -Rfactor / delta * (FiDelta - FiOrignal);
+        Jac.col(i).noalias() += -Rfactor / delta * (FiDelta - FiOrignal);
         ebardot(i % 3, i / 3) -= delta;
     }
 
-    // Add in the scaled Mass Matrix
-    H.noalias() += Mfactor * m_MassMatrix;
+    // Add in the contribution from the Mass Matrix which is stored in compact upper triangular form
+    unsigned int idx = 0;
+    for (unsigned int j = 0; j < NSF; j++) {
+        for (unsigned int i = j; i < NSF; i++) {
+            Jac(3 * i, 3 * j) += Mfactor * m_MassMatrix(idx);
+            Jac(3 * i + 1, 3 * j + 1) += Mfactor * m_MassMatrix(idx);
+            Jac(3 * i + 2, 3 * j + 2) += Mfactor * m_MassMatrix(idx);
+            if (i != j) {
+                Jac(3 * j, 3 * i) += Mfactor * m_MassMatrix(idx);
+                Jac(3 * j + 1, 3 * i + 1) += Mfactor * m_MassMatrix(idx);
+                Jac(3 * j + 2, 3 * i + 2) += Mfactor * m_MassMatrix(idx);
+            }
+            idx++;
+        }
+    }
+
+    H.noalias() = Jac;
 }
 
 // Compute the generalized force vector due to gravity using the efficient ANCF specific method
@@ -704,13 +736,13 @@ void ChElementBeamANCF_3243_TR05::ComputeMassMatrixAndGravityForce() {
         }
     }
 
-    // Store the full mass matrix for this version
-    m_MassMatrix.setZero();
-    for (unsigned i = 0; i < NSF; i++) {
-        for (unsigned j = 0; j < NSF; j++) {
-            m_MassMatrix(3 * i, 3 * j) = MassMatrixCompactSquare(i, j);
-            m_MassMatrix(3 * i + 1, 3 * j + 1) = MassMatrixCompactSquare(i, j);
-            m_MassMatrix(3 * i + 2, 3 * j + 2) = MassMatrixCompactSquare(i, j);
+    // Store just the unique entries in the Mass Matrix in Compact Upper Triangular Form
+    // since the full Mass Matrix is both sparse and symmetric
+    unsigned int idx = 0;
+    for (unsigned int i = 0; i < NSF; i++) {
+        for (unsigned int j = i; j < NSF; j++) {
+            m_MassMatrix(idx) = MassMatrixCompactSquare(i, j);
+            idx++;
         }
     }
 }
@@ -720,6 +752,11 @@ void ChElementBeamANCF_3243_TR05::ComputeMassMatrixAndGravityForce() {
 
 void ChElementBeamANCF_3243_TR05::PrecomputeInternalForceMatricesWeights() {
     ChQuadratureTables* GQTable = GetStaticGQTables();
+
+    m_SD_D0.resize(NSF, 3 * NIP_D0);
+    m_kGQ_D0.resize(NIP_D0, 1);
+    m_SD_Dv.resize(NSF, 3 * NIP_Dv);
+    m_kGQ_Dv.resize(NIP_Dv, 1);
 
     // Precalculate the matrices of normalized shape function derivatives corrected for a potentially non-straight
     // reference configuration & GQ Weights times the determinant of the element Jacobian for later use in the
@@ -779,13 +816,12 @@ void ChElementBeamANCF_3243_TR05::PrecomputeInternalForceMatricesWeights() {
 void ChElementBeamANCF_3243_TR05::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
                                                                const Matrix3xN& ebar,
                                                                const Matrix3xN& ebardot) {
-    // Setup mapping for Fi in Matrix form the later generalized internal force calculations
-    Eigen::Map<MatrixNx3> FiMatrixForm(Fi.data(), NSF, 3);
+    // This element is faster if a separate variable is used for calculating the results for the generalized internal
+    // forces and then copied over to Fi in vector form at the end.
+    MatrixNx3 QiCompact;
+    QiCompact.setZero();
 
-    // Set Fi to zero since the results from each GQ point will be added to this vector
-    FiMatrixForm.setZero();
-
-    // Calculate the portion of the Selective Reduced Integration that does not account for the Poisson effect
+    // Calculate the portion of the Selective Reduced Integration that does account for the Poisson effect
     const ChVectorN<double, 6>& D0 = GetMaterial()->Get_D0();
     for (unsigned int GQpnt = 0; GQpnt < NIP_D0; GQpnt++) {
         MatrixNx3c Sbar_xi_D = m_SD_D0.block<NSF, 3>(0, 3 * GQpnt);
@@ -824,13 +860,18 @@ void ChElementBeamANCF_3243_TR05::ComputeInternalForcesAtState(ChVectorDynamic<>
         SPK2(0, 1) = sigmaPK2_combined(5);
         SPK2(1, 0) = sigmaPK2_combined(5);
 
-        // Calculate the generalized internal force integrand for a Linear Kelvin-Voigt Viscoelastic material model
-        FiMatrixForm.noalias() += Sbar_xi_D * (SPK2 * F.transpose());
+        // Calculate the transpose of the (1st Piola Kirchhoff Stress tensor = F*SPK2) scaled by the negative of the
+        // determinate of the element Jacobian.  Note that SPK2 is symmetric.
+        // For this element is is faster to calculate the 1st Piola Kirchhoff stress tensor by itself first and then
+        // multiply it by Sbar_xi_D.  It is also faster if ".noalias()" is not used when adding with QiCompact
+        ChMatrixNM<double, 3, 3> P_transpose_scaled = SPK2 * F.transpose();
+        QiCompact.noalias() += Sbar_xi_D * P_transpose_scaled;
     }
 
-    // Calculate the portion of the Selective Reduced Integration that does account for the Poisson effect just along
-    // the beam axis
-    const ChMatrix33<>& Dv = GetMaterial()->Get_Dv();
+    // Calculate the portion of the Selective Reduced Integration that account for the Poisson effect, but only on the
+    // beam axis
+    const ChMatrix33<double>& Dv = GetMaterial()->Get_Dv();
+
     for (unsigned int GQpnt = 0; GQpnt < NIP_Dv; GQpnt++) {
         MatrixNx3c Sbar_xi_D = m_SD_Dv.block<NSF, 3>(0, 3 * GQpnt);
 
@@ -851,11 +892,16 @@ void ChElementBeamANCF_3243_TR05::ComputeInternalForcesAtState(ChVectorDynamic<>
         epsilon_combined *= m_kGQ_Dv(GQpnt);
 
         // 2nd Piola Kirchhoff Stress tensor (Just the diagonal terms are non-zero)
-        ChVectorN<double, 3> SPK2 = Dv * epsilon_combined;
+        epsilon_combined = Dv * epsilon_combined;
 
-        // Calculate the generalized internal force integrand for a Linear Kelvin-Voigt Viscoelastic material model
-        FiMatrixForm.noalias() += Sbar_xi_D * (SPK2.asDiagonal() * F.transpose());
+        // Calculate the transpose of the (1st Piola Kirchhoff Stress tensor = F*SPK2) scaled by the negative of the
+        // determinate of the element Jacobian.  Note that SPK2 is symmetric.
+        ChMatrixNM<double, 3, 3> P_transpose_scaled = epsilon_combined.asDiagonal() * F.transpose();
+        QiCompact.noalias() += Sbar_xi_D * P_transpose_scaled;
     }
+
+    Eigen::Map<ChVectorN<double, 3 * NSF>> QiReshaped(QiCompact.data(), QiCompact.size());
+    Fi.noalias() = QiReshaped;
 }
 
 // -----------------------------------------------------------------------------
@@ -985,24 +1031,24 @@ void ChElementBeamANCF_3243_TR05::CalcCoordDerivMatrix(Matrix3xN& ebardot) {
     ebardot.col(7) = m_nodes[1]->GetDDD_dt().eigen();
 }
 
-void ChElementBeamANCF_3243_TR05::CalcCombinedCoordMatrix(MatrixNx6& ebar_ebardot) {
-    ebar_ebardot.template block<1, 3>(0, 0) = m_nodes[0]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(0, 3) = m_nodes[0]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(1, 0) = m_nodes[0]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(1, 3) = m_nodes[0]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(2, 0) = m_nodes[0]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(2, 3) = m_nodes[0]->GetDD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(3, 0) = m_nodes[0]->GetDDD().eigen();
-    ebar_ebardot.template block<1, 3>(3, 3) = m_nodes[0]->GetDDD_dt().eigen();
+void ChElementBeamANCF_3243_TR05::CalcCombinedCoordMatrix(Matrix6xN& ebar_ebardot) {
+    ebar_ebardot.block<3, 1>(0, 0) = m_nodes[0]->GetPos().eigen();
+    ebar_ebardot.block<3, 1>(3, 0) = m_nodes[0]->GetPos_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 1) = m_nodes[0]->GetD().eigen();
+    ebar_ebardot.block<3, 1>(3, 1) = m_nodes[0]->GetD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 2) = m_nodes[0]->GetDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 2) = m_nodes[0]->GetDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 3) = m_nodes[0]->GetDDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 3) = m_nodes[0]->GetDDD_dt().eigen();
 
-    ebar_ebardot.template block<1, 3>(4, 0) = m_nodes[1]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(4, 3) = m_nodes[1]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(5, 0) = m_nodes[1]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(5, 3) = m_nodes[1]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(6, 0) = m_nodes[1]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(6, 3) = m_nodes[1]->GetDD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(7, 0) = m_nodes[1]->GetDDD().eigen();
-    ebar_ebardot.template block<1, 3>(7, 3) = m_nodes[1]->GetDDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 4) = m_nodes[1]->GetPos().eigen();
+    ebar_ebardot.block<3, 1>(3, 4) = m_nodes[1]->GetPos_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 5) = m_nodes[1]->GetD().eigen();
+    ebar_ebardot.block<3, 1>(3, 5) = m_nodes[1]->GetD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 6) = m_nodes[1]->GetDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 6) = m_nodes[1]->GetDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 7) = m_nodes[1]->GetDDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 7) = m_nodes[1]->GetDDD_dt().eigen();
 }
 
 // Calculate the 3x3 Element Jacobian at the given point (xi,eta,zeta) in the element

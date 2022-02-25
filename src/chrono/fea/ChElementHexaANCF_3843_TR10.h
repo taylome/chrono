@@ -19,7 +19,7 @@
 // =============================================================================
 // TR10 = Liu Based Pre-Integration storing only O1
 // =============================================================================
-// Mass Matrix = Compact NxN
+// Mass Matrix = Compact Upper Triangular
 // Liu Based Pre-Integration method for both the internal force and Jacobian
 // Storing only O1 and computing O2 from O1 when needed
 // =============================================================================
@@ -82,6 +82,7 @@ class ChApi ChElementHexaANCF_3843_TR10 : public ChElementHexahedron, public ChE
     // Short-cut for defining a Eigen arrays of length NIP
     using ArrayNIP = Eigen::Array<double, 1, NIP, Eigen::RowMajor>;
 
+    // Short-cut for defining Eigen vectors and matrices of different sizes
     using VectorN = ChVectorN<double, NSF>;
     using Vector3N = ChVectorN<double, 3 * NSF>;
     using VectorNIP = ChVectorN<double, NIP>;
@@ -179,6 +180,10 @@ class ChApi ChElementHexaANCF_3843_TR10 : public ChElementHexahedron, public ChE
     /// Get the von Mises stress value at the normalized element coordinates (xi, eta, zeta) at the current state
     /// of the element.  Normalized element coordinates span from -1 to 1.
     double GetVonMissesStress(const double xi, const double eta, const double zeta);
+
+    /// Skip the precomputation phase and populate any internal force and Jacobian precomputed matrices or vectors with
+    /// random values.  This function only applies to TR05-TR11
+    void SkipPrecomputation() { m_skipPrecomputation = true; }
 
   public:
     // Interface to ChElementBase base class
@@ -329,7 +334,6 @@ class ChApi ChElementHexaANCF_3843_TR10 : public ChElementHexahedron, public ChE
 
     /// Calculate the current 6xN matrix of the nodal coordinates and nodal coordinate time derivatives.
     void CalcCombinedCoordMatrix(Matrix6xN& ebar_ebardot);
-    void CalcCombinedCoordMatrix(MatrixNx6& ebar_ebardot);
 
     /// Calculate the Nx1 Compact Vector of the Normalized Shape Functions (just the unique values)
     void Calc_Sxi_compact(VectorN& Sxi_compact, double xi, double eta, double zeta);
@@ -357,6 +361,7 @@ class ChApi ChElementHexaANCF_3843_TR10 : public ChElementHexahedron, public ChE
     /// Access a statically-allocated set of tables, from 0 to a 10th order, with precomputed tables.
     static ChQuadratureTables* GetStaticGQTables();
 
+    bool m_skipPrecomputation;                              ///< Skip precomputation phase
     std::shared_ptr<ChMaterialHexaANCF> m_material;         ///< material model
     std::vector<std::shared_ptr<ChNodeFEAxyzDDD>> m_nodes;  ///< element nodes
     double m_lenX;                                          ///< total element length along X
@@ -364,9 +369,10 @@ class ChApi ChElementHexaANCF_3843_TR10 : public ChElementHexahedron, public ChE
     double m_lenZ;                                          ///< total element length along Z
     double m_Alpha;                                         ///< structural damping
     bool m_damping_enabled;                                 ///< Flag to run internal force damping calculations
-    VectorN m_GravForceScale;               ///< Gravity scaling matrix used to get the generalized force due to gravity
-    Matrix3xN m_ebar0;                      ///< Element Position Coordinate Vector for the Reference Configuration
-    MatrixNxN m_MassMatrix;                 /// Mass Matrix in compact NxN form
+    VectorN m_GravForceScale;  ///< Gravity scaling matrix used to get the generalized force due to gravity
+    Matrix3xN m_ebar0;         ///< Element Position Coordinate Vector for the Reference Configuration
+    ChVectorN<double, (NSF * (NSF + 1)) / 2>
+        m_MassMatrix;                       /// Mass Matrix in extra compact form (Upper Triangular Part only)
     ChMatrixNM<double, NSF, 3 * NIP> m_SD;  ///< Precomputed corrected normalized shape function
                                             ///< derivative matrices
     ArrayNIP m_kGQ;                         ///< Precomputed Gauss-Quadrature Weight & Element Jacobian

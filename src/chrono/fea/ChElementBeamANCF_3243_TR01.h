@@ -24,7 +24,7 @@
 // =============================================================================
 // TR01 = Direct Textbook Translation
 // =============================================================================
-// Mass Matrix = Full 3Nx3N
+// Mass Matrix = Compact Upper Triangular
 // Full Number of GQ Points
 // Nodal Coordinates in Vector Form (Lots of multiplications by zeros)
 // Textbook Mathematics
@@ -81,6 +81,10 @@ class ChApi ChElementBeamANCF_3243_TR01 : public ChElementBeam, public ChLoadabl
     template <typename T, int M, int N>
     using ChMatrixNMc = Eigen::Matrix<T, M, N, Eigen::ColMajor>;
 
+    // Short-cuts for defining a Eigen arrays of length NIP_D0 and NIP_Dv
+    using ArrayNIP_D0 = Eigen::Array<double, 1, NIP_D0, Eigen::RowMajor>;
+    using ArrayNIP_Dv = Eigen::Array<double, 1, NIP_Dv, Eigen::RowMajor>;
+
     using VectorN = ChVectorN<double, NSF>;
     using Vector3N = ChVectorN<double, 3 * NSF>;
     using VectorNIP_D0 = ChVectorN<double, NIP_D0>;
@@ -93,6 +97,7 @@ class ChApi ChElementBeamANCF_3243_TR01 : public ChElementBeam, public ChLoadabl
     using Matrix3Nx3N = ChMatrixNM<double, 3 * NSF, 3 * NSF>;
     using Matrix3x3N = ChMatrixNM<double, 3, 3 * NSF>;
     using Matrix6x3N = ChMatrixNM<double, 6, 3 * NSF>;
+    using Matrix6xN = ChMatrixNM<double, 6, NSF>;
 
     ChElementBeamANCF_3243_TR01();
     ~ChElementBeamANCF_3243_TR01() {}
@@ -329,9 +334,8 @@ class ChApi ChElementBeamANCF_3243_TR01 : public ChElementBeam, public ChLoadabl
     /// Calculate the current 3xN matrix of nodal coordinate time derivatives.
     void CalcCoordDerivMatrix(Matrix3xN& ebardot);
 
-    /// Calculate the current Nx6 matrix of the transpose of the nodal coordinates and nodal coordinate time
-    /// derivatives.
-    void CalcCombinedCoordMatrix(MatrixNx6& ebar_ebardot);
+    /// Calculate the current 6xN matrix of the nodal coordinates and nodal coordinate time derivatives.
+    void CalcCombinedCoordMatrix(Matrix6xN& ebar_ebardot);
 
     /// Calculate the Nx1 Compact Vector of the Normalized Shape Functions (just the unique values)
     void Calc_Sxi_compact(VectorN& Sxi_compact, double xi, double eta, double zeta);
@@ -381,7 +385,8 @@ class ChApi ChElementBeamANCF_3243_TR01 : public ChElementBeam, public ChLoadabl
     VectorN m_GravForceScale;  ///< Gravity scaling matrix used to get the generalized force due to gravity
     Matrix3xN m_ebar0;         ///< Element Position Coordinate Vector for the Reference Configuration
     Vector3N m_e0;             ///< Element Position Coordinate Vector for the Reference Configuration
-    Matrix3Nx3N m_MassMatrix;  ///< Mass Matrix in full form;
+    ChVectorN<double, (NSF * (NSF + 1)) / 2>
+        m_MassMatrix;  /// Mass Matrix in extra compact form (Upper Triangular Part only)
 
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

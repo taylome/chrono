@@ -10,6 +10,7 @@
 
 option(BUILD_DEMOS "Build demo programs" ON)
 option(BUILD_BENCHMARKING "Build benchmark tests" OFF)
+option(BUILD_ANCF_ANALYSIS "Build ANCF Analysis programs" ON)
 
 #-----------------------------------------------------------------------------
 # Search prefixes specified by <PackageName>_ROOT
@@ -673,6 +674,9 @@ if(BUILD_TESTING)
 endif()
 if(BUILD_BENCHMARKING)
   add_subdirectory(tests/benchmark_tests)
+endif()
+if(BUILD_ANCF_ANALYSIS)
+  add_subdirectory(ancf_analysis)
 endif()
 
 #------------------------------------------------------------

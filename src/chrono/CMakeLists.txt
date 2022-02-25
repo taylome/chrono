@@ -487,14 +487,124 @@ set(ChronoEngine_fea_elements_SOURCES
     fea/ChElementHexaCorot_20.cpp
     fea/ChElementHexaANCF_3813.cpp
     fea/ChElementHexaANCF_3813_9.cpp
-    fea/ChElementHexaANCF_3843.cpp
-    fea/ChElementBeamANCF_3243.cpp
-    fea/ChElementBeamANCF_3333.cpp
     fea/ChElementShellANCF_3423.cpp
-    fea/ChElementShellANCF_3833.cpp
-    fea/ChElementShellANCF_3443.cpp
 	fea/ChElementShellBST.cpp
     fea/ChElementShellReissner4.cpp
+	fea/ChElementBeamANCF_3243.cpp
+	fea/ChElementBeamANCF_3243_TR01.cpp
+	fea/ChElementBeamANCF_3243_TR01B.cpp
+	fea/ChElementBeamANCF_3243_TR02.cpp
+	fea/ChElementBeamANCF_3243_TR02B.cpp
+	fea/ChElementBeamANCF_3243_TR03.cpp
+	fea/ChElementBeamANCF_3243_TR03B.cpp
+	fea/ChElementBeamANCF_3243_TR04.cpp
+	fea/ChElementBeamANCF_3243_TR04B.cpp
+	fea/ChElementBeamANCF_3243_TR05.cpp
+	fea/ChElementBeamANCF_3243_TR05B.cpp
+	fea/ChElementBeamANCF_3243_TR06.cpp
+	fea/ChElementBeamANCF_3243_TR06B.cpp
+	fea/ChElementBeamANCF_3243_TR07.cpp
+	fea/ChElementBeamANCF_3243_TR07B.cpp
+	fea/ChElementBeamANCF_3243_TR08.cpp
+	fea/ChElementBeamANCF_3243_TR08B.cpp
+	fea/ChElementBeamANCF_3243_TR09.cpp
+	fea/ChElementBeamANCF_3243_TR09B.cpp
+	fea/ChElementBeamANCF_3243_TR10.cpp
+	fea/ChElementBeamANCF_3243_TR10B.cpp
+	fea/ChElementBeamANCF_3243_TR11.cpp
+	fea/ChElementBeamANCF_3243_TR11B.cpp
+    fea/ChElementBeamANCF_3333.cpp
+	fea/ChElementBeamANCF_3333_TR01.cpp
+	fea/ChElementBeamANCF_3333_TR01B.cpp
+	fea/ChElementBeamANCF_3333_TR02.cpp
+	fea/ChElementBeamANCF_3333_TR02B.cpp
+	fea/ChElementBeamANCF_3333_TR03.cpp
+	fea/ChElementBeamANCF_3333_TR03B.cpp
+	fea/ChElementBeamANCF_3333_TR04.cpp
+	fea/ChElementBeamANCF_3333_TR04B.cpp
+	fea/ChElementBeamANCF_3333_TR05.cpp
+	fea/ChElementBeamANCF_3333_TR05B.cpp
+	fea/ChElementBeamANCF_3333_TR06.cpp
+	fea/ChElementBeamANCF_3333_TR06B.cpp
+	fea/ChElementBeamANCF_3333_TR07.cpp
+	fea/ChElementBeamANCF_3333_TR07B.cpp
+	fea/ChElementBeamANCF_3333_TR08.cpp
+	fea/ChElementBeamANCF_3333_TR08B.cpp
+	fea/ChElementBeamANCF_3333_TR09.cpp
+	fea/ChElementBeamANCF_3333_TR09B.cpp
+	fea/ChElementBeamANCF_3333_TR10.cpp
+	fea/ChElementBeamANCF_3333_TR10B.cpp
+	fea/ChElementBeamANCF_3333_TR11.cpp
+	fea/ChElementBeamANCF_3333_TR11B.cpp
+	fea/ChElementShellANCF_3443.cpp
+	fea/ChElementShellANCF_3443_TR01.cpp
+	fea/ChElementShellANCF_3443_TR01B.cpp
+	fea/ChElementShellANCF_3443_TR02.cpp
+	fea/ChElementShellANCF_3443_TR02B.cpp
+	fea/ChElementShellANCF_3443_TR03.cpp
+	fea/ChElementShellANCF_3443_TR03B.cpp
+	fea/ChElementShellANCF_3443_TR04.cpp
+	fea/ChElementShellANCF_3443_TR04B.cpp
+	fea/ChElementShellANCF_3443_TR05.cpp
+	fea/ChElementShellANCF_3443_TR05B.cpp
+	fea/ChElementShellANCF_3443_TR06.cpp
+	fea/ChElementShellANCF_3443_TR06B.cpp
+	fea/ChElementShellANCF_3443_TR07.cpp
+	fea/ChElementShellANCF_3443_TR07B.cpp
+	fea/ChElementShellANCF_3443_TR08.cpp
+	fea/ChElementShellANCF_3443_TR08B.cpp
+	fea/ChElementShellANCF_3443_TR09.cpp
+	fea/ChElementShellANCF_3443_TR09B.cpp
+	fea/ChElementShellANCF_3443_TR10.cpp
+	fea/ChElementShellANCF_3443_TR10B.cpp
+	fea/ChElementShellANCF_3443_TR11.cpp
+	fea/ChElementShellANCF_3443_TR11B.cpp
+	fea/ChElementShellANCF_3833.cpp
+	fea/ChElementShellANCF_3833_TR01.cpp
+	fea/ChElementShellANCF_3833_TR01B.cpp
+	fea/ChElementShellANCF_3833_TR02.cpp
+	fea/ChElementShellANCF_3833_TR02B.cpp
+	fea/ChElementShellANCF_3833_TR03.cpp
+	fea/ChElementShellANCF_3833_TR03B.cpp
+	fea/ChElementShellANCF_3833_TR04.cpp
+	fea/ChElementShellANCF_3833_TR04B.cpp
+	fea/ChElementShellANCF_3833_TR05.cpp
+	fea/ChElementShellANCF_3833_TR05B.cpp
+	fea/ChElementShellANCF_3833_TR06.cpp
+	fea/ChElementShellANCF_3833_TR06B.cpp
+	fea/ChElementShellANCF_3833_TR07.cpp
+	fea/ChElementShellANCF_3833_TR07B.cpp
+	fea/ChElementShellANCF_3833_TR08.cpp
+	fea/ChElementShellANCF_3833_TR08B.cpp
+	fea/ChElementShellANCF_3833_TR09.cpp
+	fea/ChElementShellANCF_3833_TR09B.cpp
+	fea/ChElementShellANCF_3833_TR10.cpp
+	fea/ChElementShellANCF_3833_TR10B.cpp
+	fea/ChElementShellANCF_3833_TR11.cpp
+	fea/ChElementShellANCF_3833_TR11B.cpp
+	fea/ChElementHexaANCF_3843.cpp
+	fea/ChElementHexaANCF_3843_TR01.cpp
+	fea/ChElementHexaANCF_3843_TR01B.cpp
+	fea/ChElementHexaANCF_3843_TR02.cpp
+	fea/ChElementHexaANCF_3843_TR02B.cpp
+	fea/ChElementHexaANCF_3843_TR03.cpp
+	fea/ChElementHexaANCF_3843_TR03B.cpp
+	fea/ChElementHexaANCF_3843_TR04.cpp
+	fea/ChElementHexaANCF_3843_TR04B.cpp
+	fea/ChElementHexaANCF_3843_TR05.cpp
+	fea/ChElementHexaANCF_3843_TR05B.cpp
+	fea/ChElementHexaANCF_3843_TR06.cpp
+	fea/ChElementHexaANCF_3843_TR06B.cpp
+	fea/ChElementHexaANCF_3843_TR07.cpp
+	fea/ChElementHexaANCF_3843_TR07B.cpp
+	fea/ChElementHexaANCF_3843_TR08.cpp
+	fea/ChElementHexaANCF_3843_TR08B.cpp
+	fea/ChElementHexaANCF_3843_TR09.cpp
+	fea/ChElementHexaANCF_3843_TR09B.cpp
+	fea/ChElementHexaANCF_3843_TR10.cpp
+	fea/ChElementHexaANCF_3843_TR10B.cpp
+	fea/ChElementHexaANCF_3843_TR11.cpp
+	fea/ChElementHexaANCF_3843_TR11B.cpp
 )
 
 set(ChronoEngine_fea_elements_HEADERS
@@ -504,8 +614,6 @@ set(ChronoEngine_fea_elements_HEADERS
     fea/ChElementSpring.h
     fea/ChElementBar.h
     fea/ChElementBeam.h
-    fea/ChElementBeamANCF_3243.h
-    fea/ChElementBeamANCF_3333.h
     fea/ChElementBeamEuler.h
     fea/ChElementBeamTaperedTimoshenko.h
     fea/ChElementBeamTaperedTimoshenkoFPM.h
@@ -519,13 +627,125 @@ set(ChronoEngine_fea_elements_HEADERS
     fea/ChElementHexaANCF_3813_9.h
     fea/ChElementHexaCorot_8.h
     fea/ChElementHexaCorot_20.h
-    fea/ChElementHexaANCF_3843.h
     fea/ChElementShell.h
     fea/ChElementShellANCF_3423.h
-    fea/ChElementShellANCF_3443.h
-    fea/ChElementShellANCF_3833.h
     fea/ChElementShellReissner4.h
 	fea/ChElementShellBST.h
+    fea/ChElementBeamANCF_3243.h
+	fea/ChElementBeamANCF_3243_TR01.h
+	fea/ChElementBeamANCF_3243_TR01B.h
+	fea/ChElementBeamANCF_3243_TR02.h
+	fea/ChElementBeamANCF_3243_TR02B.h
+	fea/ChElementBeamANCF_3243_TR03.h
+	fea/ChElementBeamANCF_3243_TR03B.h
+	fea/ChElementBeamANCF_3243_TR04.h
+	fea/ChElementBeamANCF_3243_TR04B.h
+	fea/ChElementBeamANCF_3243_TR05.h
+	fea/ChElementBeamANCF_3243_TR05B.h
+	fea/ChElementBeamANCF_3243_TR06.h
+	fea/ChElementBeamANCF_3243_TR06B.h
+	fea/ChElementBeamANCF_3243_TR07.h
+	fea/ChElementBeamANCF_3243_TR07B.h
+	fea/ChElementBeamANCF_3243_TR08.h
+	fea/ChElementBeamANCF_3243_TR08B.h
+	fea/ChElementBeamANCF_3243_TR09.h
+	fea/ChElementBeamANCF_3243_TR09B.h
+	fea/ChElementBeamANCF_3243_TR10.h
+	fea/ChElementBeamANCF_3243_TR10B.h
+	fea/ChElementBeamANCF_3243_TR11.h
+	fea/ChElementBeamANCF_3243_TR11B.h
+    fea/ChElementBeamANCF_3333.h
+	fea/ChElementBeamANCF_3333_TR01.h
+	fea/ChElementBeamANCF_3333_TR01B.h
+	fea/ChElementBeamANCF_3333_TR02.h
+	fea/ChElementBeamANCF_3333_TR02B.h
+	fea/ChElementBeamANCF_3333_TR03.h
+	fea/ChElementBeamANCF_3333_TR03B.h
+	fea/ChElementBeamANCF_3333_TR04.h
+	fea/ChElementBeamANCF_3333_TR04B.h
+	fea/ChElementBeamANCF_3333_TR05.h
+	fea/ChElementBeamANCF_3333_TR05B.h
+	fea/ChElementBeamANCF_3333_TR06.h
+	fea/ChElementBeamANCF_3333_TR06B.h
+	fea/ChElementBeamANCF_3333_TR07.h
+	fea/ChElementBeamANCF_3333_TR07B.h
+	fea/ChElementBeamANCF_3333_TR08.h
+	fea/ChElementBeamANCF_3333_TR08B.h
+	fea/ChElementBeamANCF_3333_TR09.h
+	fea/ChElementBeamANCF_3333_TR09B.h
+	fea/ChElementBeamANCF_3333_TR10.h
+	fea/ChElementBeamANCF_3333_TR10B.h
+	fea/ChElementBeamANCF_3333_TR11.h
+	fea/ChElementBeamANCF_3333_TR11B.h
+	fea/ChElementShellANCF_3443.h
+	fea/ChElementShellANCF_3443_TR01.h
+	fea/ChElementShellANCF_3443_TR01B.h
+	fea/ChElementShellANCF_3443_TR02.h
+	fea/ChElementShellANCF_3443_TR02B.h
+	fea/ChElementShellANCF_3443_TR03.h
+	fea/ChElementShellANCF_3443_TR03B.h
+	fea/ChElementShellANCF_3443_TR04.h
+	fea/ChElementShellANCF_3443_TR04B.h
+	fea/ChElementShellANCF_3443_TR05.h
+	fea/ChElementShellANCF_3443_TR05B.h
+	fea/ChElementShellANCF_3443_TR06.h
+	fea/ChElementShellANCF_3443_TR06B.h
+	fea/ChElementShellANCF_3443_TR07.h
+	fea/ChElementShellANCF_3443_TR07B.h
+	fea/ChElementShellANCF_3443_TR08.h
+	fea/ChElementShellANCF_3443_TR08B.h
+	fea/ChElementShellANCF_3443_TR09.h
+	fea/ChElementShellANCF_3443_TR09B.h
+	fea/ChElementShellANCF_3443_TR10.h
+	fea/ChElementShellANCF_3443_TR10B.h
+	fea/ChElementShellANCF_3443_TR11.h
+	fea/ChElementShellANCF_3443_TR11B.h
+    fea/ChElementShellANCF_3833.h
+	fea/ChElementShellANCF_3833_TR01.h
+	fea/ChElementShellANCF_3833_TR01B.h
+	fea/ChElementShellANCF_3833_TR02.h
+	fea/ChElementShellANCF_3833_TR02B.h
+	fea/ChElementShellANCF_3833_TR03.h
+	fea/ChElementShellANCF_3833_TR03B.h
+	fea/ChElementShellANCF_3833_TR04.h
+	fea/ChElementShellANCF_3833_TR04B.h
+	fea/ChElementShellANCF_3833_TR05.h
+	fea/ChElementShellANCF_3833_TR05B.h
+	fea/ChElementShellANCF_3833_TR06.h
+	fea/ChElementShellANCF_3833_TR06B.h
+	fea/ChElementShellANCF_3833_TR07.h
+	fea/ChElementShellANCF_3833_TR07B.h
+	fea/ChElementShellANCF_3833_TR08.h
+	fea/ChElementShellANCF_3833_TR08B.h
+	fea/ChElementShellANCF_3833_TR09.h
+	fea/ChElementShellANCF_3833_TR09B.h
+	fea/ChElementShellANCF_3833_TR10.h
+	fea/ChElementShellANCF_3833_TR10B.h
+	fea/ChElementShellANCF_3833_TR11.h
+	fea/ChElementShellANCF_3833_TR11B.h
+	fea/ChElementHexaANCF_3843.h
+	fea/ChElementHexaANCF_3843_TR01.h
+	fea/ChElementHexaANCF_3843_TR01B.h
+	fea/ChElementHexaANCF_3843_TR02.h
+	fea/ChElementHexaANCF_3843_TR02B.h
+	fea/ChElementHexaANCF_3843_TR03.h
+	fea/ChElementHexaANCF_3843_TR03B.h
+	fea/ChElementHexaANCF_3843_TR04.h
+	fea/ChElementHexaANCF_3843_TR04B.h
+	fea/ChElementHexaANCF_3843_TR05.h
+	fea/ChElementHexaANCF_3843_TR05B.h
+	fea/ChElementHexaANCF_3843_TR06.h
+	fea/ChElementHexaANCF_3843_TR06B.h
+	fea/ChElementHexaANCF_3843_TR07.h
+	fea/ChElementHexaANCF_3843_TR07B.h
+	fea/ChElementHexaANCF_3843_TR08.h
+	fea/ChElementHexaANCF_3843_TR08B.h
+	fea/ChElementHexaANCF_3843_TR09.h
+	fea/ChElementHexaANCF_3843_TR09B.h
+	fea/ChElementHexaANCF_3843_TR10.h
+	fea/ChElementHexaANCF_3843_TR10B.h
+	fea/ChElementHexaANCF_3843_TR11.h
+	fea/ChElementHexaANCF_3843_TR11B.h
 )
 
 source_group(fea\\elements FILES

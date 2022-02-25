@@ -22,8 +22,27 @@
 #include "chrono/solver/ChDirectSolverLS.h"
 
 #include "chrono/fea/ChElementHexaANCF_3843_TR01.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR01B.h"
 #include "chrono/fea/ChElementHexaANCF_3843_TR02.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR02B.h"
 #include "chrono/fea/ChElementHexaANCF_3843_TR03.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR03B.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR04.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR04B.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR05.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR05B.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR06.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR06B.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR07.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR07B.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR08.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR08B.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR09.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR09B.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR10.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR10B.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR11.h"
+#include "chrono/fea/ChElementHexaANCF_3843_TR11B.h"
 
 #include "chrono/fea/ChMesh.h"
 #include "chrono/fea/ChVisualizationFEAmesh.h"
@@ -330,7 +349,7 @@ bool ANCFBrickTest<ElementVersion, MaterialVersion>::GeneralizedInternalForceNoD
     m_element->ComputeInternalForces(InternalForceNoDispNoVel);
 
     double MaxAbsError = InternalForceNoDispNoVel.cwiseAbs().maxCoeff();
-    bool passed_test = (MaxAbsError <= 0.001);
+    bool passed_test = (MaxAbsError <= 0.002);
 
     if (msglvl >= 2) {
         std::cout << std::endl << std::endl << "---------------------------" << std::endl << std::endl;
@@ -1339,7 +1358,7 @@ bool ANCFBrickTest<ElementVersion, MaterialVersion>::AxialDisplacementCheck(int 
             assert(auxsystem);
 
             F.setZero();
-            F(0) = TIP_FORCE;  // Apply the force along the global X axis (beam axis)
+            F(0) = 5 * TIP_FORCE;  // Apply the force along the global X axis (beam axis)
         }
 
       public:
@@ -1369,13 +1388,13 @@ bool ANCFBrickTest<ElementVersion, MaterialVersion>::AxialDisplacementCheck(int 
     elementlast->EvaluateElementFrame(1, 0, 0, point, rot);
 
     // For Analytical Formula, see a mechanics of materials textbook (delta = (P*L)/(A*E))
-    double Displacement_Theory = (TIP_FORCE * length) / (width * height * E);
+    double Displacement_Theory = (5 * TIP_FORCE * length) / (width * height * E);
     double Displacement_Model = point.x() - length;
     ChVector<> Tip_Angles = rot.Q_to_Euler123();
 
     double Percent_Error = (Displacement_Model - Displacement_Theory) / Displacement_Theory * 100;
 
-    bool passed_displacement = abs(Percent_Error) < 6.0;
+    bool passed_displacement = abs(Percent_Error) < 7.0;
     bool passed_angles = (abs(Tip_Angles.x() * CH_C_RAD_TO_DEG) < 0.1) &&
                          (abs(Tip_Angles.y() * CH_C_RAD_TO_DEG) < 0.1) && (abs(Tip_Angles.z() * CH_C_RAD_TO_DEG) < 0.1);
     bool passed_tests = passed_displacement && passed_angles;
@@ -1389,7 +1408,7 @@ bool ANCFBrickTest<ElementVersion, MaterialVersion>::AxialDisplacementCheck(int 
                   << std::endl;
     }
     if (msglvl >= 1) {
-        std::cout << "Axial Pull Test - Tip Displacement Check (Percent Error less than 6%) = " << Percent_Error << "%";
+        std::cout << "Axial Pull Test - Tip Displacement Check (Percent Error less than 7%) = " << Percent_Error << "%";
         if (passed_displacement)
             print_green(" - Test PASSED\n");
         else
@@ -1969,6 +1988,13 @@ int main(int argc, char* argv[]) {
         print_red("ChElementHexaANCF_3843_TR01 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR01B, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR01B_test;
+    if (ChElementHexaANCF_3843_TR01B_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR01B Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR01B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFBrickTest<ChElementHexaANCF_3843_TR02, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR02_test;
     if (ChElementHexaANCF_3843_TR02_test.RunElementChecks(0))
         print_green("ChElementHexaANCF_3843_TR02 Element Checks = PASSED\n");
@@ -1976,11 +2002,137 @@ int main(int argc, char* argv[]) {
         print_red("ChElementHexaANCF_3843_TR02 Element Checks = FAILED\n");
 
     std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR02B, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR02B_test;
+    if (ChElementHexaANCF_3843_TR02B_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR02B Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR02B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
     ANCFBrickTest<ChElementHexaANCF_3843_TR03, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR03_test;
     if (ChElementHexaANCF_3843_TR03_test.RunElementChecks(0))
         print_green("ChElementHexaANCF_3843_TR03 Element Checks = PASSED\n");
     else
         print_red("ChElementHexaANCF_3843_TR03 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR03B, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR03B_test;
+    if (ChElementHexaANCF_3843_TR03B_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR03B Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR03B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR04, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR04_test;
+    if (ChElementHexaANCF_3843_TR04_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR04 Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR04 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR04B, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR04B_test;
+    if (ChElementHexaANCF_3843_TR04B_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR04B Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR04B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR05, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR05_test;
+    if (ChElementHexaANCF_3843_TR05_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR05 Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR05 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR05B, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR05B_test;
+    if (ChElementHexaANCF_3843_TR05B_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR05B Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR05B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR06, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR06_test;
+    if (ChElementHexaANCF_3843_TR06_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR06 Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR06 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR06B, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR06B_test;
+    if (ChElementHexaANCF_3843_TR06B_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR06B Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR06B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR07, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR07_test;
+    if (ChElementHexaANCF_3843_TR07_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR07 Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR07 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR07B, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR07B_test;
+    if (ChElementHexaANCF_3843_TR07B_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR07B Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR07B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR08, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR08_test;
+    if (ChElementHexaANCF_3843_TR08_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR08 Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR08 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR08B, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR08B_test;
+    if (ChElementHexaANCF_3843_TR08B_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR08B Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR08B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR09, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR09_test;
+    if (ChElementHexaANCF_3843_TR09_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR09 Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR09 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR09B, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR09B_test;
+    if (ChElementHexaANCF_3843_TR09B_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR09B Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR09B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR10, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR10_test;
+    if (ChElementHexaANCF_3843_TR10_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR10 Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR10 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR10B, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR10B_test;
+    if (ChElementHexaANCF_3843_TR10B_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR10B Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR10B Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR11, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR11_test;
+    if (ChElementHexaANCF_3843_TR11_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR11 Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR11 Element Checks = FAILED\n");
+
+    std::cout << "-------------------------------------" << std::endl;
+    ANCFBrickTest<ChElementHexaANCF_3843_TR11B, ChMaterialHexaANCF> ChElementHexaANCF_3843_TR11B_test;
+    if (ChElementHexaANCF_3843_TR11B_test.RunElementChecks(0))
+        print_green("ChElementHexaANCF_3843_TR11B Element Checks = PASSED\n");
+    else
+        print_red("ChElementHexaANCF_3843_TR11B Element Checks = FAILED\n");
 
     return 0;
 }

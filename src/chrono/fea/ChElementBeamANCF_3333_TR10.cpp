@@ -20,7 +20,7 @@
 // =============================================================================
 // TR10 = Liu Based Pre-Integration storing only O1
 // =============================================================================
-// Mass Matrix = Compact NxN
+// Mass Matrix = Compact Upper Triangular
 // Liu Based Pre-Integration method for both the internal force and Jacobian
 // Storing only O1 and computing O2 from O1 when needed
 // =============================================================================
@@ -313,16 +313,20 @@ void ChElementBeamANCF_3333_TR10::Update() {
 void ChElementBeamANCF_3333_TR10::ComputeMmatrixGlobal(ChMatrixRef M) {
     M.setZero();
 
-    // Inflate the Mass Matrix since it is stored in compact form.
-    // In MATLAB notation:
-    // M(1:3:end,1:3:end) = m_MassMatrix;
-    // M(2:3:end,2:3:end) = m_MassMatrix;
-    // M(3:3:end,3:3:end) = m_MassMatrix;
+    // Mass Matrix is Stored in Compact Upper Triangular Form
+    // Expand it out into its Full Sparse Symmetric Form
+    unsigned int idx = 0;
     for (unsigned int i = 0; i < NSF; i++) {
-        for (unsigned int j = 0; j < NSF; j++) {
-            M(3 * i, 3 * j) = m_MassMatrix(i, j);
-            M(3 * i + 1, 3 * j + 1) = m_MassMatrix(i, j);
-            M(3 * i + 2, 3 * j + 2) = m_MassMatrix(i, j);
+        for (unsigned int j = i; j < NSF; j++) {
+            M(3 * i, 3 * j) = m_MassMatrix(idx);
+            M(3 * i + 1, 3 * j + 1) = m_MassMatrix(idx);
+            M(3 * i + 2, 3 * j + 2) = m_MassMatrix(idx);
+            if (i != j) {
+                M(3 * j, 3 * i) = m_MassMatrix(idx);
+                M(3 * j + 1, 3 * i + 1) = m_MassMatrix(idx);
+                M(3 * j + 2, 3 * i + 2) = m_MassMatrix(idx);
+            }
+            idx++;
         }
     }
 }
@@ -330,9 +334,9 @@ void ChElementBeamANCF_3333_TR10::ComputeMmatrixGlobal(ChMatrixRef M) {
 // This class computes and adds corresponding masses to ElementGeneric member m_TotalMass
 
 void ChElementBeamANCF_3333_TR10::ComputeNodalMass() {
-    m_nodes[0]->m_TotalMass += m_MassMatrix(0, 0) + m_MassMatrix(0, 3) + m_MassMatrix(0, 6);
-    m_nodes[1]->m_TotalMass += m_MassMatrix(3, 0) + m_MassMatrix(3, 3) + m_MassMatrix(3, 6);
-    m_nodes[2]->m_TotalMass += m_MassMatrix(6, 0) + m_MassMatrix(6, 3) + m_MassMatrix(6, 6);
+    m_nodes[0]->m_TotalMass += m_MassMatrix(0) + m_MassMatrix(3) + m_MassMatrix(6);
+    m_nodes[1]->m_TotalMass += m_MassMatrix(3) + m_MassMatrix(24) + m_MassMatrix(27);
+    m_nodes[2]->m_TotalMass += m_MassMatrix(6) + m_MassMatrix(27) + m_MassMatrix(39);
 }
 
 // Compute the generalized internal force vector for the current nodal coordinates and set the value in the Fi vector.
@@ -372,13 +376,9 @@ void ChElementBeamANCF_3333_TR10::ComputeInternalForces(ChVectorDynamic<>& Fi) {
 
     // Multiply the combined K1 and K3 matrix by the nodal coordinates in compact form and then remap it into the
     // required vector order that is the generalized internal force vector
-    // MatrixNx3 QiCompactLiu = m_K13Compact * ebar.transpose();
-    // Eigen::Map<Vector3N> QiReshapedLiu(QiCompactLiu.data(), QiCompactLiu.size());
-    // Fi = QiReshapedLiu;
-
-    // Setup mapping for Fi in Matrix form the later generalized internal force calculations
-    Eigen::Map<MatrixNx3> FiMatrixForm(Fi.data(), NSF, 3);
-    FiMatrixForm.noalias() = m_K13Compact * ebar.transpose();
+    MatrixNx3 QiCompact = m_K13Compact * ebar.transpose();
+    Eigen::Map<Vector3N> Qi(QiCompact.data(), QiCompact.size());
+    Fi.noalias() = Qi;
 }
 
 // Calculate the global matrix H as a linear combination of K, R, and M:
@@ -427,26 +427,32 @@ void ChElementBeamANCF_3333_TR10::ComputeKRMmatricesGlobal(ChMatrixRef H,
     }
     ChMatrixNMc<double, 9, NSF* NSF> K2 = -PI2 * O2;
 
+    Matrix3Nx3N Jac;
     for (unsigned int k = 0; k < NSF; k++) {
         for (unsigned int f = 0; f < NSF; f++) {
-            H.block<3, 1>(3 * k, 3 * f).noalias() = K2.block<3, 1>(0, NSF * f + k);
-            H.block<3, 1>(3 * k, 3 * f + 1).noalias() = K2.block<3, 1>(3, NSF * f + k);
-            H.block<3, 1>(3 * k, 3 * f + 2).noalias() = K2.block<3, 1>(6, NSF * f + k);
+            Jac.block<3, 1>(3 * k, 3 * f).noalias() = K2.block<3, 1>(0, NSF * f + k);
+            Jac.block<3, 1>(3 * k, 3 * f + 1).noalias() = K2.block<3, 1>(3, NSF * f + k);
+            Jac.block<3, 1>(3 * k, 3 * f + 2).noalias() = K2.block<3, 1>(6, NSF * f + k);
         }
     }
 
     // Add in the sparse (blocks times the 3x3 identity matrix) component of the Jacobian that was already calculated as
-    // part of the generalized internal force calculations as well as the Mass Matrix which is stored in compact NxN
-    // form
-    MatrixNxN K_K13Compact = Mfactor * m_MassMatrix - Kfactor * m_K13Compact;
-
+    // part of the generalized internal force calculations as well as the Mass Matrix which is stored in compact upper
+    // triangular form
     for (unsigned int i = 0; i < NSF; i++) {
         for (unsigned int j = 0; j < NSF; j++) {
-            H(3 * i, 3 * j) += K_K13Compact(i, j);
-            H(3 * i + 1, 3 * j + 1) += K_K13Compact(i, j);
-            H(3 * i + 2, 3 * j + 2) += K_K13Compact(i, j);
+            // Convert from a (i,j) index to a linear index into the Mass Matrix in Compact Upper Triangular Form
+            // https://math.stackexchange.com/questions/2134011/conversion-of-upper-triangle-linear-index-from-index-on-symmetrical-array
+            int idx = (j >= i) ? ((NSF * (NSF - 1) - (NSF - i) * (NSF - i - 1)) / 2 + j)
+                               : ((NSF * (NSF - 1) - (NSF - j) * (NSF - j - 1)) / 2 + i);
+            double d = Mfactor * m_MassMatrix(idx) - Kfactor * m_K13Compact(i, j);
+            Jac(3 * i + 0, 3 * j + 0) += d;
+            Jac(3 * i + 1, 3 * j + 1) += d;
+            Jac(3 * i + 2, 3 * j + 2) += d;
         }
     }
+
+    H.noalias() = Jac;
 }
 
 // Compute the generalized force vector due to gravity using the efficient ANCF specific method
@@ -756,7 +762,7 @@ void ChElementBeamANCF_3333_TR10::ComputeMassMatrixAndGravityForce() {
     MatrixNxN MassMatrixCompactSquare;
 
     // Set these to zeros since they will be incremented as the vector/matrix is calculated
-    m_MassMatrix.setZero();
+    MassMatrixCompactSquare.setZero();
     m_GravForceScale.setZero();
 
     double rho = GetMaterial()->Get_rho();  // Density of the material for the element
@@ -776,8 +782,18 @@ void ChElementBeamANCF_3333_TR10::ComputeMassMatrixAndGravityForce() {
                 Calc_Sxi_compact(Sxi_compact, xi, eta, zeta);
 
                 m_GravForceScale += (GQ_weight * rho * det_J_0xi) * Sxi_compact;
-                m_MassMatrix += (GQ_weight * rho * det_J_0xi) * Sxi_compact * Sxi_compact.transpose();
+                MassMatrixCompactSquare += (GQ_weight * rho * det_J_0xi) * Sxi_compact * Sxi_compact.transpose();
             }
+        }
+    }
+
+    // Store just the unique entries in the Mass Matrix in Compact Upper Triangular Form
+    // since the full Mass Matrix is both sparse and symmetric
+    unsigned int idx = 0;
+    for (unsigned int i = 0; i < NSF; i++) {
+        for (unsigned int j = i; j < NSF; j++) {
+            m_MassMatrix(idx) = MassMatrixCompactSquare(i, j);
+            idx++;
         }
     }
 }
@@ -789,6 +805,10 @@ void ChElementBeamANCF_3333_TR10::PrecomputeInternalForceMatricesWeights() {
     ChQuadratureTables* GQTable = GetStaticGQTables();
     unsigned int GQ_idx_xi = NP - 1;        // Gauss-Quadrature table index for xi
     unsigned int GQ_idx_eta_zeta = NT - 1;  // Gauss-Quadrature table index for eta and zeta
+
+    m_O1.resize(NSF * NSF, NSF * NSF);
+    m_K3Compact.resize(NSF, NSF);
+    m_K13Compact.resize(NSF, NSF);
 
     m_K13Compact.setZero();
     m_K3Compact.setZero();

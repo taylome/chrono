@@ -24,7 +24,7 @@
 // =============================================================================
 // TR09 = Liu Based Pre-Integration storing both O1 and O2
 // =============================================================================
-// Mass Matrix = Compact NxN
+// Mass Matrix = Compact Upper Triangular
 // Liu Based Pre-Integration method for both the internal force and Jacobian
 // Storing both O1 and O2
 // =============================================================================
@@ -359,11 +359,20 @@ class ChApi ChElementBeamANCF_3243_TR09 : public ChElementBeam, public ChLoadabl
     bool m_damping_enabled;                                 ///< Flag to run internal force damping calculations
     VectorN m_GravForceScale;  ///< Gravity scaling matrix used to get the generalized force due to gravity
     Matrix3xN m_ebar0;         ///< Element Position Coordinate Vector for the Reference Configuration
-    MatrixNxN m_MassMatrix;    ///< Mass Matrix in compact matrix form;
-    ChMatrixNM<double, NSF * NSF, NSF * NSF> m_O1;
-    ChMatrixNMc<double, NSF * NSF, NSF * NSF> m_O2;
-    ChMatrixNM<double, NSF, NSF> m_K3Compact;
-    ChMatrixNM<double, NSF, NSF> m_K13Compact;
+    ChVectorN<double, (NSF * (NSF + 1)) / 2>
+        m_MassMatrix;  /// Mass Matrix in extra compact form (Upper Triangular Part only)
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+        m_O1;  ///< Precomputed Matrix combined with the nodal coordinates used for the "Pre-Integration" style method
+               ///< internal force calculation
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>
+        m_O2;  ///< Precomputed Matrix combined with the nodal coordinates used for the "Pre-Integration" style method
+               ///< Jacobian calculation
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+        m_K3Compact;  ///< Precomputed Matrix combined with the nodal coordinates used for the "Pre-Integration" style
+                      ///< method internal force calculation
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+        m_K13Compact;  ///< Saved results from the generalized internal force calculation that are reused for the
+                       ///< Jacobian calculations for the "Pre-Integration" style method
 
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

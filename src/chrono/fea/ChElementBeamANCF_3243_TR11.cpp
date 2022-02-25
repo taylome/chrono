@@ -371,7 +371,8 @@ void ChElementBeamANCF_3243_TR11::ComputeInternalForces(ChVectorDynamic<>& Fi) {
     ChMatrixNMc<double, 3, NSF> ebar_colmajor = ebar;
     Eigen::Map<ChVectorN<double, 3 * NSF>> e(ebar_colmajor.data(), ebar_colmajor.size());
 
-    Fi.noalias() = (m_K1 + m_K2) * e + (2 * m_Alpha) * m_K2 * edot;
+    Vector3N Qi = (m_K1 + m_K2) * e + (2 * m_Alpha) * (m_K2 * edot);
+    Fi.noalias() = Qi;
 }
 
 // Calculate the global matrix H as a linear combination of K, R, and M:
@@ -390,7 +391,7 @@ void ChElementBeamANCF_3243_TR11::ComputeKRMmatricesGlobal(ChMatrixRef H,
     CalcCoordDerivMatrix(ebardot);
     Matrix3xN ebar_plus_ebardot = ebar + (2 * m_Alpha) * ebardot;
 
-    H.noalias() = -Kfactor * m_K1 - (Kfactor + Rfactor * 2 * m_Alpha) * m_K2;
+    Matrix3Nx3N Jac = -Kfactor * m_K1 - (Kfactor + Rfactor * 2 * m_Alpha) * m_K2;
 
     unsigned int index = 0;
     for (unsigned int i = 0; i < NSF; i++) {
@@ -404,7 +405,7 @@ void ChElementBeamANCF_3243_TR11::ComputeKRMmatricesGlobal(ChMatrixRef H,
                 Block(0, 0) += d;
                 Block(1, 1) += d;
                 Block(2, 2) += d;
-                H.block<3, 3>(3 * i, 3 * k).noalias() += Kfactor * Block;
+                Jac.block<3, 3>(3 * i, 3 * k).noalias() += Kfactor * Block;
             }
 
             if (i != s) {
@@ -415,7 +416,7 @@ void ChElementBeamANCF_3243_TR11::ComputeKRMmatricesGlobal(ChMatrixRef H,
                     Block(0, 0) += d;
                     Block(1, 1) += d;
                     Block(2, 2) += d;
-                    H.block<3, 3>(3 * s, 3 * k).noalias() += Kfactor * Block;
+                    Jac.block<3, 3>(3 * s, 3 * k).noalias() += Kfactor * Block;
                 }
             }
         }
@@ -424,17 +425,19 @@ void ChElementBeamANCF_3243_TR11::ComputeKRMmatricesGlobal(ChMatrixRef H,
     unsigned int idx = 0;
     for (unsigned int i = 0; i < NSF; i++) {
         for (unsigned int j = i; j < NSF; j++) {
-            H(3 * i, 3 * j) += Mfactor * m_MassMatrix(idx);
-            H(3 * i + 1, 3 * j + 1) += Mfactor * m_MassMatrix(idx);
-            H(3 * i + 2, 3 * j + 2) += Mfactor * m_MassMatrix(idx);
+            Jac(3 * i, 3 * j) += Mfactor * m_MassMatrix(idx);
+            Jac(3 * i + 1, 3 * j + 1) += Mfactor * m_MassMatrix(idx);
+            Jac(3 * i + 2, 3 * j + 2) += Mfactor * m_MassMatrix(idx);
             if (i != j) {
-                H(3 * j, 3 * i) += Mfactor * m_MassMatrix(idx);
-                H(3 * j + 1, 3 * i + 1) += Mfactor * m_MassMatrix(idx);
-                H(3 * j + 2, 3 * i + 2) += Mfactor * m_MassMatrix(idx);
+                Jac(3 * j, 3 * i) += Mfactor * m_MassMatrix(idx);
+                Jac(3 * j + 1, 3 * i + 1) += Mfactor * m_MassMatrix(idx);
+                Jac(3 * j + 2, 3 * i + 2) += Mfactor * m_MassMatrix(idx);
             }
             idx++;
         }
     }
+
+    H.noalias() = Jac;
 }
 
 // Compute the generalized force vector due to gravity using the efficient ANCF specific method
@@ -783,6 +786,10 @@ void ChElementBeamANCF_3243_TR11::PrecomputeInternalForceMatricesWeights() {
     ChQuadratureTables* GQTable = GetStaticGQTables();
     unsigned int GQ_idx_xi = NP - 1;        // Gauss-Quadrature table index for xi
     unsigned int GQ_idx_eta_zeta = NT - 1;  // Gauss-Quadrature table index for eta and zeta
+
+    m_Ccompact.resize(NSF * ((NSF * (NSF + 1)) / 2), NSF);
+    m_K1.resize(3 * NSF, 3 * NSF);
+    m_K2.resize(3 * NSF, 3 * NSF);
 
     // m_Ccompact.setRandom();
     // m_K1.setRandom();

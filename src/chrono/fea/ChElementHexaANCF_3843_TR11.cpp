@@ -35,7 +35,7 @@ namespace fea {
 // ------------------------------------------------------------------------------
 
 ChElementHexaANCF_3843_TR11::ChElementHexaANCF_3843_TR11()
-    : m_lenX(0), m_lenY(0), m_lenZ(0), m_Alpha(0), m_damping_enabled(false) {
+    : m_lenX(0), m_lenY(0), m_lenZ(0), m_Alpha(0), m_damping_enabled(false), m_skipPrecomputation(false) {
     m_nodes.resize(8);
 
     m_Ccompact.resize(NSF * ((NSF * (NSF + 1)) / 2), NSF);
@@ -451,7 +451,8 @@ void ChElementHexaANCF_3843_TR11::ComputeInternalForces(ChVectorDynamic<>& Fi) {
     ChMatrixNMc<double, 3, NSF> ebar_colmajor = ebar;
     Eigen::Map<ChVectorN<double, 3 * NSF>> e(ebar_colmajor.data(), ebar_colmajor.size());
 
-    Fi.noalias() = (m_K1 + m_K2) * e + (2 * m_Alpha) * m_K2 * edot;
+    Vector3N Qi = (m_K1 + m_K2) * e + (2 * m_Alpha) * (m_K2 * edot);
+    Fi.noalias() = Qi;
 }
 
 // Calculate the global matrix H as a linear combination of K, R, and M:
@@ -470,7 +471,7 @@ void ChElementHexaANCF_3843_TR11::ComputeKRMmatricesGlobal(ChMatrixRef H,
     CalcCoordDerivMatrix(ebardot);
     Matrix3xN ebar_plus_ebardot = ebar + (2 * m_Alpha) * ebardot;
 
-    H.noalias() = -Kfactor * m_K1 - (Kfactor + Rfactor * 2 * m_Alpha) * m_K2;
+    Matrix3Nx3N Jac = -Kfactor * m_K1 - (Kfactor + Rfactor * 2 * m_Alpha) * m_K2;
 
     unsigned int index = 0;
     for (unsigned int i = 0; i < NSF; i++) {
@@ -484,7 +485,7 @@ void ChElementHexaANCF_3843_TR11::ComputeKRMmatricesGlobal(ChMatrixRef H,
                 Block(0, 0) += d;
                 Block(1, 1) += d;
                 Block(2, 2) += d;
-                H.block<3, 3>(3 * i, 3 * k).noalias() += Kfactor * Block;
+                Jac.block<3, 3>(3 * i, 3 * k).noalias() += Kfactor * Block;
             }
 
             if (i != s) {
@@ -495,7 +496,7 @@ void ChElementHexaANCF_3843_TR11::ComputeKRMmatricesGlobal(ChMatrixRef H,
                     Block(0, 0) += d;
                     Block(1, 1) += d;
                     Block(2, 2) += d;
-                    H.block<3, 3>(3 * s, 3 * k).noalias() += Kfactor * Block;
+                    Jac.block<3, 3>(3 * s, 3 * k).noalias() += Kfactor * Block;
                 }
             }
         }
@@ -504,17 +505,19 @@ void ChElementHexaANCF_3843_TR11::ComputeKRMmatricesGlobal(ChMatrixRef H,
     unsigned int idx = 0;
     for (unsigned int i = 0; i < NSF; i++) {
         for (unsigned int j = i; j < NSF; j++) {
-            H(3 * i, 3 * j) += Mfactor * m_MassMatrix(idx);
-            H(3 * i + 1, 3 * j + 1) += Mfactor * m_MassMatrix(idx);
-            H(3 * i + 2, 3 * j + 2) += Mfactor * m_MassMatrix(idx);
+            Jac(3 * i, 3 * j) += Mfactor * m_MassMatrix(idx);
+            Jac(3 * i + 1, 3 * j + 1) += Mfactor * m_MassMatrix(idx);
+            Jac(3 * i + 2, 3 * j + 2) += Mfactor * m_MassMatrix(idx);
             if (i != j) {
-                H(3 * j, 3 * i) += Mfactor * m_MassMatrix(idx);
-                H(3 * j + 1, 3 * i + 1) += Mfactor * m_MassMatrix(idx);
-                H(3 * j + 2, 3 * i + 2) += Mfactor * m_MassMatrix(idx);
+                Jac(3 * j, 3 * i) += Mfactor * m_MassMatrix(idx);
+                Jac(3 * j + 1, 3 * i + 1) += Mfactor * m_MassMatrix(idx);
+                Jac(3 * j + 2, 3 * i + 2) += Mfactor * m_MassMatrix(idx);
             }
             idx++;
         }
     }
+
+    H.noalias() = Jac;
 }
 
 // Compute the generalized force vector due to gravity using the efficient ANCF specific method
@@ -852,82 +855,84 @@ void ChElementHexaANCF_3843_TR11::PrecomputeInternalForceMatricesWeights() {
     ChQuadratureTables* GQTable = GetStaticGQTables();
     unsigned int GQ_idx_xi_eta_zeta = NP - 1;  // Gauss-Quadrature table index for xi, eta, and zeta
 
-    // m_Ccompact.setRandom();
-    // m_K1.setRandom();
+    if (m_skipPrecomputation) {
+        m_Ccompact.setRandom();
+        m_K1.setRandom();
+    } else {
+        ChMatrixNM<double, NSF, NSF> K1compact;
+        K1compact.setZero();
+        m_Ccompact.setZero();
+        m_K1.setZero();
 
-    ChMatrixNM<double, NSF, NSF> K1compact;
-    K1compact.setZero();
-    m_Ccompact.setZero();
-    m_K1.setZero();
+        ChMatrixNM<double, 6, 6> D = GetMaterial()->Get_D();
 
-    ChMatrixNM<double, 6, 6> D = GetMaterial()->Get_D();
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> epsilion_matrices;
+        epsilion_matrices.resize(6 * NSF, NSF);
 
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> epsilion_matrices;
-    epsilion_matrices.resize(6 * NSF, NSF);
+        // Precalculate the matrices of normalized shape function derivatives corrected for a potentially non-straight
+        // reference configuration & GQ Weights times the determiate of the element Jacobian for later Calculating the
+        // portion of the Selective Reduced Integration that does account for the Poisson effect
+        for (unsigned int it_xi = 0; it_xi < GQTable->Lroots[GQ_idx_xi_eta_zeta].size(); it_xi++) {
+            for (unsigned int it_eta = 0; it_eta < GQTable->Lroots[GQ_idx_xi_eta_zeta].size(); it_eta++) {
+                for (unsigned int it_zeta = 0; it_zeta < GQTable->Lroots[GQ_idx_xi_eta_zeta].size(); it_zeta++) {
+                    double GQ_weight = GQTable->Weight[GQ_idx_xi_eta_zeta][it_xi] *
+                                       GQTable->Weight[GQ_idx_xi_eta_zeta][it_eta] *
+                                       GQTable->Weight[GQ_idx_xi_eta_zeta][it_zeta];
+                    double xi = GQTable->Lroots[GQ_idx_xi_eta_zeta][it_xi];
+                    double eta = GQTable->Lroots[GQ_idx_xi_eta_zeta][it_eta];
+                    double zeta = GQTable->Lroots[GQ_idx_xi_eta_zeta][it_zeta];
 
-    // Precalculate the matrices of normalized shape function derivatives corrected for a potentially non-straight
-    // reference configuration & GQ Weights times the determiate of the element Jacobian for later Calculating the
-    // portion of the Selective Reduced Integration that does account for the Poisson effect
-    for (unsigned int it_xi = 0; it_xi < GQTable->Lroots[GQ_idx_xi_eta_zeta].size(); it_xi++) {
-        for (unsigned int it_eta = 0; it_eta < GQTable->Lroots[GQ_idx_xi_eta_zeta].size(); it_eta++) {
-            for (unsigned int it_zeta = 0; it_zeta < GQTable->Lroots[GQ_idx_xi_eta_zeta].size(); it_zeta++) {
-                double GQ_weight = GQTable->Weight[GQ_idx_xi_eta_zeta][it_xi] *
-                                   GQTable->Weight[GQ_idx_xi_eta_zeta][it_eta] *
-                                   GQTable->Weight[GQ_idx_xi_eta_zeta][it_zeta];
-                double xi = GQTable->Lroots[GQ_idx_xi_eta_zeta][it_xi];
-                double eta = GQTable->Lroots[GQ_idx_xi_eta_zeta][it_eta];
-                double zeta = GQTable->Lroots[GQ_idx_xi_eta_zeta][it_zeta];
+                    ChMatrix33<double>
+                        J_0xi;  // Element Jacobian between the reference configuration and normalized configuration
+                    ChMatrixNMc<double, NSF, 3> Sxi_D;  // Matrix of normalized shape function derivatives
 
-                ChMatrix33<double>
-                    J_0xi;  // Element Jacobian between the reference configuration and normalized configuration
-                ChMatrixNMc<double, NSF, 3> Sxi_D;  // Matrix of normalized shape function derivatives
+                    Calc_Sxi_D(Sxi_D, xi, eta, zeta);
+                    J_0xi.noalias() = m_ebar0 * Sxi_D;
+                    Sxi_D = Sxi_D * J_0xi.inverse();
 
-                Calc_Sxi_D(Sxi_D, xi, eta, zeta);
-                J_0xi.noalias() = m_ebar0 * Sxi_D;
-                Sxi_D = Sxi_D * J_0xi.inverse();
+                    epsilion_matrices.block<NSF, NSF>(0 * NSF, 0) = 0.5 * Sxi_D.col(0) * Sxi_D.col(0).transpose();
+                    epsilion_matrices.block<NSF, NSF>(1 * NSF, 0) = 0.5 * Sxi_D.col(1) * Sxi_D.col(1).transpose();
+                    epsilion_matrices.block<NSF, NSF>(2 * NSF, 0) = 0.5 * Sxi_D.col(2) * Sxi_D.col(2).transpose();
+                    epsilion_matrices.block<NSF, NSF>(3 * NSF, 0) =
+                        0.5 * Sxi_D.col(1) * Sxi_D.col(2).transpose() + 0.5 * Sxi_D.col(2) * Sxi_D.col(1).transpose();
+                    epsilion_matrices.block<NSF, NSF>(4 * NSF, 0) =
+                        0.5 * Sxi_D.col(0) * Sxi_D.col(2).transpose() + 0.5 * Sxi_D.col(2) * Sxi_D.col(0).transpose();
+                    epsilion_matrices.block<NSF, NSF>(5 * NSF, 0) =
+                        0.5 * Sxi_D.col(0) * Sxi_D.col(1).transpose() + 0.5 * Sxi_D.col(1) * Sxi_D.col(0).transpose();
 
-                epsilion_matrices.block<NSF, NSF>(0 * NSF, 0) = 0.5 * Sxi_D.col(0) * Sxi_D.col(0).transpose();
-                epsilion_matrices.block<NSF, NSF>(1 * NSF, 0) = 0.5 * Sxi_D.col(1) * Sxi_D.col(1).transpose();
-                epsilion_matrices.block<NSF, NSF>(2 * NSF, 0) = 0.5 * Sxi_D.col(2) * Sxi_D.col(2).transpose();
-                epsilion_matrices.block<NSF, NSF>(3 * NSF, 0) =
-                    0.5 * Sxi_D.col(1) * Sxi_D.col(2).transpose() + 0.5 * Sxi_D.col(2) * Sxi_D.col(1).transpose();
-                epsilion_matrices.block<NSF, NSF>(4 * NSF, 0) =
-                    0.5 * Sxi_D.col(0) * Sxi_D.col(2).transpose() + 0.5 * Sxi_D.col(2) * Sxi_D.col(0).transpose();
-                epsilion_matrices.block<NSF, NSF>(5 * NSF, 0) =
-                    0.5 * Sxi_D.col(0) * Sxi_D.col(1).transpose() + 0.5 * Sxi_D.col(1) * Sxi_D.col(0).transpose();
-
-                // Just need to compute the upper triangular C compact block matrices since symmetry will be used
-                // in the internal force calculations
-                unsigned int index = 0;
-                for (unsigned int i = 0; i < NSF; i++) {
-                    for (unsigned int j = i; j < NSF; j++) {
-                        for (unsigned int k = 0; k < 6; k++) {
-                            for (unsigned int l = 0; l < 6; l++) {
-                                m_Ccompact.block<NSF, NSF>(NSF * index, 0) +=
-                                    J_0xi.determinant() * GQ_weight * 2 *
-                                    epsilion_matrices.block<1, NSF>(i + NSF * k, 0).transpose() * D(k, l) *
-                                    epsilion_matrices.block<NSF, 1>(NSF * l, j).transpose();
+                    // Just need to compute the upper triangular C compact block matrices since symmetry will be used
+                    // in the internal force calculations
+                    unsigned int index = 0;
+                    for (unsigned int i = 0; i < NSF; i++) {
+                        for (unsigned int j = i; j < NSF; j++) {
+                            for (unsigned int k = 0; k < 6; k++) {
+                                for (unsigned int l = 0; l < 6; l++) {
+                                    m_Ccompact.block<NSF, NSF>(NSF * index, 0) +=
+                                        J_0xi.determinant() * GQ_weight * 2 *
+                                        epsilion_matrices.block<1, NSF>(i + NSF * k, 0).transpose() * D(k, l) *
+                                        epsilion_matrices.block<NSF, 1>(NSF * l, j).transpose();
+                                }
                             }
+                            index++;
                         }
-                        index++;
                     }
-                }
 
-                for (unsigned int k = 0; k < 6; k++) {
-                    for (unsigned int l = 0; l < 3; l++) {
-                        K1compact +=
-                            J_0xi.determinant() * GQ_weight * D(k, l) * epsilion_matrices.block<NSF, NSF>(NSF * k, 0);
+                    for (unsigned int k = 0; k < 6; k++) {
+                        for (unsigned int l = 0; l < 3; l++) {
+                            K1compact += J_0xi.determinant() * GQ_weight * D(k, l) *
+                                         epsilion_matrices.block<NSF, NSF>(NSF * k, 0);
+                        }
                     }
                 }
             }
         }
-    }
 
-    for (unsigned int i = 0; i < NSF; i++) {
-        for (unsigned int j = 0; j < NSF; j++) {
-            m_K1(3 * i, 3 * j) = K1compact(i, j);
-            m_K1(3 * i + 1, 3 * j + 1) = K1compact(i, j);
-            m_K1(3 * i + 2, 3 * j + 2) = K1compact(i, j);
+        for (unsigned int i = 0; i < NSF; i++) {
+            for (unsigned int j = 0; j < NSF; j++) {
+                m_K1(3 * i, 3 * j) = K1compact(i, j);
+                m_K1(3 * i + 1, 3 * j + 1) = K1compact(i, j);
+                m_K1(3 * i + 2, 3 * j + 2) = K1compact(i, j);
+            }
         }
     }
 }
@@ -1355,80 +1360,6 @@ void ChElementHexaANCF_3843_TR11::CalcCombinedCoordMatrix(Matrix6xN& ebar_ebardo
     ebar_ebardot.block<3, 1>(3, 30) = m_nodes[7]->GetDD_dt().eigen();
     ebar_ebardot.block<3, 1>(0, 31) = m_nodes[7]->GetDDD().eigen();
     ebar_ebardot.block<3, 1>(3, 31) = m_nodes[7]->GetDDD_dt().eigen();
-}
-
-void ChElementHexaANCF_3843_TR11::CalcCombinedCoordMatrix(MatrixNx6& ebar_ebardot) {
-    ebar_ebardot.block<1, 3>(0, 0) = m_nodes[0]->GetPos().eigen();
-    ebar_ebardot.block<1, 3>(0, 3) = m_nodes[0]->GetPos_dt().eigen();
-    ebar_ebardot.block<1, 3>(1, 0) = m_nodes[0]->GetD().eigen();
-    ebar_ebardot.block<1, 3>(1, 3) = m_nodes[0]->GetD_dt().eigen();
-    ebar_ebardot.block<1, 3>(2, 0) = m_nodes[0]->GetDD().eigen();
-    ebar_ebardot.block<1, 3>(2, 3) = m_nodes[0]->GetDD_dt().eigen();
-    ebar_ebardot.block<1, 3>(3, 0) = m_nodes[0]->GetDDD().eigen();
-    ebar_ebardot.block<1, 3>(3, 3) = m_nodes[0]->GetDDD_dt().eigen();
-
-    ebar_ebardot.block<1, 3>(4, 0) = m_nodes[1]->GetPos().eigen();
-    ebar_ebardot.block<1, 3>(4, 3) = m_nodes[1]->GetPos_dt().eigen();
-    ebar_ebardot.block<1, 3>(5, 0) = m_nodes[1]->GetD().eigen();
-    ebar_ebardot.block<1, 3>(5, 3) = m_nodes[1]->GetD_dt().eigen();
-    ebar_ebardot.block<1, 3>(6, 0) = m_nodes[1]->GetDD().eigen();
-    ebar_ebardot.block<1, 3>(6, 3) = m_nodes[1]->GetDD_dt().eigen();
-    ebar_ebardot.block<1, 3>(7, 0) = m_nodes[1]->GetDDD().eigen();
-    ebar_ebardot.block<1, 3>(7, 3) = m_nodes[1]->GetDDD_dt().eigen();
-
-    ebar_ebardot.block<1, 3>(8, 0) = m_nodes[2]->GetPos().eigen();
-    ebar_ebardot.block<1, 3>(8, 3) = m_nodes[2]->GetPos_dt().eigen();
-    ebar_ebardot.block<1, 3>(9, 0) = m_nodes[2]->GetD().eigen();
-    ebar_ebardot.block<1, 3>(9, 3) = m_nodes[2]->GetD_dt().eigen();
-    ebar_ebardot.block<1, 3>(10, 0) = m_nodes[2]->GetDD().eigen();
-    ebar_ebardot.block<1, 3>(10, 3) = m_nodes[2]->GetDD_dt().eigen();
-    ebar_ebardot.block<1, 3>(11, 0) = m_nodes[2]->GetDDD().eigen();
-    ebar_ebardot.block<1, 3>(11, 3) = m_nodes[2]->GetDDD_dt().eigen();
-
-    ebar_ebardot.block<1, 3>(12, 0) = m_nodes[3]->GetPos().eigen();
-    ebar_ebardot.block<1, 3>(12, 3) = m_nodes[3]->GetPos_dt().eigen();
-    ebar_ebardot.block<1, 3>(13, 0) = m_nodes[3]->GetD().eigen();
-    ebar_ebardot.block<1, 3>(13, 3) = m_nodes[3]->GetD_dt().eigen();
-    ebar_ebardot.block<1, 3>(14, 0) = m_nodes[3]->GetDD().eigen();
-    ebar_ebardot.block<1, 3>(14, 3) = m_nodes[3]->GetDD_dt().eigen();
-    ebar_ebardot.block<1, 3>(15, 0) = m_nodes[3]->GetDDD().eigen();
-    ebar_ebardot.block<1, 3>(15, 3) = m_nodes[3]->GetDDD_dt().eigen();
-
-    ebar_ebardot.block<1, 3>(16, 0) = m_nodes[4]->GetPos().eigen();
-    ebar_ebardot.block<1, 3>(16, 3) = m_nodes[4]->GetPos_dt().eigen();
-    ebar_ebardot.block<1, 3>(17, 0) = m_nodes[4]->GetD().eigen();
-    ebar_ebardot.block<1, 3>(17, 3) = m_nodes[4]->GetD_dt().eigen();
-    ebar_ebardot.block<1, 3>(18, 0) = m_nodes[4]->GetDD().eigen();
-    ebar_ebardot.block<1, 3>(18, 3) = m_nodes[4]->GetDD_dt().eigen();
-    ebar_ebardot.block<1, 3>(19, 0) = m_nodes[4]->GetDDD().eigen();
-    ebar_ebardot.block<1, 3>(19, 3) = m_nodes[4]->GetDDD_dt().eigen();
-
-    ebar_ebardot.block<1, 3>(20, 0) = m_nodes[5]->GetPos().eigen();
-    ebar_ebardot.block<1, 3>(20, 3) = m_nodes[5]->GetPos_dt().eigen();
-    ebar_ebardot.block<1, 3>(21, 0) = m_nodes[5]->GetD().eigen();
-    ebar_ebardot.block<1, 3>(21, 3) = m_nodes[5]->GetD_dt().eigen();
-    ebar_ebardot.block<1, 3>(22, 0) = m_nodes[5]->GetDD().eigen();
-    ebar_ebardot.block<1, 3>(22, 3) = m_nodes[5]->GetDD_dt().eigen();
-    ebar_ebardot.block<1, 3>(23, 0) = m_nodes[5]->GetDDD().eigen();
-    ebar_ebardot.block<1, 3>(23, 3) = m_nodes[5]->GetDDD_dt().eigen();
-
-    ebar_ebardot.block<1, 3>(24, 0) = m_nodes[6]->GetPos().eigen();
-    ebar_ebardot.block<1, 3>(24, 3) = m_nodes[6]->GetPos_dt().eigen();
-    ebar_ebardot.block<1, 3>(25, 0) = m_nodes[6]->GetD().eigen();
-    ebar_ebardot.block<1, 3>(25, 3) = m_nodes[6]->GetD_dt().eigen();
-    ebar_ebardot.block<1, 3>(26, 0) = m_nodes[6]->GetDD().eigen();
-    ebar_ebardot.block<1, 3>(26, 3) = m_nodes[6]->GetDD_dt().eigen();
-    ebar_ebardot.block<1, 3>(27, 0) = m_nodes[6]->GetDDD().eigen();
-    ebar_ebardot.block<1, 3>(27, 3) = m_nodes[6]->GetDDD_dt().eigen();
-
-    ebar_ebardot.block<1, 3>(28, 0) = m_nodes[7]->GetPos().eigen();
-    ebar_ebardot.block<1, 3>(28, 3) = m_nodes[7]->GetPos_dt().eigen();
-    ebar_ebardot.block<1, 3>(29, 0) = m_nodes[7]->GetD().eigen();
-    ebar_ebardot.block<1, 3>(29, 3) = m_nodes[7]->GetD_dt().eigen();
-    ebar_ebardot.block<1, 3>(30, 0) = m_nodes[7]->GetDD().eigen();
-    ebar_ebardot.block<1, 3>(30, 3) = m_nodes[7]->GetDD_dt().eigen();
-    ebar_ebardot.block<1, 3>(31, 0) = m_nodes[7]->GetDDD().eigen();
-    ebar_ebardot.block<1, 3>(31, 3) = m_nodes[7]->GetDDD_dt().eigen();
 }
 
 // Calculate the 3x3 Element Jacobian at the given point (xi,eta,zeta) in the element

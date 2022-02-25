@@ -69,6 +69,9 @@ class ChApi ChElementShellANCF_3833_TR11 : public ChElementShell, public ChLoada
     template <typename T, int M, int N>
     using ChMatrixNMc = Eigen::Matrix<T, M, N, Eigen::ColMajor>;
 
+    // Short-cut for defining a Eigen arrays of length NIP
+    using ArrayNIP = Eigen::Array<double, 1, NIP, Eigen::RowMajor>;
+
     using VectorN = ChVectorN<double, NSF>;
     using Vector3N = ChVectorN<double, 3 * NSF>;
     using VectorNIP = ChVectorN<double, NIP>;
@@ -80,6 +83,7 @@ class ChApi ChElementShellANCF_3833_TR11 : public ChElementShell, public ChLoada
     using Matrix3Nx3N = ChMatrixNM<double, 3 * NSF, 3 * NSF>;
     using Matrix3x3N = ChMatrixNM<double, 3, 3 * NSF>;
     using Matrix6x3N = ChMatrixNM<double, 6, 3 * NSF>;
+    using Matrix6xN = ChMatrixNM<double, 6, NSF>;
 
     ChElementShellANCF_3833_TR11();
     ~ChElementShellANCF_3833_TR11() {}
@@ -380,9 +384,8 @@ class ChApi ChElementShellANCF_3833_TR11 : public ChElementShell, public ChLoada
     /// Calculate the current 3xN matrix of nodal coordinate time derivatives.
     void CalcCoordDerivMatrix(Matrix3xN& ebardot);
 
-    /// Calculate the current Nx6 matrix of the transpose of the nodal coordinates and nodal coordinate time
-    /// derivatives.
-    void CalcCombinedCoordMatrix(MatrixNx6& ebar_ebardot);
+    /// Calculate the current 6xN matrix of the nodal coordinates and nodal coordinate time derivatives.
+    void CalcCombinedCoordMatrix(Matrix6xN& ebar_ebardot);
 
     /// Calculate the Nx1 Compact Vector of the Normalized Shape Functions (just the unique values)
     void Calc_Sxi_compact(VectorN& Sxi_compact, double xi, double eta, double zeta, double thickness, double zoffset);

@@ -84,7 +84,6 @@ class ChApi ChElementShellANCF_3443_TR11 : public ChElementShell, public ChLoada
     using Matrix3x3N = ChMatrixNM<double, 3, 3 * NSF>;
     using Matrix6x3N = ChMatrixNM<double, 6, 3 * NSF>;
     using Matrix6xN = ChMatrixNM<double, 6, NSF>;
-    using VectorNIPr = ChMatrixNM<double, 1, NIP>;
 
     ChElementShellANCF_3443_TR11();
     ~ChElementShellANCF_3443_TR11() {}

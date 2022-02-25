@@ -194,6 +194,10 @@ class ChApi ChElementHexaANCF_3843 : public ChElementHexahedron, public ChElemen
     /// of the element.  Normalized element coordinates span from -1 to 1.
     double GetVonMissesStress(const double xi, const double eta, const double zeta);
 
+    /// Skip the precomputation phase and populate any internal force and Jacobian precomputed matrices or vectors with
+    /// random values.  This function only applies to TR05-TR11
+    void SkipPrecomputation() { m_skipPrecomputation = true; }
+
   public:
     // Interface to ChElementBase base class
     // -------------------------------------
@@ -414,6 +418,7 @@ class ChApi ChElementHexaANCF_3843 : public ChElementHexahedron, public ChElemen
     /// Access a statically-allocated set of tables, from 0 to a 10th order, with precomputed tables.
     static ChQuadratureTables* GetStaticGQTables();
 
+    bool m_skipPrecomputation;                       ///< Skip precomputation phase
     IntFrcMethod m_method;                           ///< Generalized internal force and Jacobian calculation method
     std::shared_ptr<ChMaterialHexaANCF> m_material;  ///< material model
     std::vector<std::shared_ptr<ChNodeFEAxyzDDD>> m_nodes;  ///< element nodes

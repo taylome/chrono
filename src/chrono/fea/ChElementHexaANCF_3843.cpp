@@ -45,7 +45,13 @@ namespace fea {
 // ------------------------------------------------------------------------------
 
 ChElementHexaANCF_3843::ChElementHexaANCF_3843()
-    : m_method(IntFrcMethod::ContInt), m_lenX(0), m_lenY(0), m_lenZ(0), m_Alpha(0), m_damping_enabled(false) {
+    : m_method(IntFrcMethod::ContInt),
+      m_lenX(0),
+      m_lenY(0),
+      m_lenZ(0),
+      m_Alpha(0),
+      m_damping_enabled(false),
+      m_skipPrecomputation(false) {
     m_nodes.resize(8);
 }
 

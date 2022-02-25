@@ -19,7 +19,7 @@
 // =============================================================================
 // TR03 = TR02 + Dense Math
 // =============================================================================
-// Mass Matrix = Full 3Nx3N
+// Mass Matrix = Compact Upper Triangular
 // Reduced Number of GQ Points
 // Nodal Coordinates in Matrix Form
 // Textbook Mathematics
@@ -38,7 +38,7 @@ namespace fea {
 // ------------------------------------------------------------------------------
 
 ChElementHexaANCF_3843_TR03::ChElementHexaANCF_3843_TR03()
-    : m_lenX(0), m_lenY(0), m_lenZ(0), m_Alpha(0), m_damping_enabled(false) {
+    : m_lenX(0), m_lenY(0), m_lenZ(0), m_Alpha(0), m_damping_enabled(false), m_skipPrecomputation(false) {
     m_nodes.resize(8);
 }
 
@@ -373,35 +373,45 @@ void ChElementHexaANCF_3843_TR03::Update() {
 // Return the mass matrix in full sparse form.
 
 void ChElementHexaANCF_3843_TR03::ComputeMmatrixGlobal(ChMatrixRef M) {
-    M = m_MassMatrix;
+    M.setZero();
+
+    // Mass Matrix is Stored in Compact Upper Triangular Form
+    // Expand it out into its Full Sparse Symmetric Form
+    unsigned int idx = 0;
+    for (unsigned int i = 0; i < NSF; i++) {
+        for (unsigned int j = i; j < NSF; j++) {
+            M(3 * i, 3 * j) = m_MassMatrix(idx);
+            M(3 * i + 1, 3 * j + 1) = m_MassMatrix(idx);
+            M(3 * i + 2, 3 * j + 2) = m_MassMatrix(idx);
+            if (i != j) {
+                M(3 * j, 3 * i) = m_MassMatrix(idx);
+                M(3 * j + 1, 3 * i + 1) = m_MassMatrix(idx);
+                M(3 * j + 2, 3 * i + 2) = m_MassMatrix(idx);
+            }
+            idx++;
+        }
+    }
 }
 
 // This class computes and adds corresponding masses to ElementGeneric member m_TotalMass
 
 void ChElementHexaANCF_3843_TR03::ComputeNodalMass() {
-    m_nodes[0]->m_TotalMass += m_MassMatrix(0, 0) + m_MassMatrix(0, 12) + m_MassMatrix(0, 24) + m_MassMatrix(0, 36) +
-                               m_MassMatrix(0, 48) + m_MassMatrix(0, 60) + m_MassMatrix(0, 72) + m_MassMatrix(0, 84);
-    m_nodes[1]->m_TotalMass += m_MassMatrix(12, 0) + m_MassMatrix(12, 12) + m_MassMatrix(12, 24) +
-                               m_MassMatrix(12, 36) + m_MassMatrix(12, 48) + m_MassMatrix(12, 60) +
-                               m_MassMatrix(12, 72) + m_MassMatrix(12, 84);
-    m_nodes[2]->m_TotalMass += m_MassMatrix(24, 0) + m_MassMatrix(24, 12) + m_MassMatrix(24, 24) +
-                               m_MassMatrix(24, 36) + m_MassMatrix(24, 48) + m_MassMatrix(24, 60) +
-                               m_MassMatrix(24, 72) + m_MassMatrix(24, 84);
-    m_nodes[3]->m_TotalMass += m_MassMatrix(36, 0) + m_MassMatrix(36, 12) + m_MassMatrix(36, 24) +
-                               m_MassMatrix(36, 36) + m_MassMatrix(36, 48) + m_MassMatrix(36, 60) +
-                               m_MassMatrix(36, 72) + m_MassMatrix(36, 84);
-    m_nodes[4]->m_TotalMass += m_MassMatrix(48, 0) + m_MassMatrix(48, 12) + m_MassMatrix(48, 24) +
-                               m_MassMatrix(48, 36) + m_MassMatrix(48, 48) + m_MassMatrix(48, 60) +
-                               m_MassMatrix(48, 72) + m_MassMatrix(48, 84);
-    m_nodes[5]->m_TotalMass += m_MassMatrix(60, 0) + m_MassMatrix(60, 12) + m_MassMatrix(60, 24) +
-                               m_MassMatrix(60, 36) + m_MassMatrix(60, 48) + m_MassMatrix(60, 60) +
-                               m_MassMatrix(60, 72) + m_MassMatrix(60, 84);
-    m_nodes[6]->m_TotalMass += m_MassMatrix(72, 0) + m_MassMatrix(72, 12) + m_MassMatrix(72, 24) +
-                               m_MassMatrix(72, 36) + m_MassMatrix(72, 48) + m_MassMatrix(72, 60) +
-                               m_MassMatrix(72, 72) + m_MassMatrix(72, 84);
-    m_nodes[7]->m_TotalMass += m_MassMatrix(84, 0) + m_MassMatrix(84, 12) + m_MassMatrix(84, 24) +
-                               m_MassMatrix(84, 36) + m_MassMatrix(84, 48) + m_MassMatrix(84, 60) +
-                               m_MassMatrix(84, 72) + m_MassMatrix(84, 84);
+    m_nodes[0]->m_TotalMass += m_MassMatrix(0) + m_MassMatrix(4) + m_MassMatrix(8) + m_MassMatrix(12) +
+                               m_MassMatrix(16) + m_MassMatrix(20) + m_MassMatrix(24) + m_MassMatrix(28);
+    m_nodes[1]->m_TotalMass += m_MassMatrix(4) + m_MassMatrix(122) + m_MassMatrix(126) + m_MassMatrix(130) +
+                               m_MassMatrix(134) + m_MassMatrix(138) + m_MassMatrix(142) + m_MassMatrix(146);
+    m_nodes[2]->m_TotalMass += m_MassMatrix(8) + m_MassMatrix(126) + m_MassMatrix(228) + m_MassMatrix(232) +
+                               m_MassMatrix(236) + m_MassMatrix(240) + m_MassMatrix(244) + m_MassMatrix(248);
+    m_nodes[3]->m_TotalMass += m_MassMatrix(12) + m_MassMatrix(130) + m_MassMatrix(232) + m_MassMatrix(318) +
+                               m_MassMatrix(322) + m_MassMatrix(326) + m_MassMatrix(330) + m_MassMatrix(334);
+    m_nodes[4]->m_TotalMass += m_MassMatrix(16) + m_MassMatrix(134) + m_MassMatrix(236) + m_MassMatrix(322) +
+                               m_MassMatrix(392) + m_MassMatrix(396) + m_MassMatrix(400) + m_MassMatrix(404);
+    m_nodes[5]->m_TotalMass += m_MassMatrix(20) + m_MassMatrix(138) + m_MassMatrix(240) + m_MassMatrix(326) +
+                               m_MassMatrix(396) + m_MassMatrix(450) + m_MassMatrix(454) + m_MassMatrix(458);
+    m_nodes[6]->m_TotalMass += m_MassMatrix(24) + m_MassMatrix(142) + m_MassMatrix(244) + m_MassMatrix(330) +
+                               m_MassMatrix(400) + m_MassMatrix(454) + m_MassMatrix(492) + m_MassMatrix(496);
+    m_nodes[7]->m_TotalMass += m_MassMatrix(28) + m_MassMatrix(146) + m_MassMatrix(248) + m_MassMatrix(334) +
+                               m_MassMatrix(404) + m_MassMatrix(458) + m_MassMatrix(496) + m_MassMatrix(518);
 }
 
 // Compute the generalized internal force vector for the current nodal coordinates and set the value in the Fi vector.
@@ -426,8 +436,6 @@ void ChElementHexaANCF_3843_TR03::ComputeKRMmatricesGlobal(ChMatrixRef H,
                                                            double Mfactor) {
     assert((H.rows() == 3 * NSF) && (H.cols() == 3 * NSF));
 
-    H.setZero();
-
     ChVectorDynamic<double> FiOrignal(3 * NSF);
     ChVectorDynamic<double> FiDelta(3 * NSF);
     Matrix3xN ebar;
@@ -438,6 +446,8 @@ void ChElementHexaANCF_3843_TR03::ComputeKRMmatricesGlobal(ChMatrixRef H,
 
     double delta = 1e-6;
 
+    Matrix3Nx3N Jac;
+
     // Compute the Jacobian via numerical differentiation of the generalized internal force vector
     // Since the generalized force vector due to gravity is a constant, it doesn't affect this
     // Jacobian calculation
@@ -445,17 +455,32 @@ void ChElementHexaANCF_3843_TR03::ComputeKRMmatricesGlobal(ChMatrixRef H,
     for (unsigned int i = 0; i < (3 * NSF); i++) {
         ebar(i % 3, i / 3) += delta;
         ComputeInternalForcesAtState(FiDelta, ebar, ebardot);
-        H.col(i).noalias() = -Kfactor / delta * (FiDelta - FiOrignal);
+        Jac.col(i).noalias() = -Kfactor / delta * (FiDelta - FiOrignal);
         ebar(i % 3, i / 3) -= delta;
 
         ebardot(i % 3, i / 3) += delta;
         ComputeInternalForcesAtState(FiDelta, ebar, ebardot);
-        H.col(i).noalias() += -Rfactor / delta * (FiDelta - FiOrignal);
+        Jac.col(i).noalias() += -Rfactor / delta * (FiDelta - FiOrignal);
         ebardot(i % 3, i / 3) -= delta;
     }
 
-    // Add in the scaled Mass Matrix
-    H.noalias() += Mfactor * m_MassMatrix;
+    // Add in the contribution from the Mass Matrix which is stored in compact upper triangular form
+    unsigned int idx = 0;
+    for (unsigned int j = 0; j < NSF; j++) {
+        for (unsigned int i = j; i < NSF; i++) {
+            Jac(3 * i, 3 * j) += Mfactor * m_MassMatrix(idx);
+            Jac(3 * i + 1, 3 * j + 1) += Mfactor * m_MassMatrix(idx);
+            Jac(3 * i + 2, 3 * j + 2) += Mfactor * m_MassMatrix(idx);
+            if (i != j) {
+                Jac(3 * j, 3 * i) += Mfactor * m_MassMatrix(idx);
+                Jac(3 * j + 1, 3 * i + 1) += Mfactor * m_MassMatrix(idx);
+                Jac(3 * j + 2, 3 * i + 2) += Mfactor * m_MassMatrix(idx);
+            }
+            idx++;
+        }
+    }
+
+    H.noalias() = Jac;
 }
 
 // Compute the generalized force vector due to gravity using the efficient ANCF specific method
@@ -775,13 +800,13 @@ void ChElementHexaANCF_3843_TR03::ComputeMassMatrixAndGravityForce() {
         }
     }
 
-    // Store the full mass matrix for this version
-    m_MassMatrix.setZero();
-    for (unsigned i = 0; i < NSF; i++) {
-        for (unsigned j = 0; j < NSF; j++) {
-            m_MassMatrix(3 * i, 3 * j) = MassMatrixCompactSquare(i, j);
-            m_MassMatrix(3 * i + 1, 3 * j + 1) = MassMatrixCompactSquare(i, j);
-            m_MassMatrix(3 * i + 2, 3 * j + 2) = MassMatrixCompactSquare(i, j);
+    // Store just the unique entries in the Mass Matrix in Compact Upper Triangular Form
+    // since the full Mass Matrix is both sparse and symmetric
+    unsigned int idx = 0;
+    for (unsigned int i = 0; i < NSF; i++) {
+        for (unsigned int j = i; j < NSF; j++) {
+            m_MassMatrix(idx) = MassMatrixCompactSquare(i, j);
+            idx++;
         }
     }
 }
@@ -793,8 +818,9 @@ void ChElementHexaANCF_3843_TR03::ComputeMassMatrixAndGravityForce() {
 void ChElementHexaANCF_3843_TR03::ComputeInternalForcesAtState(ChVectorDynamic<>& Fi,
                                                                const Matrix3xN& ebar,
                                                                const Matrix3xN& ebardot) {
-    // Set Fi to zero since the results from each GQ point will be added to this vector
-    Fi.setZero();
+    // Set Qi to zero since the results from each GQ point will be added to this vector
+    Vector3N Qi;
+    Qi.setZero();
 
     // Straight & Normalized Internal Force Integrand is of order: 12 in xi, order: 12 in eta, and order: 12 in zeta.
     // This requires GQ 7 points along the xi, eta, & zeta directions for "Full Integration"
@@ -813,13 +839,15 @@ void ChElementHexaANCF_3843_TR03::ComputeInternalForcesAtState(ChVectorDynamic<>
                 double xi = GQTable->Lroots[NP - 1][it_xi];
                 double eta = GQTable->Lroots[NP - 1][it_eta];
                 double zeta = GQTable->Lroots[NP - 1][it_zeta];
-                Vector3N Qi;
-                ComputeInternalForcesSingleGQPnt(Qi, xi, eta, zeta, D, ebar, ebardot);
+                Vector3N QiPnt;
+                ComputeInternalForcesSingleGQPnt(QiPnt, xi, eta, zeta, D, ebar, ebardot);
 
-                Fi.noalias() += GQ_weight * Qi;
+                Qi.noalias() += GQ_weight * QiPnt;
             }
         }
     }
+
+    Fi.noalias() = Qi;
 }
 
 void ChElementHexaANCF_3843_TR03::ComputeInternalForcesSingleGQPnt(Vector3N& Qi,
@@ -1235,78 +1263,78 @@ void ChElementHexaANCF_3843_TR03::CalcCoordDerivMatrix(Matrix3xN& ebardot) {
     ebardot.col(31) = m_nodes[7]->GetDDD_dt().eigen();
 }
 
-void ChElementHexaANCF_3843_TR03::CalcCombinedCoordMatrix(MatrixNx6& ebar_ebardot) {
-    ebar_ebardot.template block<1, 3>(0, 0) = m_nodes[0]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(0, 3) = m_nodes[0]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(1, 0) = m_nodes[0]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(1, 3) = m_nodes[0]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(2, 0) = m_nodes[0]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(2, 3) = m_nodes[0]->GetDD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(3, 0) = m_nodes[0]->GetDDD().eigen();
-    ebar_ebardot.template block<1, 3>(3, 3) = m_nodes[0]->GetDDD_dt().eigen();
+void ChElementHexaANCF_3843_TR03::CalcCombinedCoordMatrix(Matrix6xN& ebar_ebardot) {
+    ebar_ebardot.block<3, 1>(0, 0) = m_nodes[0]->GetPos().eigen();
+    ebar_ebardot.block<3, 1>(3, 0) = m_nodes[0]->GetPos_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 1) = m_nodes[0]->GetD().eigen();
+    ebar_ebardot.block<3, 1>(3, 1) = m_nodes[0]->GetD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 2) = m_nodes[0]->GetDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 2) = m_nodes[0]->GetDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 3) = m_nodes[0]->GetDDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 3) = m_nodes[0]->GetDDD_dt().eigen();
 
-    ebar_ebardot.template block<1, 3>(4, 0) = m_nodes[1]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(4, 3) = m_nodes[1]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(5, 0) = m_nodes[1]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(5, 3) = m_nodes[1]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(6, 0) = m_nodes[1]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(6, 3) = m_nodes[1]->GetDD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(7, 0) = m_nodes[1]->GetDDD().eigen();
-    ebar_ebardot.template block<1, 3>(7, 3) = m_nodes[1]->GetDDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 4) = m_nodes[1]->GetPos().eigen();
+    ebar_ebardot.block<3, 1>(3, 4) = m_nodes[1]->GetPos_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 5) = m_nodes[1]->GetD().eigen();
+    ebar_ebardot.block<3, 1>(3, 5) = m_nodes[1]->GetD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 6) = m_nodes[1]->GetDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 6) = m_nodes[1]->GetDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 7) = m_nodes[1]->GetDDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 7) = m_nodes[1]->GetDDD_dt().eigen();
 
-    ebar_ebardot.template block<1, 3>(8, 0) = m_nodes[2]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(8, 3) = m_nodes[2]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(9, 0) = m_nodes[2]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(9, 3) = m_nodes[2]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(10, 0) = m_nodes[2]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(10, 3) = m_nodes[2]->GetDD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(11, 0) = m_nodes[2]->GetDDD().eigen();
-    ebar_ebardot.template block<1, 3>(11, 3) = m_nodes[2]->GetDDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 8) = m_nodes[2]->GetPos().eigen();
+    ebar_ebardot.block<3, 1>(3, 8) = m_nodes[2]->GetPos_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 9) = m_nodes[2]->GetD().eigen();
+    ebar_ebardot.block<3, 1>(3, 9) = m_nodes[2]->GetD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 10) = m_nodes[2]->GetDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 10) = m_nodes[2]->GetDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 11) = m_nodes[2]->GetDDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 11) = m_nodes[2]->GetDDD_dt().eigen();
 
-    ebar_ebardot.template block<1, 3>(12, 0) = m_nodes[3]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(12, 3) = m_nodes[3]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(13, 0) = m_nodes[3]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(13, 3) = m_nodes[3]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(14, 0) = m_nodes[3]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(14, 3) = m_nodes[3]->GetDD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(15, 0) = m_nodes[3]->GetDDD().eigen();
-    ebar_ebardot.template block<1, 3>(15, 3) = m_nodes[3]->GetDDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 12) = m_nodes[3]->GetPos().eigen();
+    ebar_ebardot.block<3, 1>(3, 12) = m_nodes[3]->GetPos_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 13) = m_nodes[3]->GetD().eigen();
+    ebar_ebardot.block<3, 1>(3, 13) = m_nodes[3]->GetD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 14) = m_nodes[3]->GetDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 14) = m_nodes[3]->GetDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 15) = m_nodes[3]->GetDDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 15) = m_nodes[3]->GetDDD_dt().eigen();
 
-    ebar_ebardot.template block<1, 3>(16, 0) = m_nodes[4]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(16, 3) = m_nodes[4]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(17, 0) = m_nodes[4]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(17, 3) = m_nodes[4]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(18, 0) = m_nodes[4]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(18, 3) = m_nodes[4]->GetDD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(19, 0) = m_nodes[4]->GetDDD().eigen();
-    ebar_ebardot.template block<1, 3>(19, 3) = m_nodes[4]->GetDDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 16) = m_nodes[4]->GetPos().eigen();
+    ebar_ebardot.block<3, 1>(3, 16) = m_nodes[4]->GetPos_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 17) = m_nodes[4]->GetD().eigen();
+    ebar_ebardot.block<3, 1>(3, 17) = m_nodes[4]->GetD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 18) = m_nodes[4]->GetDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 18) = m_nodes[4]->GetDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 19) = m_nodes[4]->GetDDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 19) = m_nodes[4]->GetDDD_dt().eigen();
 
-    ebar_ebardot.template block<1, 3>(20, 0) = m_nodes[5]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(20, 3) = m_nodes[5]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(21, 0) = m_nodes[5]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(21, 3) = m_nodes[5]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(22, 0) = m_nodes[5]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(22, 3) = m_nodes[5]->GetDD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(23, 0) = m_nodes[5]->GetDDD().eigen();
-    ebar_ebardot.template block<1, 3>(23, 3) = m_nodes[5]->GetDDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 20) = m_nodes[5]->GetPos().eigen();
+    ebar_ebardot.block<3, 1>(3, 20) = m_nodes[5]->GetPos_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 21) = m_nodes[5]->GetD().eigen();
+    ebar_ebardot.block<3, 1>(3, 21) = m_nodes[5]->GetD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 22) = m_nodes[5]->GetDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 22) = m_nodes[5]->GetDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 23) = m_nodes[5]->GetDDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 23) = m_nodes[5]->GetDDD_dt().eigen();
 
-    ebar_ebardot.template block<1, 3>(24, 0) = m_nodes[6]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(24, 3) = m_nodes[6]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(25, 0) = m_nodes[6]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(25, 3) = m_nodes[6]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(26, 0) = m_nodes[6]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(26, 3) = m_nodes[6]->GetDD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(27, 0) = m_nodes[6]->GetDDD().eigen();
-    ebar_ebardot.template block<1, 3>(27, 3) = m_nodes[6]->GetDDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 24) = m_nodes[6]->GetPos().eigen();
+    ebar_ebardot.block<3, 1>(3, 24) = m_nodes[6]->GetPos_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 25) = m_nodes[6]->GetD().eigen();
+    ebar_ebardot.block<3, 1>(3, 25) = m_nodes[6]->GetD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 26) = m_nodes[6]->GetDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 26) = m_nodes[6]->GetDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 27) = m_nodes[6]->GetDDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 27) = m_nodes[6]->GetDDD_dt().eigen();
 
-    ebar_ebardot.template block<1, 3>(28, 0) = m_nodes[7]->GetPos().eigen();
-    ebar_ebardot.template block<1, 3>(28, 3) = m_nodes[7]->GetPos_dt().eigen();
-    ebar_ebardot.template block<1, 3>(29, 0) = m_nodes[7]->GetD().eigen();
-    ebar_ebardot.template block<1, 3>(29, 3) = m_nodes[7]->GetD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(30, 0) = m_nodes[7]->GetDD().eigen();
-    ebar_ebardot.template block<1, 3>(30, 3) = m_nodes[7]->GetDD_dt().eigen();
-    ebar_ebardot.template block<1, 3>(31, 0) = m_nodes[7]->GetDDD().eigen();
-    ebar_ebardot.template block<1, 3>(31, 3) = m_nodes[7]->GetDDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 28) = m_nodes[7]->GetPos().eigen();
+    ebar_ebardot.block<3, 1>(3, 28) = m_nodes[7]->GetPos_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 29) = m_nodes[7]->GetD().eigen();
+    ebar_ebardot.block<3, 1>(3, 29) = m_nodes[7]->GetD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 30) = m_nodes[7]->GetDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 30) = m_nodes[7]->GetDD_dt().eigen();
+    ebar_ebardot.block<3, 1>(0, 31) = m_nodes[7]->GetDDD().eigen();
+    ebar_ebardot.block<3, 1>(3, 31) = m_nodes[7]->GetDDD_dt().eigen();
 }
 
 // Calculate the 3x3 Element Jacobian at the given point (xi,eta,zeta) in the element
