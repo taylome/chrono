@@ -371,10 +371,10 @@ void Run_ANCFShell_3833_Tests() {
     //    ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR04, ChMaterialShellANCF> Shell3833Test_TR04(1);
     //    Shell3833Test_TR04.PrintTimingResults("ChElementShellANCF_3833_TR04", num_steps);
     //}
-    {
-        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR04B, ChMaterialShellANCF> Shell3833Test_TR04B(1);
-        Shell3833Test_TR04B.PrintTimingResults("ChElementShellANCF_3833_TR04B", num_steps);
-    }
+    //{
+    //    ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR04B, ChMaterialShellANCF> Shell3833Test_TR04B(1);
+    //    Shell3833Test_TR04B.PrintTimingResults("ChElementShellANCF_3833_TR04B", num_steps);
+    //}
     {
         ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR05, ChMaterialShellANCF> Shell3833Test_TR05(1);
         Shell3833Test_TR05.PrintTimingResults("ChElementShellANCF_3833_TR05", num_steps);
