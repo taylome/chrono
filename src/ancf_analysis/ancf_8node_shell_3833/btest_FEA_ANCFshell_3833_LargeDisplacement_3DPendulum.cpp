@@ -499,7 +499,7 @@ int main(int argc, char* argv[]) {
 #endif
     } else {
         ChVectorN<int, 2> num_els;
-        num_els << 2, 20;  // 2=>2x4=8, 20=>20x40=800
+        num_els << 2, 10;  // 2=>2x4=8, 10=>10x20=200
 
         std::vector<SolverType> Solver = {SolverType::SparseLU};
 
