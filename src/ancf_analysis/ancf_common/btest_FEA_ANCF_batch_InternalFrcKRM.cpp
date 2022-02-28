@@ -426,10 +426,10 @@ void Run_ANCFBeam_3243_Tests() {
         ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243, ChMaterialBeamANCF> Beam3243Test;
         Beam3243Test.PrintTimingResults("ChElementBeamANCF_3243_Chrono7", num_steps);
     }
-    //{
-    //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR01, ChMaterialBeamANCF> Beam3243Test_TR01;
-    //    Beam3243Test_TR01.PrintTimingResults("ChElementBeamANCF_3243_TR01", num_steps);
-    //}
+    {
+        ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR01, ChMaterialBeamANCF> Beam3243Test_TR01;
+        Beam3243Test_TR01.PrintTimingResults("ChElementBeamANCF_3243_TR01", num_steps);
+    }
     //{
     //    ANCFBeam3243Test<num_elements, ChElementBeamANCF_3243_TR01B, ChMaterialBeamANCF> Beam3243Test_TR01B;
     //    Beam3243Test_TR01B.PrintTimingResults("ChElementBeamANCF_3243_TR01B", num_steps);
@@ -797,10 +797,10 @@ void Run_ANCFBeam_3333_Tests() {
         ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333, ChMaterialBeamANCF> Beam3333Test;
         Beam3333Test.PrintTimingResults("ChElementBeamANCF_3333_Chrono7", num_steps);
     }
-    //{
-    //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR01, ChMaterialBeamANCF> Beam3333Test_TR01;
-    //    Beam3333Test_TR01.PrintTimingResults("ChElementBeamANCF_3333_TR01", num_steps);
-    //}
+    {
+        ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR01, ChMaterialBeamANCF> Beam3333Test_TR01;
+        Beam3333Test_TR01.PrintTimingResults("ChElementBeamANCF_3333_TR01", num_steps);
+    }
     //{
     //    ANCFBeam3333Test<num_elements, ChElementBeamANCF_3333_TR01B, ChMaterialBeamANCF> Beam3333Test_TR01B;
     //    Beam3333Test_TR01B.PrintTimingResults("ChElementBeamANCF_3333_TR01B", num_steps);
@@ -1177,10 +1177,10 @@ void Run_ANCFShell_3443_Tests() {
         ANCFShell3443Test<num_elements, ChElementShellANCF_3443, ChMaterialShellANCF> Shell3443Test(1);
         Shell3443Test.PrintTimingResults("ChElementShellANCF_3443_Chrono7", num_steps);
     }
-    //{
-    //    ANCFShell3443Test<num_elements, ChElementShellANCF_3443_TR01, ChMaterialShellANCF> Shell3443Test_TR01(1);
-    //    Shell3443Test_TR01.PrintTimingResults("ChElementShellANCF_3443_TR01", num_steps);
-    //}
+    {
+        ANCFShell3443Test<num_elements, ChElementShellANCF_3443_TR01, ChMaterialShellANCF> Shell3443Test_TR01(1);
+        Shell3443Test_TR01.PrintTimingResults("ChElementShellANCF_3443_TR01", num_steps);
+    }
     //{
     //    ANCFShell3443Test<num_elements, ChElementShellANCF_3443_TR01B, ChMaterialShellANCF> Shell3443Test_TR01B(1);
     //    Shell3443Test_TR01B.PrintTimingResults("ChElementShellANCF_3443_TR01B", num_steps);
@@ -1562,10 +1562,10 @@ void Run_ANCFShell_3833_Tests() {
         ANCFShell3833Test<num_elements, ChElementShellANCF_3833, ChMaterialShellANCF> Shell3833Test(1);
         Shell3833Test.PrintTimingResults("ChElementShellANCF_3833_Chrono7", num_steps);
     }
-    //{
-    //    ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR01, ChMaterialShellANCF> Shell3833Test_TR01(1);
-    //    Shell3833Test_TR01.PrintTimingResults("ChElementShellANCF_3833_TR01", num_steps);
-    //}
+    {
+        ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR01, ChMaterialShellANCF> Shell3833Test_TR01(1);
+        Shell3833Test_TR01.PrintTimingResults("ChElementShellANCF_3833_TR01", num_steps);
+    }
     //{
     //    ANCFShell3833Test<num_elements, ChElementShellANCF_3833_TR01B, ChMaterialShellANCF> Shell3833Test_TR01B(1);
     //    Shell3833Test_TR01B.PrintTimingResults("ChElementShellANCF_3833_TR01B", num_steps);
@@ -1953,10 +1953,10 @@ void Run_ANCFHexa_3843_Tests() {
         ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843, ChMaterialHexaANCF> Hexa3843Test;
         Hexa3843Test.PrintTimingResults("ChElementHexaANCF_3843_Chrono7", num_steps);
     }
-    //{
-    //    ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR01, ChMaterialHexaANCF> Hexa3843Test_TR01;
-    //    Hexa3843Test_TR01.PrintTimingResults("ChElementHexaANCF_3843_TR01", num_steps);
-    //}
+    {
+        ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR01, ChMaterialHexaANCF> Hexa3843Test_TR01;
+        Hexa3843Test_TR01.PrintTimingResults("ChElementHexaANCF_3843_TR01", num_steps);
+    }
     //{
     //    ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR01B, ChMaterialHexaANCF> Hexa3843Test_TR01B;
     //    Hexa3843Test_TR01B.PrintTimingResults("ChElementHexaANCF_3843_TR01B", num_steps);
