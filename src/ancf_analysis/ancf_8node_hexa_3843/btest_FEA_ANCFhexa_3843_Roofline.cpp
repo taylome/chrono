@@ -199,8 +199,6 @@ double ANCFHexa3843Test<num_elements, ElementVersion, MaterialVersion>::GetInter
     ChTimer<> timer_internal_forces;
     timer_internal_forces.reset();
 
-    ChVectorDynamic<double> Fi(96);
-
     auto MeshList = m_system->Get_meshlist();
     for (auto& Mesh : MeshList) {
         auto ElementList = Mesh->GetElements();
@@ -209,10 +207,12 @@ double ANCFHexa3843Test<num_elements, ElementVersion, MaterialVersion>::GetInter
         if (Use_OMP) {
 #pragma omp parallel for
             for (int ie = 0; ie < ElementList.size(); ie++) {
+                ChVectorDynamic<double> Fi(96);
                 ElementList[ie]->ComputeInternalForces(Fi);
             }
         } else {
             for (int ie = 0; ie < ElementList.size(); ie++) {
+                ChVectorDynamic<double> Fi(96);
                 ElementList[ie]->ComputeInternalForces(Fi);
             }
         }
@@ -227,8 +227,6 @@ double ANCFHexa3843Test<num_elements, ElementVersion, MaterialVersion>::GetJacob
     ChTimer<> timer_KRM;
     timer_KRM.reset();
 
-    ChMatrixNM<double, 96, 96> H;
-
     auto MeshList = m_system->Get_meshlist();
     for (auto& Mesh : MeshList) {
         auto ElementList = Mesh->GetElements();
@@ -237,10 +235,12 @@ double ANCFHexa3843Test<num_elements, ElementVersion, MaterialVersion>::GetJacob
         if (Use_OMP) {
 #pragma omp parallel for
             for (int ie = 0; ie < ElementList.size(); ie++) {
+                ChMatrixNM<double, 96, 96> H;
                 ElementList[ie]->ComputeKRMmatricesGlobal(H, 1.0, 1.0, 1.0);
             }
         } else {
             for (int ie = 0; ie < ElementList.size(); ie++) {
+                ChMatrixNM<double, 96, 96> H;
                 ElementList[ie]->ComputeKRMmatricesGlobal(H, 1.0, 1.0, 1.0);
             }
         }
@@ -253,12 +253,22 @@ double ANCFHexa3843Test<num_elements, ElementVersion, MaterialVersion>::GetJacob
 template <int num_elements, typename ElementVersion, typename MaterialVersion>
 void ANCFHexa3843Test<num_elements, ElementVersion, MaterialVersion>::PrintTimingResults(const std::string& TestName,
                                                                                          int steps) {
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> Times;
-    Times.resize(steps, 2);
+    std::cout << "-------------------------------------" << std::endl;
+    std::cout << "Test Name, Num Els, Steps, Threads, ";
+    std::cout << "IntFrc Min(us), IntFrc Q1(us), IntFrc Median(us), IntFrc Q3(us), ";
+    std::cout << "IntFrc Max(us), IntFrc Mean(us), IntFrc StDev(us), ";
+    std::cout << "KRM Min(us), KRM Q1(us), KRM Median(us), KRM Q3(us), ";
+    std::cout << "KRM Max(us), KRM Mean(us), KRM StDev(us), " << std::endl;
+    std::cout << std::flush;
+
+    Eigen::Array<double, Eigen::Dynamic, 1, Eigen::ColMajor> TimeIntFrc;
+    TimeIntFrc.resize(steps, 1);
+    Eigen::Array<double, Eigen::Dynamic, 1, Eigen::ColMajor> TimeJac;
+    TimeJac.resize(steps, 1);
 
     // Prime the test in case the internal force calcs are also needed for the Jacobian calcs
-    // double TimeInternalFrc = GetInternalFrc(false);
-    // double TimeKRM = GetJacobian(false);
+    double TimeInternalFrc = GetInternalFrc(false);
+    double TimeKRM = GetJacobian(false);
 
     ChTimer<> Timer_Total;
     Timer_Total.reset();
@@ -267,60 +277,143 @@ void ANCFHexa3843Test<num_elements, ElementVersion, MaterialVersion>::PrintTimin
     // Run Single Threaded Tests
     for (auto i = 0; i < steps; i++) {
         PerturbNodes(false);
-        Times(i, 0) =
+        TimeIntFrc(i) =
             GetInternalFrc(false) * (1.0e6 / double(num_elements));  // Get Time Per Function Call in microseconds
     }
     for (auto i = 0; i < steps; i++) {
         PerturbNodes(false);
-        Times(i, 1) = GetJacobian(false) * (1.0e6 / double(num_elements));  // Get Time Per Function Call in
+        TimeJac(i) = GetJacobian(false) * (1.0e6 / double(num_elements));  // Get Time Per Function Call in
                                                                             // microseconds
     }
 
-    std::cout << "-------------------------------------" << std::endl;
-    std::cout << "Test Name, Num Els, Steps, Threads, ";
-    std::cout << "IntFrc Max(us), IntFrc Min(us), IntFrc Mean(us), IntFrc StDev(us), ";
-    std::cout << "KRM Max(us), KRM Min(us), KRM Mean(us), KRM StDev(us), " << std::endl;
-    std::cout << TestName << ", " << num_elements << ", " << steps << ", 0, " << Times.col(0).maxCoeff() << ", "
-              << Times.col(0).minCoeff() << ", " << Times.col(0).mean() << ", "
-              << std::sqrt((Times.col(0).array() - Times.col(0).mean()).square().sum() / (Times.col(0).size() - 1))
-              << ", " << Times.col(1).maxCoeff() << ", " << Times.col(1).minCoeff() << ", " << Times.col(1).mean()
-              << ", "
-              << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1))
-              << std::endl;
+    //Sort the times
+    std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
+    std::sort(TimeJac.begin(), TimeJac.end());
 
-    ////Run Multi-Threaded Tests
+    //Calculate the 1st quartile, median, and 3rd quartile
+    double IntFrc_Q1;
+    double IntFrc_Q2;
+    double IntFrc_Q3;
+    double Jac_Q1;
+    double Jac_Q2;
+    double Jac_Q3;
 
-    // int MaxThreads = 1;
-    // MaxThreads = ChOMP::GetNumProcs();
+    if (steps % 2 == 1) {
+        IntFrc_Q2 = TimeIntFrc((steps - 1) / 2);
+        Jac_Q2 = TimeJac((steps - 1) / 2);
 
-    // int NumThreads = 1;
-    // bool run = true;
+        if (((steps - 1) / 2) % 2 == 1) {
+            IntFrc_Q1 = TimeIntFrc((steps - 3) / 4);
+            Jac_Q1 = TimeJac((steps - 3) / 4);
+            IntFrc_Q3 = TimeIntFrc((3 * steps - 1) / 4);
+            Jac_Q3 = TimeJac((3 * steps - 1) / 4);
+        }
+        else {
+            IntFrc_Q1 = (TimeIntFrc((steps - 5) / 4) + TimeIntFrc((steps - 1) / 4)) / 2.0;
+            Jac_Q1 = (TimeJac((steps - 5) / 4) + TimeJac((steps - 1) / 4)) / 2.0;
+            IntFrc_Q3 = (TimeIntFrc((3 * steps - 3) / 4) + TimeIntFrc((3 * steps + 1) / 4)) / 2.0;
+            Jac_Q3 = (TimeJac((3 * steps - 3) / 4) + TimeJac((3 * steps + 1) / 4)) / 2.0;
+        }
+    }
+    else {
+        IntFrc_Q2 = (TimeIntFrc(steps / 2 - 1) + TimeIntFrc((steps / 2))) / 2.0;
+        Jac_Q2 = (TimeJac(steps / 2 - 1) + TimeJac((steps / 2))) / 2.0;
 
-    // int RunNum = 1;
-    // while (run) {
+        if ((steps / 2) % 2 == 1) {
+            IntFrc_Q1 = TimeIntFrc((steps - 2) / 4);
+            Jac_Q1 = TimeJac((steps - 2) / 4);
+            IntFrc_Q3 = TimeIntFrc((3 * steps - 2) / 4);
+            Jac_Q3 = TimeJac((3 * steps - 2) / 4);
+        }
+        else {
+            IntFrc_Q1 = (TimeIntFrc(steps / 4 - 1) + TimeIntFrc(steps / 4)) / 2.0;
+            Jac_Q1 = (TimeJac(steps / 4 - 1) + TimeJac(steps / 4)) / 2.0;
+            IntFrc_Q3 = (TimeIntFrc((3 * steps) / 4 - 1) + TimeIntFrc((3 * steps) / 4)) / 2.0;
+            Jac_Q3 = (TimeJac((3 * steps) / 4 - 1) + TimeJac((3 * steps) / 4)) / 2.0;
+        }
+    }
+
+    std::cout << TestName << ", " << num_elements << ", " << steps << ", 0, " << TimeIntFrc.minCoeff() << ", "
+        << IntFrc_Q1 << ", " << IntFrc_Q2 << ", " << IntFrc_Q3 << ", " << TimeIntFrc.maxCoeff() << ", "
+        << TimeIntFrc.mean() << ", "
+        << std::sqrt((TimeIntFrc - TimeIntFrc.mean()).square().sum() / (TimeIntFrc.size() - 1)) << ", "
+        << TimeJac.minCoeff() << ", " << Jac_Q1 << ", " << Jac_Q2 << ", " << Jac_Q3 << ", " << TimeJac.maxCoeff()
+        << ", " << TimeJac.mean() << ", "
+        << std::sqrt((TimeJac - TimeJac.mean()).square().sum() / (TimeJac.size() - 1)) << std::endl;
+    std::cout << std::flush;
+
+
+    //// Run Multi-Threaded Tests
+
+    //int MaxThreads = 1;
+    //MaxThreads = ChOMP::GetNumProcs();
+
+    //int NumThreads = 1;
+    //bool run = true;
+
+    //int RunNum = 1;
+    //while (run) {
     //    ChOMP::SetNumThreads(NumThreads);
 
     //    for (auto i = 0; i < steps; i++) {
     //        PerturbNodes(true);
-    //        Times(i, 0) = GetInternalFrc(true) * (1.0e6 / double(num_elements)); //Get Time Per Function Call in
-    //        microseconds
+    //        TimeIntFrc(i) =
+    //            GetInternalFrc(true) * (1.0e6 / double(num_elements));  // Get Time Per Function Call in microseconds
     //    }
     //    for (auto i = 0; i < steps; i++) {
     //        PerturbNodes(true);
-    //        Times(i, 1) = GetJacobian(true) * (1.0e6 / double(num_elements)); //Get Time Per Function Call in
-    //        microseconds
+    //        TimeJac(i) =
+    //            GetJacobian(true) * (1.0e6 / double(num_elements));  // Get Time Per Function Call in microseconds
     //    }
-    //    std::cout << TestName << ", " << num_elements << ", " << steps << ", " << NumThreads << ", "
-    //        << Times.col(0).maxCoeff() << ", "
-    //        << Times.col(0).minCoeff() << ", "
-    //        << Times.col(0).mean() << ", "
-    //        << std::sqrt((Times.col(0).array() - Times.col(0).mean()).square().sum() / (Times.col(0).size() - 1)) <<
-    //        ", "
-    //        << Times.col(1).maxCoeff() << ", "
-    //        << Times.col(1).minCoeff() << ", "
-    //        << Times.col(1).mean() << ", "
-    //        << std::sqrt((Times.col(1).array() - Times.col(1).mean()).square().sum() / (Times.col(1).size() - 1)) <<
-    //        std::endl;
+
+    //    //Sort the times
+    //    std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
+    //    std::sort(TimeJac.begin(), TimeJac.end());
+
+    //    //Calculate the 1st quartile, median, and 3rd quartile
+    //    if (steps % 2 == 1) {
+    //        IntFrc_Q2 = TimeIntFrc((steps - 1) / 2);
+    //        Jac_Q2 = TimeJac((steps - 1) / 2);
+
+    //        if (((steps - 1) / 2) % 2 == 1) {
+    //            IntFrc_Q1 = TimeIntFrc((steps - 3) / 4);
+    //            Jac_Q1 = TimeJac((steps - 3) / 4);
+    //            IntFrc_Q3 = TimeIntFrc((3 * steps - 1) / 4);
+    //            Jac_Q3 = TimeJac((3 * steps - 1) / 4);
+    //        }
+    //        else {
+    //            IntFrc_Q1 = (TimeIntFrc((steps - 5) / 4) + TimeIntFrc((steps - 1) / 4)) / 2.0;
+    //            Jac_Q1 = (TimeJac((steps - 5) / 4) + TimeJac((steps - 1) / 4)) / 2.0;
+    //            IntFrc_Q3 = (TimeIntFrc((3 * steps - 3) / 4) + TimeIntFrc((3 * steps + 1) / 4)) / 2.0;
+    //            Jac_Q3 = (TimeJac((3 * steps - 3) / 4) + TimeJac((3 * steps + 1) / 4)) / 2.0;
+    //        }
+    //    }
+    //    else {
+    //        IntFrc_Q2 = (TimeIntFrc(steps / 2 - 1) + TimeIntFrc((steps / 2))) / 2.0;
+    //        Jac_Q2 = (TimeJac(steps / 2 - 1) + TimeJac((steps / 2))) / 2.0;
+
+    //        if ((steps / 2) % 2 == 1) {
+    //            IntFrc_Q1 = TimeIntFrc((steps - 2) / 4);
+    //            Jac_Q1 = TimeJac((steps - 2) / 4);
+    //            IntFrc_Q3 = TimeIntFrc((3 * steps - 2) / 4);
+    //            Jac_Q3 = TimeJac((3 * steps - 2) / 4);
+    //        }
+    //        else {
+    //            IntFrc_Q1 = (TimeIntFrc(steps / 4 - 1) + TimeIntFrc(steps / 4)) / 2.0;
+    //            Jac_Q1 = (TimeJac(steps / 4 - 1) + TimeJac(steps / 4)) / 2.0;
+    //            IntFrc_Q3 = (TimeIntFrc((3 * steps) / 4 - 1) + TimeIntFrc((3 * steps) / 4)) / 2.0;
+    //            Jac_Q3 = (TimeJac((3 * steps) / 4 - 1) + TimeJac((3 * steps) / 4)) / 2.0;
+    //        }
+    //    }
+
+    //    std::cout << TestName << ", " << num_elements << ", " << steps << ", " << NumThreads << ", " << TimeIntFrc.minCoeff() << ", "
+    //        << IntFrc_Q1 << ", " << IntFrc_Q2 << ", " << IntFrc_Q3 << ", " << TimeIntFrc.maxCoeff() << ", "
+    //        << TimeIntFrc.mean() << ", "
+    //        << std::sqrt((TimeIntFrc - TimeIntFrc.mean()).square().sum() / (TimeIntFrc.size() - 1)) << ", "
+    //        << TimeJac.minCoeff() << ", " << Jac_Q1 << ", " << Jac_Q2 << ", " << Jac_Q3 << ", " << TimeJac.maxCoeff()
+    //        << ", " << TimeJac.mean() << ", "
+    //        << std::sqrt((TimeJac - TimeJac.mean()).square().sum() / (TimeJac.size() - 1)) << std::endl;
+    //    std::cout << std::flush;
 
     //    if (NumThreads == MaxThreads)
     //        run = false;
@@ -338,49 +431,49 @@ void ANCFHexa3843Test<num_elements, ElementVersion, MaterialVersion>::PrintTimin
     std::cout << "Total Test Time: " << Timer_Total() << "s" << std::endl;
 }
 
+
 void Run_ANCFHexa_3843_Tests() {
     const int num_elements = 512;
     int num_steps = 10;
-
-    // const int num_elements = 8;
-    // int num_steps = 1;
 
     {
         ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843, ChMaterialHexaANCF> Hexa3843Test;
         Hexa3843Test.PrintTimingResults("ChElementHexaANCF_3843_Chrono7", num_steps);
     }
-    //{
-    //    ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR01, ChMaterialHexaANCF> Hexa3843Test_TR01;
-    //    Hexa3843Test_TR01.PrintTimingResults("ChElementHexaANCF_3843_TR01", num_steps);
-    //}
-    //{
-    //    ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR01B, ChMaterialHexaANCF> Hexa3843Test_TR01B;
-    //    Hexa3843Test_TR01B.PrintTimingResults("ChElementHexaANCF_3843_TR01B", num_steps);
-    //}
-    //{
-    //    ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR02, ChMaterialHexaANCF> Hexa3843Test_TR02;
-    //    Hexa3843Test_TR02.PrintTimingResults("ChElementHexaANCF_3843_TR02", num_steps);
-    //}
-    //{
-    //    ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR02B, ChMaterialHexaANCF> Hexa3843Test_TR02B;
-    //    Hexa3843Test_TR02B.PrintTimingResults("ChElementHexaANCF_3843_TR02B", num_steps);
-    //}
-    //{
-    //    ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR03, ChMaterialHexaANCF> Hexa3843Test_TR03;
-    //    Hexa3843Test_TR03.PrintTimingResults("ChElementHexaANCF_3843_TR03", num_steps);
-    //}
-    //{
-    //    ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR03B, ChMaterialHexaANCF> Hexa3843Test_TR03B;
-    //    Hexa3843Test_TR03B.PrintTimingResults("ChElementHexaANCF_3843_TR03B", num_steps);
-    //}
-    //{
-    //    ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR04, ChMaterialHexaANCF> Hexa3843Test_TR04;
-    //    Hexa3843Test_TR04.PrintTimingResults("ChElementHexaANCF_3843_TR04", num_steps);
-    //}
-    //{
-    //    ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR04B, ChMaterialHexaANCF> Hexa3843Test_TR04B;
-    //    Hexa3843Test_TR04B.PrintTimingResults("ChElementHexaANCF_3843_TR04B", num_steps);
-    //}
+    num_steps = 1;
+    {
+        ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR01, ChMaterialHexaANCF> Hexa3843Test_TR01;
+        Hexa3843Test_TR01.PrintTimingResults("ChElementHexaANCF_3843_TR01", num_steps);
+    }
+    {
+        ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR01B, ChMaterialHexaANCF> Hexa3843Test_TR01B;
+        Hexa3843Test_TR01B.PrintTimingResults("ChElementHexaANCF_3843_TR01B", num_steps);
+    }
+    {
+        ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR02, ChMaterialHexaANCF> Hexa3843Test_TR02;
+        Hexa3843Test_TR02.PrintTimingResults("ChElementHexaANCF_3843_TR02", num_steps);
+    }
+    {
+        ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR02B, ChMaterialHexaANCF> Hexa3843Test_TR02B;
+        Hexa3843Test_TR02B.PrintTimingResults("ChElementHexaANCF_3843_TR02B", num_steps);
+    }
+    {
+        ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR03, ChMaterialHexaANCF> Hexa3843Test_TR03;
+        Hexa3843Test_TR03.PrintTimingResults("ChElementHexaANCF_3843_TR03", num_steps);
+    }
+    {
+        ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR03B, ChMaterialHexaANCF> Hexa3843Test_TR03B;
+        Hexa3843Test_TR03B.PrintTimingResults("ChElementHexaANCF_3843_TR03B", num_steps);
+    }
+    {
+        ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR04, ChMaterialHexaANCF> Hexa3843Test_TR04;
+        Hexa3843Test_TR04.PrintTimingResults("ChElementHexaANCF_3843_TR04", num_steps);
+    }
+    {
+        ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR04B, ChMaterialHexaANCF> Hexa3843Test_TR04B;
+        Hexa3843Test_TR04B.PrintTimingResults("ChElementHexaANCF_3843_TR04B", num_steps);
+    }
+    num_steps = 10;
     {
         ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR05, ChMaterialHexaANCF> Hexa3843Test_TR05;
         Hexa3843Test_TR05.PrintTimingResults("ChElementHexaANCF_3843_TR05", num_steps);
@@ -437,10 +530,6 @@ void Run_ANCFHexa_3843_Tests() {
         ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843_TR11B, ChMaterialHexaANCF> Hexa3843Test_TR11A;
         Hexa3843Test_TR11A.PrintTimingResults("ChElementHexaANCF_3843_TR11B", num_steps);
     }
-    //{
-    //    ANCFHexa3843Test<num_elements, ChElementHexaANCF_3843, ChMaterialHexaANCF> Hexa3843Test;
-    //    Hexa3843Test.PrintTimingResults("ChElementHexaANCF_3843_Chrono7", num_steps);
-    //}
 }
 
 // =============================================================================
