@@ -276,8 +276,10 @@ void ANCFShell3443Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
     }
 
     //Sort the times
-    std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
-    std::sort(TimeJac.begin(), TimeJac.end());
+    //std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
+    //std::sort(TimeJac.begin(), TimeJac.end());
+    std::sort(TimeIntFrc.data(), TimeIntFrc.data() + TimeIntFrc.size());
+    std::sort(TimeJac.data(), TimeJac.data() + TimeJac.size());
 
     //Calculate the 1st quartile, median, and 3rd quartile
     double IntFrc_Q1;
@@ -356,8 +358,10 @@ void ANCFShell3443Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
     //    }
 
     //    //Sort the times
-    //    std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
-    //    std::sort(TimeJac.begin(), TimeJac.end());
+    //    //std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
+    //    //std::sort(TimeJac.begin(), TimeJac.end());
+    //    std::sort(TimeIntFrc.data(), TimeIntFrc.data() + TimeIntFrc.size());
+    //    std::sort(TimeJac.data(), TimeJac.data() + TimeJac.size());
 
     //    //Calculate the 1st quartile, median, and 3rd quartile
     //    if (steps % 2 == 1) {
@@ -429,7 +433,7 @@ void Run_ANCFShell_3443_Tests() {
         ANCFShell3443Test<num_elements, ChElementShellANCF_3443, ChMaterialShellANCF> Shell3443Test(1);
         Shell3443Test.PrintTimingResults("ChElementShellANCF_3443_Chrono7", num_steps);
     }
-    int num_steps = 1;
+    num_steps = 1;
     {
         ANCFShell3443Test<num_elements, ChElementShellANCF_3443_TR01, ChMaterialShellANCF> Shell3443Test_TR01(1);
         Shell3443Test_TR01.PrintTimingResults("ChElementShellANCF_3443_TR01", num_steps);

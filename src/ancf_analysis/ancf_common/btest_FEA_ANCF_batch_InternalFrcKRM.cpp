@@ -364,8 +364,10 @@ void ANCFBeam3243Test<num_elements, ElementVersion, MaterialVersion>::PrintTimin
     }
 
     //Sort the times
-    std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
-    std::sort(TimeJac.begin(), TimeJac.end());
+    //std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
+    //std::sort(TimeJac.begin(), TimeJac.end());
+    std::sort(TimeIntFrc.data(), TimeIntFrc.data() + TimeIntFrc.size());
+    std::sort(TimeJac.data(), TimeJac.data() + TimeJac.size());
 
     //Calculate the 1st quartile, median, and 3rd quartile
     double IntFrc_Q1;
@@ -444,8 +446,10 @@ void ANCFBeam3243Test<num_elements, ElementVersion, MaterialVersion>::PrintTimin
         }
 
         //Sort the times
-        std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
-        std::sort(TimeJac.begin(), TimeJac.end());
+        //std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
+        //std::sort(TimeJac.begin(), TimeJac.end());
+        std::sort(TimeIntFrc.data(), TimeIntFrc.data() + TimeIntFrc.size());
+        std::sort(TimeJac.data(), TimeJac.data() + TimeJac.size());
 
         //Calculate the 1st quartile, median, and 3rd quartile
         if (steps % 2 == 1) {
@@ -821,8 +825,10 @@ void ANCFBeam3333Test<num_elements, ElementVersion, MaterialVersion>::PrintTimin
     }
 
     //Sort the times
-    std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
-    std::sort(TimeJac.begin(), TimeJac.end());
+    //std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
+    //std::sort(TimeJac.begin(), TimeJac.end());
+    std::sort(TimeIntFrc.data(), TimeIntFrc.data() + TimeIntFrc.size());
+    std::sort(TimeJac.data(), TimeJac.data() + TimeJac.size());
 
     //Calculate the 1st quartile, median, and 3rd quartile
     double IntFrc_Q1;
@@ -901,8 +907,10 @@ void ANCFBeam3333Test<num_elements, ElementVersion, MaterialVersion>::PrintTimin
         }
 
         //Sort the times
-        std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
-        std::sort(TimeJac.begin(), TimeJac.end());
+        //std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
+        //std::sort(TimeJac.begin(), TimeJac.end());
+        std::sort(TimeIntFrc.data(), TimeIntFrc.data() + TimeIntFrc.size());
+        std::sort(TimeJac.data(), TimeJac.data() + TimeJac.size());
 
         //Calculate the 1st quartile, median, and 3rd quartile
         if (steps % 2 == 1) {
@@ -1286,9 +1294,10 @@ void ANCFShell3443Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
                                                                             // microseconds
     }
 
-    //Sort the times
-    std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
-    std::sort(TimeJac.begin(), TimeJac.end());
+    //std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
+    //std::sort(TimeJac.begin(), TimeJac.end());
+    std::sort(TimeIntFrc.data(), TimeIntFrc.data() + TimeIntFrc.size());
+    std::sort(TimeJac.data(), TimeJac.data() + TimeJac.size());
 
     //Calculate the 1st quartile, median, and 3rd quartile
     double IntFrc_Q1;
@@ -1367,8 +1376,10 @@ void ANCFShell3443Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
         }
 
         //Sort the times
-        std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
-        std::sort(TimeJac.begin(), TimeJac.end());
+        //std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
+        //std::sort(TimeJac.begin(), TimeJac.end());
+        std::sort(TimeIntFrc.data(), TimeIntFrc.data() + TimeIntFrc.size());
+        std::sort(TimeJac.data(), TimeJac.data() + TimeJac.size());
 
         //Calculate the 1st quartile, median, and 3rd quartile
         if (steps % 2 == 1) {
@@ -1758,8 +1769,10 @@ void ANCFShell3833Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
     }
 
     //Sort the times
-    std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
-    std::sort(TimeJac.begin(), TimeJac.end());
+    //std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
+    //std::sort(TimeJac.begin(), TimeJac.end());
+    std::sort(TimeIntFrc.data(), TimeIntFrc.data() + TimeIntFrc.size());
+    std::sort(TimeJac.data(), TimeJac.data() + TimeJac.size());
 
     //Calculate the 1st quartile, median, and 3rd quartile
     double IntFrc_Q1;
@@ -1838,8 +1851,10 @@ void ANCFShell3833Test<num_elements, ElementVersion, MaterialVersion>::PrintTimi
         }
 
         //Sort the times
-        std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
-        std::sort(TimeJac.begin(), TimeJac.end());
+        //std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
+        //std::sort(TimeJac.begin(), TimeJac.end());
+        std::sort(TimeIntFrc.data(), TimeIntFrc.data() + TimeIntFrc.size());
+        std::sort(TimeJac.data(), TimeJac.data() + TimeJac.size());
 
         //Calculate the 1st quartile, median, and 3rd quartile
         if (steps % 2 == 1) {
@@ -2235,8 +2250,10 @@ void ANCFHexa3843Test<num_elements, ElementVersion, MaterialVersion>::PrintTimin
     }
 
     //Sort the times
-    std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
-    std::sort(TimeJac.begin(), TimeJac.end());
+    //std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
+    //std::sort(TimeJac.begin(), TimeJac.end());
+    std::sort(TimeIntFrc.data(), TimeIntFrc.data() + TimeIntFrc.size());
+    std::sort(TimeJac.data(), TimeJac.data() + TimeJac.size());
 
     //Calculate the 1st quartile, median, and 3rd quartile
     double IntFrc_Q1;
@@ -2315,8 +2332,10 @@ void ANCFHexa3843Test<num_elements, ElementVersion, MaterialVersion>::PrintTimin
         }
 
         //Sort the times
-        std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
-        std::sort(TimeJac.begin(), TimeJac.end());
+        //std::sort(TimeIntFrc.begin(), TimeIntFrc.end());
+        //std::sort(TimeJac.begin(), TimeJac.end());
+        std::sort(TimeIntFrc.data(), TimeIntFrc.data() + TimeIntFrc.size());
+        std::sort(TimeJac.data(), TimeJac.data() + TimeJac.size());
 
         //Calculate the 1st quartile, median, and 3rd quartile
         if (steps % 2 == 1) {
