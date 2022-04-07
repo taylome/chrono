@@ -433,7 +433,7 @@ void ChElementHexaANCF_3843_TR10::ComputeInternalForces(ChVectorDynamic<>& Fi) {
     // reshaped into vector format (through a simple reinterpretation of the data)
     // Assume damping is enabled and adjust PI1 to account for the extra terms.  This is the only modification required
     // to include damping in the generalized internal force calculation
-    MatrixNxN PI1_matrix = (0.5 * ebar.transpose() + m_Alpha * ebardot.transpose()) * ebar;
+    MatrixNxN PI1_matrix = (-0.5 * ebar.transpose() - m_Alpha * ebardot.transpose()) * ebar;
 
     MatrixNxN K1_matrix;
 
@@ -446,7 +446,7 @@ void ChElementHexaANCF_3843_TR10::ComputeInternalForces(ChVectorDynamic<>& Fi) {
     K1_vec.noalias() = m_O1 * PI1;
 
     // Store the combined sum of K1 and K3 since it will be used again in the Jacobian calculation
-    m_K13Compact.noalias() = K1_matrix - m_K3Compact;
+    m_K13Compact.noalias() = K1_matrix + m_K3Compact;
 
     // Multiply the combined K1 and K3 matrix by the nodal coordinates in compact form and then remap it into the
     // required vector order that is the generalized internal force vector
@@ -500,7 +500,7 @@ void ChElementHexaANCF_3843_TR10::ComputeKRMmatricesGlobal(ChMatrixRef H,
             O2.block<NSF, NSF>(NSF * t, NSF * f).noalias() = m_O1.block<NSF, NSF>(NSF * t, NSF * f).transpose();
         }
     }
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> K2 = -PI2 * O2;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> K2 = PI2 * O2;
 
     Matrix3Nx3N Jac;
     for (unsigned int k = 0; k < NSF; k++) {
@@ -954,7 +954,7 @@ void ChElementHexaANCF_3843_TR10::PrecomputeInternalForceMatricesWeights() {
                     J_0xi.noalias() = m_ebar0 * Sxi_D;
 
                     MatrixNx3c Sxi_D_0xi = Sxi_D * J_0xi.inverse();
-                    double GQWeight_det_J_0xi = -J_0xi.determinant() * GQ_weight;
+                    double GQWeight_det_J_0xi = J_0xi.determinant() * GQ_weight;
 
                     m_K3Compact += GQWeight_det_J_0xi * 0.5 *
                                    (Sxi_D_0xi * D11 * Sxi_D_0xi.transpose() + Sxi_D_0xi * D22 * Sxi_D_0xi.transpose() +

@@ -374,10 +374,6 @@ class ChApi ChElementHexaANCF_3843_TR09B : public ChElementHexahedron, public Ch
     Matrix3xN m_ebar0;         ///< Element Position Coordinate Vector for the Reference Configuration
     ChVectorN<double, (NSF * (NSF + 1)) / 2>
         m_MassMatrix;                       /// Mass Matrix in extra compact form (Upper Triangular Part only)
-    ChMatrixNM<double, NSF, 3 * NIP> m_SD;  ///< Precomputed corrected normalized shape function
-                                            ///< derivative matrices
-    ArrayNIP m_kGQ;                         ///< Precomputed Gauss-Quadrature Weight & Element Jacobian
-                                            ///< scale factors
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>
         m_O1;  ///< Precomputed Matrix combined with the nodal coordinates used for the "Pre-Integration" style method
                ///< internal force calculation

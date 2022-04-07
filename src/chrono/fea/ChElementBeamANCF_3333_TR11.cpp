@@ -359,22 +359,28 @@ void ChElementBeamANCF_3333_TR11::ComputeInternalForces(ChVectorDynamic<>& Fi) {
     CalcCoordMatrix(ebar);
     CalcCoordDerivVector(edot);
 
-    unsigned int index = 0;
-    for (unsigned int i = 0; i < NSF; i++) {
-        for (unsigned int j = i; j < NSF; j++) {
-            ChMatrixNM<double, 3, 3> Block = -ebar * m_Ccompact.block<NSF, NSF>(NSF * index, 0) * ebar.transpose();
-            m_K2.block<3, 3>(3 * i, 3 * j).noalias() = Block;
-            if (i != j) {
-                m_K2.block<3, 3>(3 * j, 3 * i).noalias() = Block.transpose();
-            }
-            index++;
+    unsigned int i = 0;
+    unsigned int j = 0;
+    for (unsigned int c = 0; c < ((NSF * (NSF + 1)) / 2); c++) {
+        ChMatrixNMc<double, NSF, 3> Ce = m_Ccompact.block<NSF, NSF>(c * NSF, 0) * ebar.transpose();
+        ChMatrix33<> Block = -ebar * Ce;
+
+        m_K2.block<3, 3>(3 * i, 3 * j).noalias() = Block;
+        if (i != j) {
+            m_K2.block<3, 3>(3 * j, 3 * i).noalias() = Block.transpose();
+        }
+
+        j++;
+        if (j == NSF) {
+            i++;
+            j = i;
         }
     }
 
     ChMatrixNMc<double, 3, NSF> ebar_colmajor = ebar;
     Eigen::Map<ChVectorN<double, 3 * NSF>> e(ebar_colmajor.data(), ebar_colmajor.size());
 
-    Vector3N Qi = (m_K1 + m_K2) * e + (2 * m_Alpha) * (m_K2 * edot);
+    Vector3N Qi = m_K2 * (e + (2 * m_Alpha) * edot) + m_K1 * e;
     Fi.noalias() = Qi;
 }
 
@@ -392,34 +398,37 @@ void ChElementBeamANCF_3333_TR11::ComputeKRMmatricesGlobal(ChMatrixRef H,
 
     CalcCoordMatrix(ebar);
     CalcCoordDerivMatrix(ebardot);
-    Matrix3xN ebar_plus_ebardot = ebar + (2 * m_Alpha) * ebardot;
 
     Matrix3Nx3N Jac = -Kfactor * m_K1 - (Kfactor + Rfactor * 2 * m_Alpha) * m_K2;
 
+    Matrix3xN A = ebar + (2 * m_Alpha) * ebardot;
+    ChMatrixNMc<double, NSF, NSF> B = ebar.transpose() * A;
+
     unsigned int index = 0;
-    for (unsigned int i = 0; i < NSF; i++) {
-        for (unsigned int s = i; s < NSF; s++) {
+    for (unsigned int m = 0; m < NSF; m++) {
+        for (unsigned int n = m; n < NSF; n++) {
             MatrixNxN Ccompact = m_Ccompact.block<NSF, NSF>(NSF * index, 0);
             index++;
 
+            ChMatrixNMc<double, NSF, 1> G = Ccompact * B.col(n);
+            ChMatrixNMc<double, 3, NSF> L = ebar * Ccompact;
             for (unsigned int k = 0; k < NSF; k++) {
-                double d = ebar_plus_ebardot.col(s).transpose() * ebar * Ccompact.row(k).transpose();
-                ChMatrixNM<double, 3, 3> Block = ebar * Ccompact.col(k) * ebar_plus_ebardot.col(s).transpose();
-                Block(0, 0) += d;
-                Block(1, 1) += d;
-                Block(2, 2) += d;
-                Jac.block<3, 3>(3 * i, 3 * k).noalias() += Kfactor * Block;
+                ChMatrixNM<double, 3, 3> Block = L.col(k) * A.col(n).transpose();
+                Block(0, 0) += G(k);
+                Block(1, 1) += G(k);
+                Block(2, 2) += G(k);
+                Jac.block<3, 3>(3 * m, 3 * k).noalias() += Kfactor * Block;
             }
 
-            if (i != s) {
+            if (m != n) {
+                ChMatrixNMc<double, NSF, 1> G = Ccompact.transpose() * B.col(m);
+                ChMatrixNMc<double, 3, NSF> L = ebar * Ccompact.transpose();
                 for (unsigned int k = 0; k < NSF; k++) {
-                    double d = ebar_plus_ebardot.col(i).transpose() * ebar * Ccompact.col(k);
-                    ChMatrixNM<double, 3, 3> Block =
-                        ebar * Ccompact.row(k).transpose() * ebar_plus_ebardot.col(i).transpose();
-                    Block(0, 0) += d;
-                    Block(1, 1) += d;
-                    Block(2, 2) += d;
-                    Jac.block<3, 3>(3 * s, 3 * k).noalias() += Kfactor * Block;
+                    ChMatrixNM<double, 3, 3> Block = L.col(k) * A.col(m).transpose();
+                    Block(0, 0) += G(k);
+                    Block(1, 1) += G(k);
+                    Block(2, 2) += G(k);
+                    Jac.block<3, 3>(3 * n, 3 * k).noalias() += Kfactor * Block;
                 }
             }
         }
