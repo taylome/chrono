@@ -435,7 +435,9 @@ set(ChronoEngine_fea_HEADERS
     fea/ChLoadsXYZROTnode.h
     fea/ChRotUtils.h
     fea/ChMaterialBeamANCF.h
+    fea/ChMaterialBeamANCF_MR.h
     fea/ChMaterialShellANCF.h
+    fea/ChMaterialShellANCF_MR.h
     fea/ChMaterialHexaANCF.h
 	fea/ChMaterialHexaANCF_MR.h
     fea/ChMaterialShellReissner.h
@@ -489,6 +491,10 @@ set(ChronoEngine_fea_elements_SOURCES
     fea/ChElementHexaANCF_3813.cpp
     fea/ChElementHexaANCF_3813_9.cpp
     fea/ChElementHexaANCF_3843.cpp
+    fea/ChElementHexaANCF_3843_MR_Damp.cpp
+    fea/ChElementHexaANCF_3843_MR_NoDamp.cpp
+    fea/ChElementHexaANCF_3843_MR_DampNumJac.cpp
+    fea/ChElementHexaANCF_3843_MR_NoDampNumJac.cpp
 	fea/ChElementHexaANCF_3843_MR_V1.cpp
 	fea/ChElementHexaANCF_3843_MR_V2.cpp
 	fea/ChElementHexaANCF_3843_MR_V3.cpp
@@ -496,13 +502,36 @@ set(ChronoEngine_fea_elements_SOURCES
 	fea/ChElementHexaANCF_3843_MR_V5.cpp
 	fea/ChElementHexaANCF_3843_MR_V6.cpp
 	fea/ChElementHexaANCF_3843_MR_V7.cpp
+	fea/ChElementHexaANCF_3843_MR_V8.cpp
+	fea/ChElementHexaANCF_3843_MR_V9.cpp
     fea/ChElementBeamANCF_3243.cpp
+	fea/ChElementBeamANCF_3243_MR_Damp.cpp
+	fea/ChElementBeamANCF_3243_MR_NoDamp.cpp
+	fea/ChElementBeamANCF_3243_MR_DampNumJac.cpp
+	fea/ChElementBeamANCF_3243_MR_NoDampNumJac.cpp
     fea/ChElementBeamANCF_3333.cpp
+	fea/ChElementBeamANCF_3333_MR_Damp.cpp
+	fea/ChElementBeamANCF_3333_MR_NoDamp.cpp
+	fea/ChElementBeamANCF_3333_MR_DampNumJac.cpp
+	fea/ChElementBeamANCF_3333_MR_NoDampNumJac.cpp
     fea/ChElementShellANCF_3423.cpp
     fea/ChElementShellANCF_3833.cpp
+	fea/ChElementShellANCF_3833_MR_Damp.cpp
+	fea/ChElementShellANCF_3833_MR_NoDamp.cpp
+	fea/ChElementShellANCF_3833_MR_DampNumJac.cpp
+	fea/ChElementShellANCF_3833_MR_NoDampNumJac.cpp
     fea/ChElementShellANCF_3443.cpp
+	fea/ChElementShellANCF_3443_MR_Damp.cpp
+	fea/ChElementShellANCF_3443_MR_NoDamp.cpp
+	fea/ChElementShellANCF_3443_MR_DampNumJac.cpp
+	fea/ChElementShellANCF_3443_MR_NoDampNumJac.cpp
 	fea/ChElementShellBST.cpp
     fea/ChElementShellReissner4.cpp
+    fea/ChElementBeamANCF_3243_TR08.cpp
+    fea/ChElementBeamANCF_3333_TR08.cpp
+    fea/ChElementShellANCF_3443_TR08.cpp
+    fea/ChElementShellANCF_3833_TR08.cpp
+    fea/ChElementHexaANCF_3843_TR08.cpp
 )
 
 set(ChronoEngine_fea_elements_HEADERS
@@ -513,7 +542,15 @@ set(ChronoEngine_fea_elements_HEADERS
     fea/ChElementBar.h
     fea/ChElementBeam.h
     fea/ChElementBeamANCF_3243.h
+	fea/ChElementBeamANCF_3243_MR_Damp.h
+	fea/ChElementBeamANCF_3243_MR_NoDamp.h
+	fea/ChElementBeamANCF_3243_MR_DampNumJac.h
+	fea/ChElementBeamANCF_3243_MR_NoDampNumJac.h
     fea/ChElementBeamANCF_3333.h
+	fea/ChElementBeamANCF_3333_MR_Damp.h
+	fea/ChElementBeamANCF_3333_MR_NoDamp.h
+	fea/ChElementBeamANCF_3333_MR_DampNumJac.h
+	fea/ChElementBeamANCF_3333_MR_NoDampNumJac.h
     fea/ChElementBeamEuler.h
     fea/ChElementBeamTaperedTimoshenko.h
     fea/ChElementBeamTaperedTimoshenkoFPM.h
@@ -528,19 +565,38 @@ set(ChronoEngine_fea_elements_HEADERS
     fea/ChElementHexaCorot_8.h
     fea/ChElementHexaCorot_20.h
     fea/ChElementHexaANCF_3843.h
-	fea/ChElementHexaANCF_3843_MR_V1.h
-	fea/ChElementHexaANCF_3843_MR_V2.h
-	fea/ChElementHexaANCF_3843_MR_V3.h
-	fea/ChElementHexaANCF_3843_MR_V4.h
-	fea/ChElementHexaANCF_3843_MR_V5.h
-	fea/ChElementHexaANCF_3843_MR_V6.h
-	fea/ChElementHexaANCF_3843_MR_V7.h
+    fea/ChElementHexaANCF_3843_MR_Damp.h
+    fea/ChElementHexaANCF_3843_MR_NoDamp.h
+    fea/ChElementHexaANCF_3843_MR_DampNumJac.h
+    fea/ChElementHexaANCF_3843_MR_NoDampNumJac.h
+    fea/ChElementHexaANCF_3843_MR_V1.h
+    fea/ChElementHexaANCF_3843_MR_V2.h
+    fea/ChElementHexaANCF_3843_MR_V3.h
+    fea/ChElementHexaANCF_3843_MR_V4.h
+    fea/ChElementHexaANCF_3843_MR_V5.h
+    fea/ChElementHexaANCF_3843_MR_V6.h
+    fea/ChElementHexaANCF_3843_MR_V7.h
+    fea/ChElementHexaANCF_3843_MR_V8.h
+    fea/ChElementHexaANCF_3843_MR_V9.h
     fea/ChElementShell.h
     fea/ChElementShellANCF_3423.h
     fea/ChElementShellANCF_3443.h
+	fea/ChElementShellANCF_3443_MR_Damp.h
+	fea/ChElementShellANCF_3443_MR_NoDamp.h
+	fea/ChElementShellANCF_3443_MR_DampNumJac.h
+	fea/ChElementShellANCF_3443_MR_NoDampNumJac.h
     fea/ChElementShellANCF_3833.h
+	fea/ChElementShellANCF_3833_MR_Damp.h
+	fea/ChElementShellANCF_3833_MR_NoDamp.h
+	fea/ChElementShellANCF_3833_MR_DampNumJac.h
+	fea/ChElementShellANCF_3833_MR_NoDampNumJac.h
     fea/ChElementShellReissner4.h
 	fea/ChElementShellBST.h
+    fea/ChElementBeamANCF_3243_TR08.h
+    fea/ChElementBeamANCF_3333_TR08.h
+    fea/ChElementShellANCF_3443_TR08.h
+    fea/ChElementShellANCF_3833_TR08.h
+    fea/ChElementHexaANCF_3843_TR08.h
 )
 
 source_group(fea\\elements FILES
