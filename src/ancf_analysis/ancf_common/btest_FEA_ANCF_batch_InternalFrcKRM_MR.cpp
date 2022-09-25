@@ -3993,10 +3993,10 @@ int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
 
     if (argc < 2) {
-        //Run_ANCFBeam_3243_Tests();
-        //Run_ANCFBeam_3333_Tests();
-        //Run_ANCFShell_3443_Tests();
-        //Run_ANCFShell_3833_Tests();
+        Run_ANCFBeam_3243_Tests();
+        Run_ANCFBeam_3333_Tests();
+        Run_ANCFShell_3443_Tests();
+        Run_ANCFShell_3833_Tests();
         Run_ANCFHexa_3843_Tests();
     }
     else{
