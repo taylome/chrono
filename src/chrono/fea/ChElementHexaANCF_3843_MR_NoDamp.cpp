@@ -860,16 +860,10 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalForceDamping(ChVectorDynam
     ArrayNIP I2 = 0.5*(I1*I1 - C11 * C11 - C22 * C22 - C33 * C33) - C12 * C12 - C13 * C13 - C23 * C23;
 
     //Calculate the determinate of F (commonly denoted as J)
-    ArrayNIP detF = F11 * F22*F33 + F12 * F23*F31 + F13 * F21*F32 - F11 * F23*F32 - F12 * F21*F33 - F13 * F22*F31;
+    ArrayNIP J = F11 * (F22*F33 - F23 * F32) + F12 * (F23*F31 - F21 * F33) + F13 * (F21*F32 - F22 * F31);
 
-    ArrayNIP detF_m2_3 = detF.pow(-2.0 / 3.0);
-
-    double c10 = GetMaterial()->Get_c10();
-    double c01 = GetMaterial()->Get_c01();
-    double k = GetMaterial()->Get_k();
-    double mu = GetMaterial()->Get_mu();
-
-    ArrayNIP kGQmu_over_detF3 = mu * m_kGQ / (detF*detF*detF);
+    //Calculate the determinate of F to the -2/3 power -> J^(-2/3)
+    ArrayNIP J_m2_3 = J.pow(-2.0 / 3.0);
 
     // Calculate the time derivative of the Greens-Lagrange strain tensor at the current point (symmetric):
     ArrayNIP Edot11 = F11 * Fdot11 + F21 * Fdot21 + F31 * Fdot31;
@@ -879,7 +873,7 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalForceDamping(ChVectorDynam
     ArrayNIP Edot13 = 0.5*(F11 * Fdot13 + F13 * Fdot11 + F21 * Fdot23 + F23 * Fdot21 + F31 * Fdot33 + F33 * Fdot31);
     ArrayNIP Edot23 = 0.5*(F12 * Fdot13 + F13 * Fdot12 + F22 * Fdot23 + F23 * Fdot22 + F32 * Fdot33 + F33 * Fdot32);
 
-    //Inverse of C times detF^2 (since all the detF terms will be handled together)
+    //Inverse of C times J^2 (since all the J terms will be handled together)
     ArrayNIP CInv11 = C22 * C33 - C23 * C23;
     ArrayNIP CInv22 = C11 * C33 - C13 * C13;
     ArrayNIP CInv33 = C11 * C22 - C12 * C12;
@@ -887,33 +881,44 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalForceDamping(ChVectorDynam
     ArrayNIP CInv13 = C12 * C23 - C13 * C22;
     ArrayNIP CInv23 = C13 * C12 - C11 * C23;
 
-    //Calculate the Stress from the viscosity law
-    ArrayNIP SPK2_NLKV_1 = kGQmu_over_detF3 * (Edot11*CInv11*CInv11 + 2.0 * Edot12*CInv11*CInv12 + 2.0 * Edot13*CInv11*CInv13 + Edot22 * CInv12*CInv12 + 2.0 * Edot23*CInv12*CInv13 + Edot33 * CInv13*CInv13);
-    ArrayNIP SPK2_NLKV_2 = kGQmu_over_detF3 * (Edot11*CInv12*CInv12 + 2.0 * Edot12*CInv12*CInv22 + 2.0 * Edot13*CInv12*CInv23 + Edot22 * CInv22*CInv22 + 2.0 * Edot23*CInv22*CInv23 + Edot33 * CInv23*CInv23);
-    ArrayNIP SPK2_NLKV_3 = kGQmu_over_detF3 * (Edot11*CInv13*CInv13 + 2.0 * Edot12*CInv13*CInv23 + 2.0 * Edot13*CInv13*CInv33 + Edot22 * CInv23*CInv23 + 2.0 * Edot23*CInv23*CInv33 + Edot33 * CInv33*CInv33);
-    ArrayNIP SPK2_NLKV_4 = kGQmu_over_detF3 * (Edot11*CInv12*CInv13 + Edot12 * (CInv12*CInv23 + CInv22 * CInv13) + Edot13 * (CInv12*CInv33 + CInv13 * CInv23) + Edot22 * CInv22*CInv23 + Edot23 * (CInv23*CInv23 + CInv22 * CInv33) + Edot33 * CInv23*CInv33);
-    ArrayNIP SPK2_NLKV_5 = kGQmu_over_detF3 * (Edot11*CInv11*CInv13 + Edot12 * (CInv11*CInv23 + CInv12 * CInv13) + Edot13 * (CInv13*CInv13 + CInv11 * CInv33) + Edot22 * CInv12*CInv23 + Edot23 * (CInv12*CInv33 + CInv13 * CInv23) + Edot33 * CInv13*CInv33);
-    ArrayNIP SPK2_NLKV_6 = kGQmu_over_detF3 * (Edot11*CInv11*CInv12 + Edot12 * (CInv12*CInv12 + CInv11 * CInv22) + Edot13 * (CInv11*CInv23 + CInv12 * CInv13) + Edot22 * CInv12*CInv22 + Edot23 * (CInv12*CInv23 + CInv22 * CInv13) + Edot33 * CInv13*CInv23);
+    //Calculate the 2nd Piola-Kirchhoff Stress components from the simple non-linear Kevlin-Voigt viscosity law (S_Cauchy = mu*D, where D is the Rate of Deformation Tensor)
+    double mu = GetMaterial()->Get_mu();
+    ArrayNIP kGQmu_over_J3 = mu * m_kGQ / (J*J*J);
+    ArrayNIP SPK2_NLKV_1 = kGQmu_over_J3 * (Edot11*CInv11*CInv11 + 2.0 * Edot12*CInv11*CInv12 + 2.0 * Edot13*CInv11*CInv13 + Edot22 * CInv12*CInv12 + 2.0 * Edot23*CInv12*CInv13 + Edot33 * CInv13*CInv13);
+    ArrayNIP SPK2_NLKV_2 = kGQmu_over_J3 * (Edot11*CInv12*CInv12 + 2.0 * Edot12*CInv12*CInv22 + 2.0 * Edot13*CInv12*CInv23 + Edot22 * CInv22*CInv22 + 2.0 * Edot23*CInv22*CInv23 + Edot33 * CInv23*CInv23);
+    ArrayNIP SPK2_NLKV_3 = kGQmu_over_J3 * (Edot11*CInv13*CInv13 + 2.0 * Edot12*CInv13*CInv23 + 2.0 * Edot13*CInv13*CInv33 + Edot22 * CInv23*CInv23 + 2.0 * Edot23*CInv23*CInv33 + Edot33 * CInv33*CInv33);
+    ArrayNIP SPK2_NLKV_4 = kGQmu_over_J3 * (Edot11*CInv12*CInv13 + Edot12 * (CInv12*CInv23 + CInv22 * CInv13) + Edot13 * (CInv12*CInv33 + CInv13 * CInv23) + Edot22 * CInv22*CInv23 + Edot23 * (CInv23*CInv23 + CInv22 * CInv33) + Edot33 * CInv23*CInv33);
+    ArrayNIP SPK2_NLKV_5 = kGQmu_over_J3 * (Edot11*CInv11*CInv13 + Edot12 * (CInv11*CInv23 + CInv12 * CInv13) + Edot13 * (CInv13*CInv13 + CInv11 * CInv33) + Edot22 * CInv12*CInv23 + Edot23 * (CInv12*CInv33 + CInv13 * CInv23) + Edot33 * CInv13*CInv33);
+    ArrayNIP SPK2_NLKV_6 = kGQmu_over_J3 * (Edot11*CInv11*CInv12 + Edot12 * (CInv12*CInv12 + CInv11 * CInv22) + Edot13 * (CInv11*CInv23 + CInv12 * CInv13) + Edot22 * CInv12*CInv22 + Edot23 * (CInv12*CInv23 + CInv22 * CInv13) + Edot33 * CInv13*CInv23);
 
-    ArrayNIP s0 = 2.0 * m_kGQ * detF_m2_3;
-    ArrayNIP s2 = -c01 * s0 * detF_m2_3;
-    s0 *= c10;
-    ArrayNIP s1 = s0 - s2 * I1;
-    ArrayNIP s3 = k * (detF - 1.0)*m_kGQ - (I1*s0 - 2 * I2 * s2) / (3.0 * detF);
+    //Get the element's material properties
+    double c10 = GetMaterial()->Get_c10();
+    double c01 = GetMaterial()->Get_c01();
+    double k = GetMaterial()->Get_k();
 
+    //Calculate the scale factors used for calculating the transpose of the 1st Piola-Kirchhoff Stress tensors
+    ArrayNIP M0 = 2.0 * m_kGQ * J_m2_3;
+    ArrayNIP M2 = -c01 * M0 * J_m2_3;
+    M0 *= c10;
+    ArrayNIP M1 = M0 - M2 * I1;
+    ArrayNIP M3 = k * (J - 1.0)*m_kGQ - (I1*M0 - 2 * I2 * M2) / (3.0 * J);
+
+    //Calculate the transpose of the 1st Piola-Kirchhoff Stress tensors grouped by Gauss-quadrature points
     ChMatrixNMc<double, 3 * NIP, 3> P_Block;
-    P_Block.block<NIP, 1>(0, 0) = s3 * (F22 * F33 - F23 * F32) + (s1 + s2 * C11) * F11 + s2 * (C12 * F12 + C13 * F13) + F11 * SPK2_NLKV_1 + F12 * SPK2_NLKV_6 + F13 * SPK2_NLKV_5;
-    P_Block.block<NIP, 1>(NIP, 0) = s3 * (F23 * F31 - F21 * F33) + (s1 + s2 * C22) * F12 + s2 * (C12 * F11 + C23 * F13) + F11 * SPK2_NLKV_6 + F12 * SPK2_NLKV_2 + F13 * SPK2_NLKV_4;
-    P_Block.block<NIP, 1>(2 * NIP, 0) = s3 * (F21 * F32 - F22 * F31) + (s1 + s2 * C33) * F13 + s2 * (C13 * F11 + C23 * F12) + F11 * SPK2_NLKV_5 + F12 * SPK2_NLKV_4 + F13 * SPK2_NLKV_3;
-    P_Block.block<NIP, 1>(0, 1) = s3 * (F13 * F32 - F12 * F33) + (s1 + s2 * C11) * F21 + s2 * (C12 * F22 + C13 * F23) + F21 * SPK2_NLKV_1 + F22 * SPK2_NLKV_6 + F23 * SPK2_NLKV_5;
-    P_Block.block<NIP, 1>(NIP, 1) = s3 * (F11 * F33 - F13 * F31) + (s1 + s2 * C22) * F22 + s2 * (C12 * F21 + C23 * F23) + F21 * SPK2_NLKV_6 + F22 * SPK2_NLKV_2 + F23 * SPK2_NLKV_4;
-    P_Block.block<NIP, 1>(2 * NIP, 1) = s3 * (F12 * F31 - F11 * F32) + (s1 + s2 * C33) * F23 + s2 * (C13 * F21 + C23 * F22) + F21 * SPK2_NLKV_5 + F22 * SPK2_NLKV_4 + F23 * SPK2_NLKV_3;
-    P_Block.block<NIP, 1>(0, 2) = s3 * (F12 * F23 - F13 * F22) + (s1 + s2 * C11) * F31 + s2 * (C12 * F32 + C13 * F33) + F31 * SPK2_NLKV_1 + F32 * SPK2_NLKV_6 + F33 * SPK2_NLKV_5;
-    P_Block.block<NIP, 1>(NIP, 2) = s3 * (F13 * F21 - F11 * F23) + (s1 + s2 * C22) * F32 + s2 * (C12 * F31 + C23 * F33) + F31 * SPK2_NLKV_6 + F32 * SPK2_NLKV_2 + F33 * SPK2_NLKV_4;
-    P_Block.block<NIP, 1>(2 * NIP, 2) = s3 * (F11 * F22 - F12 * F21) + (s1 + s2 * C33) * F33 + s2 * (C13 * F31 + C23 * F32) + F31 * SPK2_NLKV_5 + F32 * SPK2_NLKV_4 + F33 * SPK2_NLKV_3;
+    P_Block.block<NIP, 1>(0, 0) = M3 * (F22 * F33 - F23 * F32) + (M1 + M2 * C11) * F11 + M2 * (C12 * F12 + C13 * F13) + F11 * SPK2_NLKV_1 + F12 * SPK2_NLKV_6 + F13 * SPK2_NLKV_5;
+    P_Block.block<NIP, 1>(NIP, 0) = M3 * (F23 * F31 - F21 * F33) + (M1 + M2 * C22) * F12 + M2 * (C12 * F11 + C23 * F13) + F11 * SPK2_NLKV_6 + F12 * SPK2_NLKV_2 + F13 * SPK2_NLKV_4;
+    P_Block.block<NIP, 1>(2 * NIP, 0) = M3 * (F21 * F32 - F22 * F31) + (M1 + M2 * C33) * F13 + M2 * (C13 * F11 + C23 * F12) + F11 * SPK2_NLKV_5 + F12 * SPK2_NLKV_4 + F13 * SPK2_NLKV_3;
+    P_Block.block<NIP, 1>(0, 1) = M3 * (F13 * F32 - F12 * F33) + (M1 + M2 * C11) * F21 + M2 * (C12 * F22 + C13 * F23) + F21 * SPK2_NLKV_1 + F22 * SPK2_NLKV_6 + F23 * SPK2_NLKV_5;
+    P_Block.block<NIP, 1>(NIP, 1) = M3 * (F11 * F33 - F13 * F31) + (M1 + M2 * C22) * F22 + M2 * (C12 * F21 + C23 * F23) + F21 * SPK2_NLKV_6 + F22 * SPK2_NLKV_2 + F23 * SPK2_NLKV_4;
+    P_Block.block<NIP, 1>(2 * NIP, 1) = M3 * (F12 * F31 - F11 * F32) + (M1 + M2 * C33) * F23 + M2 * (C13 * F21 + C23 * F22) + F21 * SPK2_NLKV_5 + F22 * SPK2_NLKV_4 + F23 * SPK2_NLKV_3;
+    P_Block.block<NIP, 1>(0, 2) = M3 * (F12 * F23 - F13 * F22) + (M1 + M2 * C11) * F31 + M2 * (C12 * F32 + C13 * F33) + F31 * SPK2_NLKV_1 + F32 * SPK2_NLKV_6 + F33 * SPK2_NLKV_5;
+    P_Block.block<NIP, 1>(NIP, 2) = M3 * (F13 * F21 - F11 * F23) + (M1 + M2 * C22) * F32 + M2 * (C12 * F31 + C23 * F33) + F31 * SPK2_NLKV_6 + F32 * SPK2_NLKV_2 + F33 * SPK2_NLKV_4;
+    P_Block.block<NIP, 1>(2 * NIP, 2) = M3 * (F11 * F22 - F12 * F21) + (M1 + M2 * C33) * F33 + M2 * (C13 * F31 + C23 * F32) + F31 * SPK2_NLKV_5 + F32 * SPK2_NLKV_4 + F33 * SPK2_NLKV_3;
 
-    Eigen::Map<MatrixNx3> FiCompact(Fi.data(), NSF, 3);
-    FiCompact.noalias() = m_SD * P_Block;
+    //Calculate the generalized internal force vector in matrix form and then reshape it into its required vector layout
+    MatrixNx3 QiCompact = m_SD * P_Block;
+    Eigen::Map<ChVectorN<double, 3 * NSF>> QiReshaped(QiCompact.data(), QiCompact.size());
+    Fi.noalias() = QiReshaped;
 }
 
 void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalForceNoDamping(ChVectorDynamic<>& Fi) {
@@ -958,38 +963,43 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalForceNoDamping(ChVectorDyn
     ArrayNIP I1 = C11 + C22 + C33;
 
     //Calculate the 2nd invariant of the Right Cauchy-Green deformation tensor: 1/2*(trace(C)^2-trace(C^2))
-    ArrayNIP I2 = 0.5*(I1*I1 - C11*C11 - C22*C22 - C33*C33) - C12*C12 - C13*C13 - C23*C23;
+    ArrayNIP I2 = 0.5*(I1*I1 - C11 * C11 - C22 * C22 - C33 * C33) - C12 * C12 - C13 * C13 - C23 * C23;
 
     //Calculate the determinate of F (commonly denoted as J)
-    ArrayNIP detF = F11*F22*F33 + F12*F23*F31 + F13*F21*F32 - F11*F23*F32 - F12*F21*F33 - F13*F22*F31;
+    ArrayNIP J = F11 * (F22*F33 - F23 * F32) + F12 * (F23*F31 - F21 * F33) + F13 * (F21*F32 - F22 * F31);
 
-    ArrayNIP detF_m2_3 = detF.pow(-2.0 / 3.0);
+    //Calculate the determinate of F to the -2/3 power -> J^(-2/3)
+    ArrayNIP J_m2_3 = J.pow(-2.0 / 3.0);
 
+    //Get the element's material properties
     double c10 = GetMaterial()->Get_c10();
     double c01 = GetMaterial()->Get_c01();
     double k = GetMaterial()->Get_k();
 
-    ArrayNIP s0 = 2.0 * m_kGQ * detF_m2_3;
-    ArrayNIP s2 = -c01 * s0 * detF_m2_3;
-    s0 *= c10;
-    ArrayNIP s1 = s0 - s2 * I1;
-    ArrayNIP s3 = k * (detF - 1.0)*m_kGQ - (I1*s0 - 2 * I2 * s2) / (3.0 * detF);
+    //Calculate the scale factors used for calculating the transpose of the 1st Piola-Kirchhoff Stress tensors
+    ArrayNIP M0 = 2.0 * m_kGQ * J_m2_3;
+    ArrayNIP M2 = -c01 * M0 * J_m2_3;
+    M0 *= c10;
+    ArrayNIP M1 = M0 - M2 * I1;
+    ArrayNIP M3 = k * (J - 1.0)*m_kGQ - (I1*M0 - 2 * I2 * M2) / (3.0 * J);
 
+    //Calculate the transpose of the 1st Piola-Kirchhoff Stress tensors grouped by Gauss-quadrature points
     ChMatrixNMc<double, 3 * NIP, 3> P_Block;
-    P_Block.block<NIP, 1>(0, 0) = s3 * (F22 * F33 - F23 * F32) + (s1 + s2 * C11) * F11 + s2 * (C12 * F12 + C13 * F13);
-    P_Block.block<NIP, 1>(NIP, 0) = s3 * (F23 * F31 - F21 * F33) + (s1 + s2 * C22) * F12 + s2 * (C12 * F11 + C23 * F13);
-    P_Block.block<NIP, 1>(2 * NIP, 0) = s3 * (F21 * F32 - F22 * F31) + (s1 + s2 * C33) * F13 + s2 * (C13 * F11 + C23 * F12);
-    P_Block.block<NIP, 1>(0, 1) = s3 * (F13 * F32 - F12 * F33) + (s1 + s2 * C11) * F21 + s2 * (C12 * F22 + C13 * F23);
-    P_Block.block<NIP, 1>(NIP, 1) = s3 * (F11 * F33 - F13 * F31) + (s1 + s2 * C22) * F22 + s2 * (C12 * F21 + C23 * F23);
-    P_Block.block<NIP, 1>(2 * NIP, 1) = s3 * (F12 * F31 - F11 * F32) + (s1 + s2 * C33) * F23 + s2 * (C13 * F21 + C23 * F22);
-    P_Block.block<NIP, 1>(0, 2) = s3 * (F12 * F23 - F13 * F22) + (s1 + s2 * C11) * F31 + s2 * (C12 * F32 + C13 * F33);
-    P_Block.block<NIP, 1>(NIP, 2) = s3 * (F13 * F21 - F11 * F23) + (s1 + s2 * C22) * F32 + s2 * (C12 * F31 + C23 * F33);
-    P_Block.block<NIP, 1>(2 * NIP, 2) = s3 * (F11 * F22 - F12 * F21) + (s1 + s2 * C33) * F33 + s2 * (C13 * F31 + C23 * F32);
+    P_Block.block<NIP, 1>(0, 0) = M3 * (F22 * F33 - F23 * F32) + (M1 + M2 * C11) * F11 + M2 * (C12 * F12 + C13 * F13);
+    P_Block.block<NIP, 1>(NIP, 0) = M3 * (F23 * F31 - F21 * F33) + (M1 + M2 * C22) * F12 + M2 * (C12 * F11 + C23 * F13);
+    P_Block.block<NIP, 1>(2 * NIP, 0) = M3 * (F21 * F32 - F22 * F31) + (M1 + M2 * C33) * F13 + M2 * (C13 * F11 + C23 * F12);
+    P_Block.block<NIP, 1>(0, 1) = M3 * (F13 * F32 - F12 * F33) + (M1 + M2 * C11) * F21 + M2 * (C12 * F22 + C13 * F23);
+    P_Block.block<NIP, 1>(NIP, 1) = M3 * (F11 * F33 - F13 * F31) + (M1 + M2 * C22) * F22 + M2 * (C12 * F21 + C23 * F23);
+    P_Block.block<NIP, 1>(2 * NIP, 1) = M3 * (F12 * F31 - F11 * F32) + (M1 + M2 * C33) * F23 + M2 * (C13 * F21 + C23 * F22);
+    P_Block.block<NIP, 1>(0, 2) = M3 * (F12 * F23 - F13 * F22) + (M1 + M2 * C11) * F31 + M2 * (C12 * F32 + C13 * F33);
+    P_Block.block<NIP, 1>(NIP, 2) = M3 * (F13 * F21 - F11 * F23) + (M1 + M2 * C22) * F32 + M2 * (C12 * F31 + C23 * F33);
+    P_Block.block<NIP, 1>(2 * NIP, 2) = M3 * (F11 * F22 - F12 * F21) + (M1 + M2 * C33) * F33 + M2 * (C13 * F31 + C23 * F32);
 
-    Eigen::Map<MatrixNx3> FiCompact(Fi.data(), NSF, 3);
-    FiCompact.noalias() = m_SD * P_Block;
+    //Calculate the generalized internal force vector in matrix form and then reshape it into its required vector layout
+    MatrixNx3 QiCompact = m_SD * P_Block;
+    Eigen::Map<ChVectorN<double, 3 * NSF>> QiReshaped(QiCompact.data(), QiCompact.size());
+    Fi.noalias() = QiReshaped;
 }
-
 
 // -----------------------------------------------------------------------------
 // Jacobians of internal forces
@@ -1040,6 +1050,16 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianDamping(ChMatrixRe
     Eigen::Map<ArrayNIP> Fdot32(FC.block<1, NIP>(5, 1 * NIP).data(), 1, NIP);
     Eigen::Map<ArrayNIP> Fdot33(FC.block<1, NIP>(5, 2 * NIP).data(), 1, NIP);
 
+    //Calculate the components of the B1 matrix used to calculate the partial derivative of J with respect to the nodal coordinates
+    ArrayNIP BA11 = F22 * F33 - F23 * F32;
+    ArrayNIP BA21 = F23 * F31 - F21 * F33;
+    ArrayNIP BA31 = F21 * F32 - F22 * F31;
+    ArrayNIP BA12 = F13 * F32 - F12 * F33;
+    ArrayNIP BA22 = F11 * F33 - F13 * F31;
+    ArrayNIP BA32 = F12 * F31 - F11 * F32;
+    ArrayNIP BA13 = F12 * F23 - F13 * F22;
+    ArrayNIP BA23 = F13 * F21 - F11 * F23;
+    ArrayNIP BA33 = F11 * F22 - F12 * F21;
 
     //Calculate the Right Cauchy-Green deformation tensor (symmetric):
     ArrayNIP C11 = F11 * F11 + F21 * F21 + F31 * F31;
@@ -1056,19 +1076,10 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianDamping(ChMatrixRe
     ArrayNIP I2 = 0.5*(I1*I1 - C11 * C11 - C22 * C22 - C33 * C33) - C12 * C12 - C13 * C13 - C23 * C23;
 
     //Calculate the determinate of F (commonly denoted as J)
-    ArrayNIP detF = F11 * F22*F33 + F12 * F23*F31 + F13 * F21*F32 - F11 * F23*F32 - F12 * F21*F33 - F13 * F22*F31;
+    ArrayNIP J = F11 * (F22*F33 - F23 * F32) + F12 * (F23*F31 - F21 * F33) + F13 * (F21*F32 - F22 * F31);
 
-    ArrayNIP detF_m2_3 = detF.pow(-2.0 / 3.0);
-
-    double c10 = GetMaterial()->Get_c10();
-    double c01 = GetMaterial()->Get_c01();
-    double k = GetMaterial()->Get_k();
-    double mu = GetMaterial()->Get_mu();
-
-    ArrayNIP kGQmu_over_detF3 = mu * m_kGQ / (detF*detF*detF);
-    ArrayNIP KK = -Kfactor * kGQmu_over_detF3;
-    ArrayNIP KR = -Rfactor * kGQmu_over_detF3;
-    ArrayNIP SPK2_Scale = -3.0 / detF;
+    //Calculate the determinate of F to the -2/3 power -> J^(-2/3)
+    ArrayNIP J_m2_3 = J.pow(-2.0 / 3.0);
 
     // Calculate the time derivative of the Greens-Lagrange strain tensor at the current point (symmetric):
     ArrayNIP Edot11 = F11 * Fdot11 + F21 * Fdot21 + F31 * Fdot31;
@@ -1085,6 +1096,23 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianDamping(ChMatrixRe
     ArrayNIP CInv12 = C13 * C23 - C12 * C33;
     ArrayNIP CInv13 = C12 * C23 - C13 * C22;
     ArrayNIP CInv23 = C13 * C12 - C11 * C23;
+
+    //Get the element's material properties
+    double c10 = GetMaterial()->Get_c10();
+    double c01 = GetMaterial()->Get_c01();
+    double k = GetMaterial()->Get_k();
+    double mu = GetMaterial()->Get_mu();
+
+    //Calculate the first set of scale factors
+    ArrayNIP kGQmu_over_J3 = mu * m_kGQ / (J*J*J);
+    ArrayNIP KK = -Kfactor * kGQmu_over_J3;
+    ArrayNIP KR = -Rfactor * kGQmu_over_J3;
+    ArrayNIP SPK2_Scale = -3.0 / J;
+    ArrayNIP M0 = (-Kfactor * 2.0) * m_kGQ * J_m2_3; //Temporary term used to build the other scale factors
+    ArrayNIP M2 = (-2.0*c01) * M0 * J_m2_3; //Double M2 since 2*M2 is needed for the partial C11/de, C22/de, and C33/de terms.  It is reset to just M2 after that.
+    ArrayNIP M4 = (-2.0 / 3.0) * M2 / J;
+    M0 *= c10;
+    ArrayNIP M5 = (-2.0 / 3.0) * M0 / J - I1 * M4;
 
     //Calculate the Stress from the viscosity law (scaled by -Kfactor * m_kGQ)
     ArrayNIP SPK2_NLKV_1 = KK * (Edot11*CInv11*CInv11 + 2.0 * Edot12*CInv11*CInv12 + 2.0 * Edot13*CInv11*CInv13 + Edot22 * CInv12*CInv12 + 2.0 * Edot23*CInv12*CInv13 + Edot33 * CInv13*CInv13);
@@ -1103,21 +1131,6 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianDamping(ChMatrixRe
     ArrayNIP EdotC1_CInvC3 = Edot11 * CInv13 + Edot12 * CInv23 + Edot13 * CInv33;
     ArrayNIP EdotC2_CInvC3 = Edot12 * CInv13 + Edot22 * CInv23 + Edot23 * CInv33;
     ArrayNIP EdotC3_CInvC3 = Edot13 * CInv13 + Edot23 * CInv23 + Edot33 * CInv33;
-
-
-    ArrayNIP BA11 = F22 * F33 - F23 * F32;
-    ArrayNIP BA21 = F23 * F31 - F21 * F33;
-    ArrayNIP BA31 = F21 * F32 - F22 * F31;
-    ArrayNIP BA12 = F13 * F32 - F12 * F33;
-    ArrayNIP BA22 = F11 * F33 - F13 * F31;
-    ArrayNIP BA32 = F12 * F31 - F11 * F32;
-    ArrayNIP BA13 = F12 * F23 - F13 * F22;
-    ArrayNIP BA23 = F13 * F21 - F11 * F23;
-    ArrayNIP BA33 = F11 * F22 - F12 * F21;
-
-    ArrayNIP s1 = (-Kfactor * -4.0 / 3.0 * c10) * detF_m2_3 / detF * m_kGQ;
-    ArrayNIP s2 = (-Kfactor * 4.0 * c01) * detF_m2_3*detF_m2_3 * m_kGQ;
-    ArrayNIP s3 = (2.0 / 3.0) * s2 / detF;
 
     ChMatrixNM<double, 3 * NSF, NIP> Left;
     ChMatrixNM<double, 3 * NSF, NIP> Right;
@@ -1154,35 +1167,33 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianDamping(ChMatrixRe
         ArrayNIP Partial_SPK2_NLKV_1_de_combined32 = SPK2_Scale * SPK2_NLKV_1 * BA32 + ScaleNLKV_13cFdot * Fdot21 + ScaleNLKV_23cFdot * Fdot22 + ScaleNLKV_33cFdot * Fdot23 + ScaleNLKV_13cF * F21 + ScaleNLKV_23cF * F22 + ScaleNLKV_33cF * F23;
         ArrayNIP Partial_SPK2_NLKV_1_de_combined33 = SPK2_Scale * SPK2_NLKV_1 * BA33 + ScaleNLKV_13cFdot * Fdot31 + ScaleNLKV_23cFdot * Fdot32 + ScaleNLKV_33cFdot * Fdot33 + ScaleNLKV_13cF * F31 + ScaleNLKV_23cF * F32 + ScaleNLKV_33cF * F33;
 
+        ArrayNIP T0 = (M4 * C11 + M5);
+        ArrayNIP T11 = T0 * BA11 + Partial_SPK2_NLKV_1_de_combined11;
+        ArrayNIP T21 = T0 * BA21 - M2 * F12 + Partial_SPK2_NLKV_1_de_combined21;
+        ArrayNIP T31 = T0 * BA31 - M2 * F13 + Partial_SPK2_NLKV_1_de_combined31;
 
-        ArrayNIP s4 = s1 + s3 * (C11 - I1);
+        ArrayNIP T12 = T0 * BA12 + Partial_SPK2_NLKV_1_de_combined12;
+        ArrayNIP T22 = T0 * BA22 - M2 * F22 + Partial_SPK2_NLKV_1_de_combined22;
+        ArrayNIP T32 = T0 * BA32 - M2 * F23 + Partial_SPK2_NLKV_1_de_combined32;
 
-        ArrayNIP S1A = s4 * BA11 + Partial_SPK2_NLKV_1_de_combined11;
-        ArrayNIP S2A = s4 * BA21 + s2 * F12 + Partial_SPK2_NLKV_1_de_combined21;
-        ArrayNIP S3A = s4 * BA31 + s2 * F13 + Partial_SPK2_NLKV_1_de_combined31;
-
-        ArrayNIP S1B = s4 * BA12 + Partial_SPK2_NLKV_1_de_combined12;
-        ArrayNIP S2B = s4 * BA22 + s2 * F22 + Partial_SPK2_NLKV_1_de_combined22;
-        ArrayNIP S3B = s4 * BA32 + s2 * F23 + Partial_SPK2_NLKV_1_de_combined32;
-
-        ArrayNIP S1C = s4 * BA13 + Partial_SPK2_NLKV_1_de_combined13;
-        ArrayNIP S2C = s4 * BA23 + s2 * F32 + Partial_SPK2_NLKV_1_de_combined23;
-        ArrayNIP S3C = s4 * BA33 + s2 * F33 + Partial_SPK2_NLKV_1_de_combined33;
+        ArrayNIP T13 = T0 * BA13 + Partial_SPK2_NLKV_1_de_combined13;
+        ArrayNIP T23 = T0 * BA23 - M2 * F32 + Partial_SPK2_NLKV_1_de_combined23;
+        ArrayNIP T33 = T0 * BA33 - M2 * F33 + Partial_SPK2_NLKV_1_de_combined33;
 
         for (auto i = 0; i < NSF; i++) {
             Left.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F11;
             Left.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F21;
             Left.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F31;
 
-            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1A +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2A +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3A;
-            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1B +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2B +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3B;
-            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1C +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2C +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3C;
+            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T11 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T21 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T31;
+            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T12 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T22 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T32;
+            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T13 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T23 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T33;
         }
         Jac.noalias() = Left * Right.transpose();
     }
@@ -1217,34 +1228,33 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianDamping(ChMatrixRe
         ArrayNIP Partial_SPK2_NLKV_2_de_combined32 = SPK2_Scale * SPK2_NLKV_2 * BA32 + ScaleNLKV_13cFdot * Fdot21 + ScaleNLKV_23cFdot * Fdot22 + ScaleNLKV_33cFdot * Fdot23 + ScaleNLKV_13cF * F21 + ScaleNLKV_23cF * F22 + ScaleNLKV_33cF * F23;
         ArrayNIP Partial_SPK2_NLKV_2_de_combined33 = SPK2_Scale * SPK2_NLKV_2 * BA33 + ScaleNLKV_13cFdot * Fdot31 + ScaleNLKV_23cFdot * Fdot32 + ScaleNLKV_33cFdot * Fdot33 + ScaleNLKV_13cF * F31 + ScaleNLKV_23cF * F32 + ScaleNLKV_33cF * F33;
 
-        
-        ArrayNIP s4 = s1 + s3 * (C22 - I1);
+        ArrayNIP T0 = (M4 * C22 + M5);
+        ArrayNIP T11 = T0 * BA11 - M2 * F11 + Partial_SPK2_NLKV_2_de_combined11;
+        ArrayNIP T21 = T0 * BA21 + Partial_SPK2_NLKV_2_de_combined21;
+        ArrayNIP T31 = T0 * BA31 - M2 * F13 + Partial_SPK2_NLKV_2_de_combined31;
 
-        ArrayNIP S1A = s4 * BA11 + s2 * F11 + Partial_SPK2_NLKV_2_de_combined11;
-        ArrayNIP S2A = s4 * BA21 + Partial_SPK2_NLKV_2_de_combined21;
-        ArrayNIP S3A = s4 * BA31 + s2 * F13 + Partial_SPK2_NLKV_2_de_combined31;
+        ArrayNIP T12 = T0 * BA12 - M2 * F21 + Partial_SPK2_NLKV_2_de_combined12;
+        ArrayNIP T22 = T0 * BA22 + Partial_SPK2_NLKV_2_de_combined22;
+        ArrayNIP T32 = T0 * BA32 - M2 * F23 + Partial_SPK2_NLKV_2_de_combined32;
 
-        ArrayNIP S1B = s4 * BA12 + s2 * F21 + Partial_SPK2_NLKV_2_de_combined12;
-        ArrayNIP S2B = s4 * BA22 + Partial_SPK2_NLKV_2_de_combined22;
-        ArrayNIP S3B = s4 * BA32 + s2 * F23 + Partial_SPK2_NLKV_2_de_combined32;
-
-        ArrayNIP S1C = s4 * BA13 + s2 * F31 + Partial_SPK2_NLKV_2_de_combined13;
-        ArrayNIP S2C = s4 * BA23 + Partial_SPK2_NLKV_2_de_combined23;
-        ArrayNIP S3C = s4 * BA33 + s2 * F33 + Partial_SPK2_NLKV_2_de_combined33;
+        ArrayNIP T13 = T0 * BA13 - M2 * F31 + Partial_SPK2_NLKV_2_de_combined13;
+        ArrayNIP T23 = T0 * BA23 + Partial_SPK2_NLKV_2_de_combined23;
+        ArrayNIP T33 = T0 * BA33 - M2 * F33 + Partial_SPK2_NLKV_2_de_combined33;
 
         for (auto i = 0; i < NSF; i++) {
             Left.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 1 * NIP).array() * F12;
             Left.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 1 * NIP).array() * F22;
             Left.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 1 * NIP).array() * F32;
-            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1A +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2A +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3A;
-            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1B +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2B +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3B;
-            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1C +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2C +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3C;
+
+            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T11 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T21 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T31;
+            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T12 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T22 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T32;
+            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T13 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T23 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T33;
         }
         Jac.noalias() += Left * Right.transpose();
     }
@@ -1279,39 +1289,39 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianDamping(ChMatrixRe
         ArrayNIP Partial_SPK2_NLKV_3_de_combined32 = SPK2_Scale * SPK2_NLKV_3 * BA32 + ScaleNLKV_13cFdot * Fdot21 + ScaleNLKV_23cFdot * Fdot22 + ScaleNLKV_33cFdot * Fdot23 + ScaleNLKV_13cF * F21 + ScaleNLKV_23cF * F22 + ScaleNLKV_33cF * F23;
         ArrayNIP Partial_SPK2_NLKV_3_de_combined33 = SPK2_Scale * SPK2_NLKV_3 * BA33 + ScaleNLKV_13cFdot * Fdot31 + ScaleNLKV_23cFdot * Fdot32 + ScaleNLKV_33cFdot * Fdot33 + ScaleNLKV_13cF * F31 + ScaleNLKV_23cF * F32 + ScaleNLKV_33cF * F33;
 
+        ArrayNIP T0 = (M4 * C22 + M5);
+        ArrayNIP T11 = T0 * BA11 - M2 * F11 + Partial_SPK2_NLKV_3_de_combined11;
+        ArrayNIP T21 = T0 * BA21 - M2 * F12 + Partial_SPK2_NLKV_3_de_combined21;
+        ArrayNIP T31 = T0 * BA31 + Partial_SPK2_NLKV_3_de_combined31;
 
-        ArrayNIP s4 = s1 + s3 * (C33 - I1);
+        ArrayNIP T12 = T0 * BA12 - M2 * F21 + Partial_SPK2_NLKV_3_de_combined12;
+        ArrayNIP T22 = T0 * BA22 - M2 * F22 + Partial_SPK2_NLKV_3_de_combined22;
+        ArrayNIP T32 = T0 * BA32 + Partial_SPK2_NLKV_3_de_combined32;
 
-        ArrayNIP S1A = s4 * BA11 + s2 * F11 + Partial_SPK2_NLKV_3_de_combined11;
-        ArrayNIP S2A = s4 * BA21 + s2 * F12 + Partial_SPK2_NLKV_3_de_combined21;
-        ArrayNIP S3A = s4 * BA31 + Partial_SPK2_NLKV_3_de_combined31;
-
-        ArrayNIP S1B = s4 * BA12 + s2 * F21 + Partial_SPK2_NLKV_3_de_combined12;
-        ArrayNIP S2B = s4 * BA22 + s2 * F22 + Partial_SPK2_NLKV_3_de_combined22;
-        ArrayNIP S3B = s4 * BA32 + Partial_SPK2_NLKV_3_de_combined32;
-
-        ArrayNIP S1C = s4 * BA13 + s2 * F31 + Partial_SPK2_NLKV_3_de_combined13;
-        ArrayNIP S2C = s4 * BA23 + s2 * F32 + Partial_SPK2_NLKV_3_de_combined23;
-        ArrayNIP S3C = s4 * BA33 + Partial_SPK2_NLKV_3_de_combined33;
+        ArrayNIP T13 = T0 * BA13 - M2 * F31 + Partial_SPK2_NLKV_3_de_combined13;
+        ArrayNIP T23 = T0 * BA23 - M2 * F32 + Partial_SPK2_NLKV_3_de_combined23;
+        ArrayNIP T33 = T0 * BA33 + Partial_SPK2_NLKV_3_de_combined33;
 
         for (auto i = 0; i < NSF; i++) {
             Left.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 2 * NIP).array() * F13;
             Left.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 2 * NIP).array() * F23;
             Left.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 2 * NIP).array() * F33;
-            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1A +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2A +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3A;
-            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1B +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2B +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3B;
-            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1C +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2C +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3C;
+
+            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T11 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T21 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T31;
+            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T12 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T22 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T32;
+            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T13 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T23 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T33;
         }
         Jac.noalias() += Left * Right.transpose();
     }
 
-    ArrayNIP s5 = -0.5 * s2;
+    //Reset M2 to it's correct value instead of double that was used above
+    M2 *= 0.5;
     // Calculate the Contribution from the dC23/de terms
     {
         ArrayNIP ScaleNLKV_11cFdot = CInv12 * CInv13;
@@ -1343,34 +1353,33 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianDamping(ChMatrixRe
         ArrayNIP Partial_SPK2_NLKV_4_de_combined32 = SPK2_Scale * SPK2_NLKV_4 * BA32 + ScaleNLKV_13cFdot * Fdot21 + ScaleNLKV_23cFdot * Fdot22 + ScaleNLKV_33cFdot * Fdot23 + ScaleNLKV_13cF * F21 + ScaleNLKV_23cF * F22 + ScaleNLKV_33cF * F23;
         ArrayNIP Partial_SPK2_NLKV_4_de_combined33 = SPK2_Scale * SPK2_NLKV_4 * BA33 + ScaleNLKV_13cFdot * Fdot31 + ScaleNLKV_23cFdot * Fdot32 + ScaleNLKV_33cFdot * Fdot33 + ScaleNLKV_13cF * F31 + ScaleNLKV_23cF * F32 + ScaleNLKV_33cF * F33;
 
+        ArrayNIP T0 = M4 * C23;
+        ArrayNIP T11 = T0 * BA11 + Partial_SPK2_NLKV_4_de_combined11;
+        ArrayNIP T21 = T0 * BA21 + M2 * F13 + Partial_SPK2_NLKV_4_de_combined21;
+        ArrayNIP T31 = T0 * BA31 + M2 * F12 + Partial_SPK2_NLKV_4_de_combined31;
 
-        ArrayNIP s4 = s3 * C23;
+        ArrayNIP T12 = T0 * BA12 + Partial_SPK2_NLKV_4_de_combined12;
+        ArrayNIP T22 = T0 * BA22 + M2 * F23 + Partial_SPK2_NLKV_4_de_combined22;
+        ArrayNIP T32 = T0 * BA32 + M2 * F22 + Partial_SPK2_NLKV_4_de_combined32;
 
-        ArrayNIP S1A = s4 * BA11 + Partial_SPK2_NLKV_4_de_combined11;
-        ArrayNIP S2A = s4 * BA21 + s5 * F13 + Partial_SPK2_NLKV_4_de_combined21;
-        ArrayNIP S3A = s4 * BA31 + s5 * F12 + Partial_SPK2_NLKV_4_de_combined31;
-
-        ArrayNIP S1B = s4 * BA12 + Partial_SPK2_NLKV_4_de_combined12;
-        ArrayNIP S2B = s4 * BA22 + s5 * F23 + Partial_SPK2_NLKV_4_de_combined22;
-        ArrayNIP S3B = s4 * BA32 + s5 * F22 + Partial_SPK2_NLKV_4_de_combined32;
-
-        ArrayNIP S1C = s4 * BA13 + Partial_SPK2_NLKV_4_de_combined13;
-        ArrayNIP S2C = s4 * BA23 + s5 * F33 + Partial_SPK2_NLKV_4_de_combined23;
-        ArrayNIP S3C = s4 * BA33 + s5 * F32 + Partial_SPK2_NLKV_4_de_combined33;
+        ArrayNIP T13 = T0 * BA13 + Partial_SPK2_NLKV_4_de_combined13;
+        ArrayNIP T23 = T0 * BA23 + M2 * F33 + Partial_SPK2_NLKV_4_de_combined23;
+        ArrayNIP T33 = T0 * BA33 + M2 * F32 + Partial_SPK2_NLKV_4_de_combined33;
 
         for (auto i = 0; i < NSF; i++) {
             Left.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 1 * NIP).array() * F13 + m_SD.block<1, NIP>(i, 2 * NIP).array() * F12;
             Left.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 1 * NIP).array() * F23 + m_SD.block<1, NIP>(i, 2 * NIP).array() * F22;
             Left.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 1 * NIP).array() * F33 + m_SD.block<1, NIP>(i, 2 * NIP).array() * F32;
-            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1A +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2A +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3A;
-            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1B +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2B +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3B;
-            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1C +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2C +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3C;
+
+            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T11 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T21 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T31;
+            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T12 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T22 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T32;
+            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T13 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T23 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T33;
         }
         Jac.noalias() += Left * Right.transpose();
     }
@@ -1405,34 +1414,33 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianDamping(ChMatrixRe
         ArrayNIP Partial_SPK2_NLKV_5_de_combined32 = SPK2_Scale * SPK2_NLKV_5 * BA32 + ScaleNLKV_13cFdot * Fdot21 + ScaleNLKV_23cFdot * Fdot22 + ScaleNLKV_33cFdot * Fdot23 + ScaleNLKV_13cF * F21 + ScaleNLKV_23cF * F22 + ScaleNLKV_33cF * F23;
         ArrayNIP Partial_SPK2_NLKV_5_de_combined33 = SPK2_Scale * SPK2_NLKV_5 * BA33 + ScaleNLKV_13cFdot * Fdot31 + ScaleNLKV_23cFdot * Fdot32 + ScaleNLKV_33cFdot * Fdot33 + ScaleNLKV_13cF * F31 + ScaleNLKV_23cF * F32 + ScaleNLKV_33cF * F33;
 
+        ArrayNIP T0 = M4 * C13;
+        ArrayNIP T11 = T0 * BA11 + M2 * F13 + Partial_SPK2_NLKV_5_de_combined11;
+        ArrayNIP T21 = T0 * BA21 + Partial_SPK2_NLKV_5_de_combined21;
+        ArrayNIP T31 = T0 * BA31 + M2 * F11 + Partial_SPK2_NLKV_5_de_combined31;
 
-        ArrayNIP s4 = s3 * C13;
+        ArrayNIP T12 = T0 * BA12 + M2 * F23 + Partial_SPK2_NLKV_5_de_combined12;
+        ArrayNIP T22 = T0 * BA22 + Partial_SPK2_NLKV_5_de_combined22;
+        ArrayNIP T32 = T0 * BA32 + M2 * F21 + Partial_SPK2_NLKV_5_de_combined32;
 
-        ArrayNIP S1A = s4 * BA11 + s5 * F13 + Partial_SPK2_NLKV_5_de_combined11;
-        ArrayNIP S2A = s4 * BA21 + Partial_SPK2_NLKV_5_de_combined21;
-        ArrayNIP S3A = s4 * BA31 + s5 * F11 + Partial_SPK2_NLKV_5_de_combined31;
-
-        ArrayNIP S1B = s4 * BA12 + s5 * F23 + Partial_SPK2_NLKV_5_de_combined12;
-        ArrayNIP S2B = s4 * BA22 + Partial_SPK2_NLKV_5_de_combined22;
-        ArrayNIP S3B = s4 * BA32 + s5 * F21 + Partial_SPK2_NLKV_5_de_combined32;
-
-        ArrayNIP S1C = s4 * BA13 + s5 * F33 + Partial_SPK2_NLKV_5_de_combined13;
-        ArrayNIP S2C = s4 * BA23 + Partial_SPK2_NLKV_5_de_combined23;
-        ArrayNIP S3C = s4 * BA33 + s5 * F31 + Partial_SPK2_NLKV_5_de_combined33;
+        ArrayNIP T13 = T0 * BA13 + M2 * F33 + Partial_SPK2_NLKV_5_de_combined13;
+        ArrayNIP T23 = T0 * BA23 + Partial_SPK2_NLKV_5_de_combined23;
+        ArrayNIP T33 = T0 * BA33 + M2 * F31 + Partial_SPK2_NLKV_5_de_combined33;
 
         for (auto i = 0; i < NSF; i++) {
             Left.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F13 + m_SD.block<1, NIP>(i, 2 * NIP).array() * F11;
             Left.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F23 + m_SD.block<1, NIP>(i, 2 * NIP).array() * F21;
             Left.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F33 + m_SD.block<1, NIP>(i, 2 * NIP).array() * F31;
-            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1A +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2A +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3A;
-            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1B +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2B +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3B;
-            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1C +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2C +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3C;
+
+            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T11 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T21 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T31;
+            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T12 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T22 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T32;
+            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T13 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T23 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T33;
         }
         Jac.noalias() += Left * Right.transpose();
     }
@@ -1467,55 +1475,52 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianDamping(ChMatrixRe
         ArrayNIP Partial_SPK2_NLKV_6_de_combined32 = SPK2_Scale * SPK2_NLKV_6 * BA32 + ScaleNLKV_13cFdot * Fdot21 + ScaleNLKV_23cFdot * Fdot22 + ScaleNLKV_33cFdot * Fdot23 + ScaleNLKV_13cF * F21 + ScaleNLKV_23cF * F22 + ScaleNLKV_33cF * F23;
         ArrayNIP Partial_SPK2_NLKV_6_de_combined33 = SPK2_Scale * SPK2_NLKV_6 * BA33 + ScaleNLKV_13cFdot * Fdot31 + ScaleNLKV_23cFdot * Fdot32 + ScaleNLKV_33cFdot * Fdot33 + ScaleNLKV_13cF * F31 + ScaleNLKV_23cF * F32 + ScaleNLKV_33cF * F33;
 
+        ArrayNIP T0 = M4 * C13;
+        ArrayNIP T11 = T0 * BA11 + M2 * F12 + Partial_SPK2_NLKV_6_de_combined11;
+        ArrayNIP T21 = T0 * BA21 + M2 * F11 + Partial_SPK2_NLKV_6_de_combined21;
+        ArrayNIP T31 = T0 * BA31 + Partial_SPK2_NLKV_6_de_combined31;
 
-        ArrayNIP s4 = s3 * C12;
+        ArrayNIP T12 = T0 * BA12 + M2 * F22 + Partial_SPK2_NLKV_6_de_combined12;
+        ArrayNIP T22 = T0 * BA22 + M2 * F21 + Partial_SPK2_NLKV_6_de_combined22;
+        ArrayNIP T32 = T0 * BA32 + Partial_SPK2_NLKV_6_de_combined32;
 
-        ArrayNIP S1A = s4 * BA11 + s5 * F12 + Partial_SPK2_NLKV_6_de_combined11;
-        ArrayNIP S2A = s4 * BA21 + s5 * F11 + Partial_SPK2_NLKV_6_de_combined21;
-        ArrayNIP S3A = s4 * BA31 + Partial_SPK2_NLKV_6_de_combined31;
-
-        ArrayNIP S1B = s4 * BA12 + s5 * F22 + Partial_SPK2_NLKV_6_de_combined12;
-        ArrayNIP S2B = s4 * BA22 + s5 * F21 + Partial_SPK2_NLKV_6_de_combined22;
-        ArrayNIP S3B = s4 * BA32 + Partial_SPK2_NLKV_6_de_combined32;
-
-        ArrayNIP S1C = s4 * BA13 + s5 * F32 + Partial_SPK2_NLKV_6_de_combined13;
-        ArrayNIP S2C = s4 * BA23 + s5 * F31 + Partial_SPK2_NLKV_6_de_combined23;
-        ArrayNIP S3C = s4 * BA33 + Partial_SPK2_NLKV_6_de_combined33;
+        ArrayNIP T13 = T0 * BA13 + M2 * F32 + Partial_SPK2_NLKV_6_de_combined13;
+        ArrayNIP T23 = T0 * BA23 + M2 * F31 + Partial_SPK2_NLKV_6_de_combined23;
+        ArrayNIP T33 = T0 * BA33 + Partial_SPK2_NLKV_6_de_combined33;
 
         for (auto i = 0; i < NSF; i++) {
             Left.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F12 + m_SD.block<1, NIP>(i, 1 * NIP).array() * F11;
             Left.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F22 + m_SD.block<1, NIP>(i, 1 * NIP).array() * F21;
             Left.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F32 + m_SD.block<1, NIP>(i, 1 * NIP).array() * F31;
-            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1A +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2A +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3A;
-            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1B +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2B +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3B;
-            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1C +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2C +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3C;
+
+            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T11 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T21 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T31;
+            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T12 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T22 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T32;
+            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T13 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T23 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T33;
         }
         Jac.noalias() += Left * Right.transpose();
     }
 
-
     // Calculate the Contribution from the ddetF/de terms
     {
-        ArrayNIP s4 = -Kfactor * k * m_kGQ + (-5.0 / 6.0*s1*I1 + 7.0 / 6.0*s3*I2) / detF;
-        ArrayNIP s6 = s1 - s3 * I1;
+        ArrayNIP M6 = (-Kfactor * k) * m_kGQ + (5.0 / 9.0*I1*M0 - 14.0 / 9.0*M2*I2) / (J*J);
 
-        ArrayNIP S1A = s4 * BA11 + (s6 + s3 * C11)*F11 + s3 * (C12*F12 + C12 * F13);
-        ArrayNIP S2A = s4 * BA21 + (s6 + s3 * C22)*F12 + s3 * (C12*F11 + C23 * F13);
-        ArrayNIP S3A = s4 * BA31 + (s6 + s3 * C33)*F13 + s3 * (C13*F11 + C23 * F12);
+        ArrayNIP T11 = M4 * (C11*F11 + C12 * F12 + C13 * F13) + M5 * F11 + M6 * BA11;
+        ArrayNIP T21 = M4 * (C12*F11 + C22 * F12 + C23 * F13) + M5 * F12 + M6 * BA21;
+        ArrayNIP T31 = M4 * (C13*F11 + C23 * F12 + C33 * F13) + M5 * F13 + M6 * BA31;
 
-        ArrayNIP S1B = s4 * BA12 + (s6 + s3 * C11)*F21 + s3 * (C12*F22 + C13 * F23);
-        ArrayNIP S2B = s4 * BA22 + (s6 + s3 * C22)*F22 + s3 * (C12*F21 + C23 * F23);
-        ArrayNIP S3B = s4 * BA32 + (s6 + s3 * C33)*F23 + s3 * (C13*F21 + C23 * F22);
+        ArrayNIP T12 = M4 * (C11*F21 + C12 * F22 + C13 * F23) + M5 * F21 + M6 * BA12;
+        ArrayNIP T22 = M4 * (C12*F21 + C22 * F22 + C23 * F23) + M5 * F22 + M6 * BA22;
+        ArrayNIP T32 = M4 * (C13*F21 + C23 * F22 + C33 * F23) + M5 * F23 + M6 * BA32;
 
-        ArrayNIP S1C = s4 * BA13 + (s6 + s3 * C11)*F31 + s3 * (C12*F32 + C13 * F33);
-        ArrayNIP S2C = s4 * BA23 + (s6 + s3 * C22)*F32 + s3 * (C12*F31 + C23 * F33);
-        ArrayNIP S3C = s4 * BA33 + (s6 + s3 * C33)*F33 + s3 * (C13*F31 + C23 * F32);
+        ArrayNIP T13 = M4 * (C11*F31 + C12 * F32 + C13 * F33) + M5 * F31 + M6 * BA13;
+        ArrayNIP T23 = M4 * (C12*F31 + C22 * F32 + C23 * F33) + M5 * F32 + M6 * BA23;
+        ArrayNIP T33 = M4 * (C13*F31 + C23 * F32 + C33 * F33) + M5 * F33 + M6 * BA33;
 
         for (auto i = 0; i < NSF; i++) {
             Left.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * BA11 +
@@ -1528,69 +1533,73 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianDamping(ChMatrixRe
                 m_SD.block<1, NIP>(i, 1 * NIP).array() * BA23 +
                 m_SD.block<1, NIP>(i, 2 * NIP).array() * BA33;
 
-            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1A +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2A +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3A;
-            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1B +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2B +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3B;
-            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1C +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2C +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3C;
+            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T11 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T21 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T31;
+            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T12 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T22 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T32;
+            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T13 +
+                m_SD.block<1, NIP>(i, 1 * NIP).array() * T23 +
+                m_SD.block<1, NIP>(i, 2 * NIP).array() * T33;
         }
         Jac.noalias() += Left * Right.transpose();
     }
 
-    //Calculate the contribution from the Mass Matrix and Expand component
-    ArrayNIP s7 = (-Kfactor * 2.0 * c10)*m_kGQ*detF_m2_3 - s5 * I1;
-    ArrayNIP s8 = -Kfactor * m_kGQ * (k * (detF - 1.0) - 2.0 / 3.0 * c10 * I1*detF_m2_3 / detF - 4.0 / 3.0 * c01 * I2*detF_m2_3*detF_m2_3 / detF);
+    //Calculate the contribution from the Mass Matrix and Expand/Expandij components
+    ArrayNIP M1 = M0 - M2 * I1;
+    ArrayNIP M3 = (-Kfactor * k) * (J - 1.0)*m_kGQ - (I1*M0 - 2 * I2 * M2) / (3.0 * J);
 
-    ArrayNIP sC11 = s7 + s5 * C11 + SPK2_NLKV_1;
-    ArrayNIP sC22 = s7 + s5 * C22 + SPK2_NLKV_2;
-    ArrayNIP sC33 = s7 + s5 * C33 + SPK2_NLKV_3;
-    ArrayNIP sC12 = s5 * C12 + SPK2_NLKV_6;
-    ArrayNIP sC13 = s5 * C13 + SPK2_NLKV_5;
-    ArrayNIP sC23 = s5 * C23 + SPK2_NLKV_4;
+    ArrayNIP MC11 = M1 + M2 * C11 + SPK2_NLKV_1;
+    ArrayNIP MC22 = M1 + M2 * C22 + SPK2_NLKV_2;
+    ArrayNIP MC33 = M1 + M2 * C33 + SPK2_NLKV_3;
+    ArrayNIP MC12 = M2 * C12 + SPK2_NLKV_6;
+    ArrayNIP MC13 = M2 * C13 + SPK2_NLKV_5;
+    ArrayNIP MC23 = M2 * C23 + SPK2_NLKV_4;
 
-    ArrayNIP sF11 = s8 * F11;
-    ArrayNIP sF12 = s8 * F12;
-    ArrayNIP sF13 = s8 * F13;
-    ArrayNIP sF21 = s8 * F21;
-    ArrayNIP sF22 = s8 * F22;
-    ArrayNIP sF23 = s8 * F23;
-    ArrayNIP sF31 = s8 * F31;
-    ArrayNIP sF32 = s8 * F32;
-    ArrayNIP sF33 = s8 * F33;
+    ArrayNIP MF11 = M3 * F11;
+    ArrayNIP MF12 = M3 * F12;
+    ArrayNIP MF13 = M3 * F13;
+    ArrayNIP MF21 = M3 * F21;
+    ArrayNIP MF22 = M3 * F22;
+    ArrayNIP MF23 = M3 * F23;
+    ArrayNIP MF31 = M3 * F31;
+    ArrayNIP MF32 = M3 * F32;
+    ArrayNIP MF33 = M3 * F33;
 
     unsigned int idx = 0;
     for (unsigned int i = 0; i < (NSF - 1); i++) {
-        ChVectorN<double, 3 * NIP> scaled_SD_row_i;
-        scaled_SD_row_i.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * sC11 +
-            m_SD.block<1, NIP>(i, 1 * NIP).array() * sC12 +
-            m_SD.block<1, NIP>(i, 2 * NIP).array() * sC13;
-        scaled_SD_row_i.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * sC12 +
-            m_SD.block<1, NIP>(i, 1 * NIP).array() * sC22 +
-            m_SD.block<1, NIP>(i, 2 * NIP).array() * sC23;
-        scaled_SD_row_i.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * sC13 +
-            m_SD.block<1, NIP>(i, 1 * NIP).array() * sC23 +
-            m_SD.block<1, NIP>(i, 2 * NIP).array() * sC33;
+        //Calculate the scaled row of SD
+        ChVectorN<double, 3 * NIP> R;
+        R.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * MC11 +
+            m_SD.block<1, NIP>(i, 1 * NIP).array() * MC12 +
+            m_SD.block<1, NIP>(i, 2 * NIP).array() * MC13;
+        R.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * MC12 +
+            m_SD.block<1, NIP>(i, 1 * NIP).array() * MC22 +
+            m_SD.block<1, NIP>(i, 2 * NIP).array() * MC23;
+        R.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * MC13 +
+            m_SD.block<1, NIP>(i, 1 * NIP).array() * MC23 +
+            m_SD.block<1, NIP>(i, 2 * NIP).array() * MC33;
 
-        ChVectorN<double, 3 * NIP> scaled_B2_row_i;
-        scaled_B2_row_i.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 1 * NIP).array()*sF33 - m_SD.block<1, NIP>(i, 2 * NIP).array()*sF32;
-        scaled_B2_row_i.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 2 * NIP).array()*sF31 - m_SD.block<1, NIP>(i, 0 * NIP).array()*sF33;
-        scaled_B2_row_i.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array()*sF32 - m_SD.block<1, NIP>(i, 1 * NIP).array()*sF31;
+        //Calculate the scaled row of B2
+        ChVectorN<double, 3 * NIP> X;
+        X.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 1 * NIP).array()*MF33 - m_SD.block<1, NIP>(i, 2 * NIP).array()*MF32;
+        X.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 2 * NIP).array()*MF31 - m_SD.block<1, NIP>(i, 0 * NIP).array()*MF33;
+        X.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array()*MF32 - m_SD.block<1, NIP>(i, 1 * NIP).array()*MF31;
 
-        ChVectorN<double, 3 * NIP> scaled_B3_row_i;
-        scaled_B3_row_i.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 2 * NIP).array()*sF22 - m_SD.block<1, NIP>(i, 1 * NIP).array()*sF23;
-        scaled_B3_row_i.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array()*sF23 - m_SD.block<1, NIP>(i, 2 * NIP).array()*sF21;
-        scaled_B3_row_i.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 1 * NIP).array()*sF21 - m_SD.block<1, NIP>(i, 0 * NIP).array()*sF22;
+        //Calculate the scaled row of B3
+        ChVectorN<double, 3 * NIP> Y;
+        Y.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 2 * NIP).array()*MF22 - m_SD.block<1, NIP>(i, 1 * NIP).array()*MF23;
+        Y.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array()*MF23 - m_SD.block<1, NIP>(i, 2 * NIP).array()*MF21;
+        Y.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 1 * NIP).array()*MF21 - m_SD.block<1, NIP>(i, 0 * NIP).array()*MF22;
 
-        ChVectorN<double, 3 * NIP> scaled_B4_row_i;
-        scaled_B4_row_i.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 1 * NIP).array()*sF13 - m_SD.block<1, NIP>(i, 2 * NIP).array()*sF12;
-        scaled_B4_row_i.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 2 * NIP).array()*sF11 - m_SD.block<1, NIP>(i, 0 * NIP).array()*sF13;
-        scaled_B4_row_i.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array()*sF12 - m_SD.block<1, NIP>(i, 1 * NIP).array()*sF11;
+        //Calculate the scaled row of B4
+        ChVectorN<double, 3 * NIP> Z;
+        Z.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 1 * NIP).array()*MF13 - m_SD.block<1, NIP>(i, 2 * NIP).array()*MF12;
+        Z.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 2 * NIP).array()*MF11 - m_SD.block<1, NIP>(i, 0 * NIP).array()*MF13;
+        Z.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array()*MF12 - m_SD.block<1, NIP>(i, 1 * NIP).array()*MF11;
 
-        double d_diag = Mfactor * m_MassMatrix(idx) + (scaled_SD_row_i.dot(m_SD.row(i)));
+        double d_diag = Mfactor * m_MassMatrix(idx) + (R.dot(m_SD.row(i)));
 
         Jac(3 * i, 3 * i) += d_diag;
         Jac(3 * i + 1, 3 * i + 1) += d_diag;
@@ -1598,10 +1607,10 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianDamping(ChMatrixRe
         idx++;
 
         for (unsigned int j = (i + 1); j < NSF; j++) {
-            double d = Mfactor * m_MassMatrix(idx) + (scaled_SD_row_i.dot(m_SD.row(j)));
-            double B2 = scaled_B2_row_i.dot(m_SD.row(j));
-            double B3 = scaled_B3_row_i.dot(m_SD.row(j));
-            double B4 = scaled_B4_row_i.dot(m_SD.row(j));
+            double d = Mfactor * m_MassMatrix(idx) + (R.dot(m_SD.row(j)));
+            double B2 = X.dot(m_SD.row(j));
+            double B3 = Y.dot(m_SD.row(j));
+            double B4 = Z.dot(m_SD.row(j));
 
             Jac(3 * i + 0, 3 * j + 0) += d;
             Jac(3 * i + 0, 3 * j + 1) -= B2;
@@ -1632,18 +1641,18 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianDamping(ChMatrixRe
     }
 
     //No need to calculate B2, B3, or B4 for the last point since they equal 0
-    ChVectorN<double, 3 * NIP> scaled_SD_row_i;
-    scaled_SD_row_i.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(NSF - 1, 0 * NIP).array() * sC11 +
-        m_SD.block<1, NIP>(NSF - 1, 1 * NIP).array() * sC12 +
-        m_SD.block<1, NIP>(NSF - 1, 2 * NIP).array() * sC13;
-    scaled_SD_row_i.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(NSF - 1, 0 * NIP).array() * sC12 +
-        m_SD.block<1, NIP>(NSF - 1, 1 * NIP).array() * sC22 +
-        m_SD.block<1, NIP>(NSF - 1, 2 * NIP).array() * sC23;
-    scaled_SD_row_i.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(NSF - 1, 0 * NIP).array() * sC13 +
-        m_SD.block<1, NIP>(NSF - 1, 1 * NIP).array() * sC23 +
-        m_SD.block<1, NIP>(NSF - 1, 2 * NIP).array() * sC33;
+    ChVectorN<double, 3 * NIP> R;
+    R.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(NSF - 1, 0 * NIP).array() * MC11 +
+        m_SD.block<1, NIP>(NSF - 1, 1 * NIP).array() * MC12 +
+        m_SD.block<1, NIP>(NSF - 1, 2 * NIP).array() * MC13;
+    R.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(NSF - 1, 0 * NIP).array() * MC12 +
+        m_SD.block<1, NIP>(NSF - 1, 1 * NIP).array() * MC22 +
+        m_SD.block<1, NIP>(NSF - 1, 2 * NIP).array() * MC23;
+    R.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(NSF - 1, 0 * NIP).array() * MC13 +
+        m_SD.block<1, NIP>(NSF - 1, 1 * NIP).array() * MC23 +
+        m_SD.block<1, NIP>(NSF - 1, 2 * NIP).array() * MC33;
 
-    double d_diag = Mfactor * m_MassMatrix(idx) + (scaled_SD_row_i.dot(m_SD.row(NSF - 1)));
+    double d_diag = Mfactor * m_MassMatrix(idx) + (R.dot(m_SD.row(NSF - 1)));
 
     Jac(3 * (NSF - 1) + 0, 3 * (NSF - 1) + 0) += d_diag;
     Jac(3 * (NSF - 1) + 1, 3 * (NSF - 1) + 1) += d_diag;
@@ -1682,6 +1691,17 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianNoDamping(ChMatrix
     Eigen::Map<ArrayNIP> F32(FC.block<1, NIP>(2, 1 * NIP).data(), 1, NIP);
     Eigen::Map<ArrayNIP> F33(FC.block<1, NIP>(2, 2 * NIP).data(), 1, NIP);
 
+    //Calculate the components of the B1 matrix used to calculate the partial derivative of J with respect to the nodal coordinates
+    ArrayNIP BA11 = F22 * F33 - F23 * F32;
+    ArrayNIP BA21 = F23 * F31 - F21 * F33;
+    ArrayNIP BA31 = F21 * F32 - F22 * F31;
+    ArrayNIP BA12 = F13 * F32 - F12 * F33;
+    ArrayNIP BA22 = F11 * F33 - F13 * F31;
+    ArrayNIP BA32 = F12 * F31 - F11 * F32;
+    ArrayNIP BA13 = F12 * F23 - F13 * F22;
+    ArrayNIP BA23 = F13 * F21 - F11 * F23;
+    ArrayNIP BA33 = F11 * F22 - F12 * F21;
+
     //Calculate the Right Cauchy-Green deformation tensor (symmetric):
     ArrayNIP C11 = F11 * F11 + F21 * F21 + F31 * F31;
     ArrayNIP C22 = F12 * F12 + F22 * F22 + F32 * F32;
@@ -1697,243 +1717,238 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianNoDamping(ChMatrix
     ArrayNIP I2 = 0.5*(I1*I1 - C11 * C11 - C22 * C22 - C33 * C33) - C12 * C12 - C13 * C13 - C23 * C23;
 
     //Calculate the determinate of F (commonly denoted as J)
-    ArrayNIP detF = F11 * F22*F33 + F12 * F23*F31 + F13 * F21*F32 - F11 * F23*F32 - F12 * F21*F33 - F13 * F22*F31;
+    ArrayNIP J = F11 * (F22*F33 - F23 * F32) + F12 * (F23*F31 - F21 * F33) + F13 * (F21*F32 - F22 * F31);
 
-    ArrayNIP detF_m2_3 = detF.pow(-2.0 / 3.0);
+    //Calculate the determinate of F to the -2/3 power -> J^(-2/3)
+    ArrayNIP J_m2_3 = J.pow(-2.0 / 3.0);
 
+    //Get the element's material properties
     double c10 = GetMaterial()->Get_c10();
     double c01 = GetMaterial()->Get_c01();
     double k = GetMaterial()->Get_k();
 
-    ArrayNIP BA11 = F22*F33 - F23*F32;
-    ArrayNIP BA21 = F23*F31 - F21*F33;
-    ArrayNIP BA31 = F21*F32 - F22*F31;
-    ArrayNIP BA12 = F13*F32 - F12*F33;
-    ArrayNIP BA22 = F11*F33 - F13*F31;
-    ArrayNIP BA32 = F12*F31 - F11*F32;
-    ArrayNIP BA13 = F12*F23 - F13*F22;
-    ArrayNIP BA23 = F13*F21 - F11*F23;
-    ArrayNIP BA33 = F11*F22 - F12*F21;
+    //Calculate the first group of required scale factors
+    ArrayNIP M0 = (-Kfactor * 2.0) * m_kGQ * J_m2_3; //Temporary term used to build the other scale factors
+    ArrayNIP M2 = (-2.0*c01) * M0 * J_m2_3; //Double M2 since 2*M2 is needed for the partial C11/de, C22/de, and C33/de terms.  It is reset to just M2 after that.
+    ArrayNIP M4 = (-2.0 / 3.0) * M2 / J;
+    M0 *= c10;
+    ArrayNIP M5 = (-2.0 / 3.0) * M0 / J - I1 * M4;
 
-    ArrayNIP s1 = (-Kfactor * -4.0 / 3.0 * c10) * detF_m2_3 / detF* m_kGQ;
-    ArrayNIP s2 = (-Kfactor * 4.0 * c01) * detF_m2_3*detF_m2_3 * m_kGQ;
-    ArrayNIP s3 = (2.0 / 3.0) * s2 / detF;
-
+    //Setup the Jacobian matrix that the results will be stored into
     ChMatrixNM<double, 3 * NSF, NIP> Left;
     ChMatrixNM<double, 3 * NSF, NIP> Right;
     Matrix3Nx3N Jac;
 
     //Calculate the Contribution from the dC11 / de terms
     {
-        ArrayNIP s4 = s1 + s3 * (C11 - I1);
+        ArrayNIP T0 = (M4 * C11 + M5);
+        ArrayNIP T11 = T0 * BA11;
+        ArrayNIP T21 = T0 * BA21 - M2 * F12;
+        ArrayNIP T31 = T0 * BA31 - M2 * F13;
 
-        ArrayNIP S1A = s4*BA11;
-        ArrayNIP S2A = s4*BA21 + s2*F12;
-        ArrayNIP S3A = s4*BA31 + s2*F13;
+        ArrayNIP T12 = T0 * BA12;
+        ArrayNIP T22 = T0 * BA22 - M2 * F22;
+        ArrayNIP T32 = T0 * BA32 - M2 * F23;
 
-        ArrayNIP S1B = s4*BA12;
-        ArrayNIP S2B = s4*BA22 + s2*F22;
-        ArrayNIP S3B = s4*BA32 + s2*F23;
-
-        ArrayNIP S1C = s4*BA13;
-        ArrayNIP S2C = s4*BA23 + s2*F32;
-        ArrayNIP S3C = s4*BA33 + s2*F33;
+        ArrayNIP T13 = T0 * BA13;
+        ArrayNIP T23 = T0 * BA23 - M2 * F32;
+        ArrayNIP T33 = T0 * BA33 - M2 * F33;
 
         for (auto i = 0; i < NSF; i++) {
             Left.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F11;
             Left.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F21;
             Left.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F31;
 
-            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1A +
-                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * S2A +
-                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * S3A;
-            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1B +
-                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * S2B +
-                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * S3B;
-            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1C +
-                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * S2C +
-                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * S3C;
+            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T11 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T21 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T31;
+            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T12 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T22 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T32;
+            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T13 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T23 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T33;
         }
         Jac.noalias() = Left * Right.transpose();
     }
     //Calculate the Contribution from the dC22 / de terms
     {
-        ArrayNIP s4 = s1 + s3 * (C22 - I1);
+        ArrayNIP T0 = (M4 * C22 + M5);
+        ArrayNIP T11 = T0 * BA11 - M2 * F11;
+        ArrayNIP T21 = T0 * BA21;
+        ArrayNIP T31 = T0 * BA31 - M2 * F13;
 
-        ArrayNIP S1A = s4*BA11 + s2*F11;
-        ArrayNIP S2A = s4*BA21;
-        ArrayNIP S3A = s4*BA31 + s2*F13;
+        ArrayNIP T12 = T0 * BA12 - M2 * F21;
+        ArrayNIP T22 = T0 * BA22;
+        ArrayNIP T32 = T0 * BA32 - M2 * F23;
 
-        ArrayNIP S1B = s4*BA12 + s2*F21;
-        ArrayNIP S2B = s4*BA22;
-        ArrayNIP S3B = s4*BA32 + s2*F23;
-
-        ArrayNIP S1C = s4*BA13 + s2*F31;
-        ArrayNIP S2C = s4*BA23;
-        ArrayNIP S3C = s4*BA33 + s2*F33;
+        ArrayNIP T13 = T0 * BA13 - M2 * F31;
+        ArrayNIP T23 = T0 * BA23;
+        ArrayNIP T33 = T0 * BA33 - M2 * F33;
 
         for (auto i = 0; i < NSF; i++) {
             Left.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 1 * NIP).array() * F12;
             Left.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 1 * NIP).array() * F22;
             Left.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 1 * NIP).array() * F32;
-            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1A +
-                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * S2A +
-                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * S3A;
-            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1B +
-                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * S2B +
-                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * S3B;
-            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1C +
-                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * S2C +
-                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * S3C;
+
+            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T11 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T21 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T31;
+            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T12 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T22 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T32;
+            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T13 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T23 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T33;
         }
         Jac.noalias() += Left * Right.transpose();
     }
     //Calculate the Contribution from the dC33 / de terms
     {
-        ArrayNIP s4 = s1 + s3 * (C33 - I1);
+        ArrayNIP T0 = (M4 * C22 + M5);
+        ArrayNIP T11 = T0 * BA11 - M2 * F11;
+        ArrayNIP T21 = T0 * BA21 - M2 * F12;
+        ArrayNIP T31 = T0 * BA31;
 
-        ArrayNIP S1A = s4*BA11 + s2*F11;
-        ArrayNIP S2A = s4*BA21 + s2*F12;
-        ArrayNIP S3A = s4*BA31;
+        ArrayNIP T12 = T0 * BA12 - M2 * F21;
+        ArrayNIP T22 = T0 * BA22 - M2 * F22;
+        ArrayNIP T32 = T0 * BA32;
 
-        ArrayNIP S1B = s4*BA12 + s2*F21;
-        ArrayNIP S2B = s4*BA22 + s2*F22;
-        ArrayNIP S3B = s4*BA32;
-
-        ArrayNIP S1C = s4*BA13 + s2*F31;
-        ArrayNIP S2C = s4*BA23 + s2*F32;
-        ArrayNIP S3C = s4*BA33;
+        ArrayNIP T13 = T0 * BA13 - M2 * F31;
+        ArrayNIP T23 = T0 * BA23 - M2 * F32;
+        ArrayNIP T33 = T0 * BA33;
 
         for (auto i = 0; i < NSF; i++) {
             Left.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 2 * NIP).array() * F13;
             Left.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 2 * NIP).array() * F23;
             Left.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 2 * NIP).array() * F33;
-            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1A +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2A +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3A;
-            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1B +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2B +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3B;
-            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1C +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2C +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3C;
+
+            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T11 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T21 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T31;
+            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T12 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T22 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T32;
+            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T13 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T23 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T33;
         }
         Jac.noalias() += Left * Right.transpose();
     }
 
-    ArrayNIP s5 = -0.5 * s2;
+    //Reset M2 to it's correct value instead of double that was used above
+    M2 *= 0.5;
     // Calculate the Contribution from the dC23/de terms
     {
-        ArrayNIP s4 = s3 * C23;
+        ArrayNIP T0 = M4 * C23;
+        ArrayNIP T11 = T0 * BA11;
+        ArrayNIP T21 = T0 * BA21 + M2 * F13;
+        ArrayNIP T31 = T0 * BA31 + M2 * F12;
 
-        ArrayNIP S1A = s4 * BA11;
-        ArrayNIP S2A = s4 * BA21 + s5 * F13;
-        ArrayNIP S3A = s4 * BA31 + s5 * F12;
+        ArrayNIP T12 = T0 * BA12;
+        ArrayNIP T22 = T0 * BA22 + M2 * F23;
+        ArrayNIP T32 = T0 * BA32 + M2 * F22;
 
-        ArrayNIP S1B = s4 * BA12;
-        ArrayNIP S2B = s4 * BA22 + s5 * F23;
-        ArrayNIP S3B = s4 * BA32 + s5 * F22;
-
-        ArrayNIP S1C = s4 * BA13;
-        ArrayNIP S2C = s4 * BA23 + s5 * F33;
-        ArrayNIP S3C = s4 * BA33 + s5 * F32;
+        ArrayNIP T13 = T0 * BA13;
+        ArrayNIP T23 = T0 * BA23 + M2 * F33;
+        ArrayNIP T33 = T0 * BA33 + M2 * F32;
 
         for (auto i = 0; i < NSF; i++) {
             Left.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 1 * NIP).array() * F13 + m_SD.block<1, NIP>(i, 2 * NIP).array() * F12;
             Left.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 1 * NIP).array() * F23 + m_SD.block<1, NIP>(i, 2 * NIP).array() * F22;
             Left.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 1 * NIP).array() * F33 + m_SD.block<1, NIP>(i, 2 * NIP).array() * F32;
-            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1A +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2A +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3A;
-            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1B +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2B +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3B;
-            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1C +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2C +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3C;
+
+            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T11 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T21 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T31;
+            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T12 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T22 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T32;
+            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T13 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T23 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T33;
         }
         Jac.noalias() += Left * Right.transpose();
     }
     // Calculate the Contribution from the dC13/de terms
     {
-        ArrayNIP s4 = s3 * C13;
+        ArrayNIP T0 = M4 * C13;
+        ArrayNIP T11 = T0 * BA11 + M2 * F13;
+        ArrayNIP T21 = T0 * BA21;
+        ArrayNIP T31 = T0 * BA31 + M2 * F11;
 
-        ArrayNIP S1A = s4*BA11 + s5*F13;
-        ArrayNIP S2A = s4*BA21;
-        ArrayNIP S3A = s4*BA31 + s5*F11;
+        ArrayNIP T12 = T0 * BA12 + M2 * F23;
+        ArrayNIP T22 = T0 * BA22;
+        ArrayNIP T32 = T0 * BA32 + M2 * F21;
 
-        ArrayNIP S1B = s4*BA12 + s5*F23;
-        ArrayNIP S2B = s4*BA22;
-        ArrayNIP S3B = s4*BA32 + s5*F21;
-
-        ArrayNIP S1C = s4*BA13 + s5*F33;
-        ArrayNIP S2C = s4*BA23;
-        ArrayNIP S3C = s4*BA33 + s5*F31;
+        ArrayNIP T13 = T0 * BA13 + M2 * F33;
+        ArrayNIP T23 = T0 * BA23;
+        ArrayNIP T33 = T0 * BA33 + M2 * F31;
 
         for (auto i = 0; i < NSF; i++) {
             Left.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F13 + m_SD.block<1, NIP>(i, 2 * NIP).array() * F11;
             Left.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F23 + m_SD.block<1, NIP>(i, 2 * NIP).array() * F21;
             Left.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F33 + m_SD.block<1, NIP>(i, 2 * NIP).array() * F31;
-            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1A +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2A +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3A;
-            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1B +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2B +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3B;
-            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1C +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2C +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3C;
+
+            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T11 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T21 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T31;
+            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T12 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T22 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T32;
+            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T13 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T23 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T33;
         }
         Jac.noalias() += Left * Right.transpose();
     }
     // Calculate the Contribution from the dC12/de terms
     {
-        ArrayNIP s4 = s3 * C12;
+        ArrayNIP T0 = M4 * C13;
+        ArrayNIP T11 = T0 * BA11 + M2 * F12;
+        ArrayNIP T21 = T0 * BA21 + M2 * F11;
+        ArrayNIP T31 = T0 * BA31;
 
-        ArrayNIP S1A = s4 * BA11 + s5 * F12;
-        ArrayNIP S2A = s4 * BA21 + s5 * F11;
-        ArrayNIP S3A = s4 * BA31;
+        ArrayNIP T12 = T0 * BA12 + M2 * F22;
+        ArrayNIP T22 = T0 * BA22 + M2 * F21;
+        ArrayNIP T32 = T0 * BA32;
 
-        ArrayNIP S1B = s4 * BA12 + s5 * F22;
-        ArrayNIP S2B = s4 * BA22 + s5 * F21;
-        ArrayNIP S3B = s4 * BA32;
-
-        ArrayNIP S1C = s4 * BA13 + s5 * F32;
-        ArrayNIP S2C = s4 * BA23 + s5 * F31;
-        ArrayNIP S3C = s4 * BA33;
+        ArrayNIP T13 = T0 * BA13 + M2 * F32;
+        ArrayNIP T23 = T0 * BA23 + M2 * F31;
+        ArrayNIP T33 = T0 * BA33;
 
         for (auto i = 0; i < NSF; i++) {
             Left.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F12 + m_SD.block<1, NIP>(i, 1 * NIP).array() * F11;
             Left.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F22 + m_SD.block<1, NIP>(i, 1 * NIP).array() * F21;
             Left.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * F32 + m_SD.block<1, NIP>(i, 1 * NIP).array() * F31;
-            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1A +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2A +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3A;
-            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1B +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2B +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3B;
-            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1C +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2C +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3C;
+
+            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T11 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T21 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T31;
+            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T12 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T22 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T32;
+            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T13 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T23 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T33;
         }
         Jac.noalias() += Left * Right.transpose();
     }
     // Calculate the Contribution from the ddetF/de terms
     {
-        ArrayNIP s4 = -Kfactor * k * m_kGQ + (-5.0 / 6.0*s1*I1 + 7.0 / 6.0*s3*I2) / detF;
-        ArrayNIP s6 = s1 - s3*I1;
+        ArrayNIP M6 = (-Kfactor * k) * m_kGQ + (5.0/9.0*I1*M0 - 14.0/9.0*M2*I2)/(J*J);
 
-        ArrayNIP S1A = s4*BA11 + (s6 + s3*C11)*F11 + s3 * (C12*F12 + C12*F13);
-        ArrayNIP S2A = s4*BA21 + (s6 + s3*C22)*F12 + s3 * (C12*F11 + C23*F13);
-        ArrayNIP S3A = s4*BA31 + (s6 + s3*C33)*F13 + s3 * (C13*F11 + C23*F12);
+        ArrayNIP T11 = M4 * (C11*F11 + C12 * F12 + C13 * F13) + M5 * F11 + M6 * BA11;
+        ArrayNIP T21 = M4 * (C12*F11 + C22 * F12 + C23 * F13) + M5 * F12 + M6 * BA21;
+        ArrayNIP T31 = M4 * (C13*F11 + C23 * F12 + C33 * F13) + M5 * F13 + M6 * BA31;
 
-        ArrayNIP S1B = s4*BA12 + (s6 + s3*C11)*F21 + s3 * (C12*F22 + C13*F23);
-        ArrayNIP S2B = s4*BA22 + (s6 + s3*C22)*F22 + s3 * (C12*F21 + C23*F23);
-        ArrayNIP S3B = s4*BA32 + (s6 + s3*C33)*F23 + s3 * (C13*F21 + C23*F22);
+        ArrayNIP T12 = M4 * (C11*F21 + C12 * F22 + C13 * F23) + M5 * F21 + M6 * BA12;
+        ArrayNIP T22 = M4 * (C12*F21 + C22 * F22 + C23 * F23) + M5 * F22 + M6 * BA22;
+        ArrayNIP T32 = M4 * (C13*F21 + C23 * F22 + C33 * F23) + M5 * F23 + M6 * BA32;
 
-        ArrayNIP S1C = s4*BA13 + (s6 + s3*C11)*F31 + s3 * (C12*F32 + C13*F33);
-        ArrayNIP S2C = s4*BA23 + (s6 + s3*C22)*F32 + s3 * (C12*F31 + C23*F33);
-        ArrayNIP S3C = s4*BA33 + (s6 + s3*C33)*F33 + s3 * (C13*F31 + C23*F32);
+        ArrayNIP T13 = M4 * (C11*F31 + C12 * F32 + C13 * F33) + M5 * F31 + M6 * BA13;
+        ArrayNIP T23 = M4 * (C12*F31 + C22 * F32 + C23 * F33) + M5 * F32 + M6 * BA23;
+        ArrayNIP T33 = M4 * (C13*F31 + C23 * F32 + C33 * F33) + M5 * F33 + M6 * BA33;
 
         for (auto i = 0; i < NSF; i++) {
             Left.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * BA11 +
@@ -1946,80 +1961,84 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianNoDamping(ChMatrix
                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * BA23 +
                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * BA33;
 
-            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1A +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2A +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3A;
-            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1B +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2B +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3B;
-            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * S1C +
-                m_SD.block<1, NIP>(i, 1 * NIP).array() * S2C +
-                m_SD.block<1, NIP>(i, 2 * NIP).array() * S3C;
+            Right.block<1, NIP>(3 * i + 0, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T11 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T21 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T31;
+            Right.block<1, NIP>(3 * i + 1, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T12 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T22 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T32;
+            Right.block<1, NIP>(3 * i + 2, 0).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * T13 +
+                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * T23 +
+                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * T33;
         }
         Jac.noalias() += Left * Right.transpose();
     }
 
-    //Calculate the contribution from the Mass Matrix and Expand component
-    ArrayNIP s7 = (-Kfactor * 2.0 * c10)*m_kGQ*detF_m2_3 - s5*I1;
-    ArrayNIP s8 = -Kfactor * m_kGQ * (k * (detF - 1.0) - 2.0 / 3.0 * c10 * I1*detF_m2_3 / detF - 4.0 / 3.0 * c01 * I2*detF_m2_3*detF_m2_3 / detF);
+    //Calculate the contribution from the Mass Matrix and Expand/Expandij components
+    ArrayNIP M1 = M0 - M2 * I1;
+    ArrayNIP M3 = (-Kfactor * k) * (J - 1.0)*m_kGQ - (I1*M0 - 2 * I2 * M2) / (3.0 * J);
 
-    ArrayNIP sC11 = s7 + s5 * C11;
-    ArrayNIP sC22 = s7 + s5 * C22;
-    ArrayNIP sC33 = s7 + s5 * C33;
-    ArrayNIP sC12 = s5*C12;
-    ArrayNIP sC13 = s5*C13;
-    ArrayNIP sC23 = s5*C23;
+    ArrayNIP MC11 = M1 + M2 * C11;
+    ArrayNIP MC22 = M1 + M2 * C22;
+    ArrayNIP MC33 = M1 + M2 * C33;
+    ArrayNIP MC12 = M2 * C12;
+    ArrayNIP MC13 = M2 * C13;
+    ArrayNIP MC23 = M2 * C23;
 
-    ArrayNIP sF11 = s8*F11;
-    ArrayNIP sF12 = s8*F12;
-    ArrayNIP sF13 = s8*F13;
-    ArrayNIP sF21 = s8*F21;
-    ArrayNIP sF22 = s8*F22;
-    ArrayNIP sF23 = s8*F23;
-    ArrayNIP sF31 = s8*F31;
-    ArrayNIP sF32 = s8*F32;
-    ArrayNIP sF33 = s8*F33;
+    ArrayNIP MF11 = M3 * F11;
+    ArrayNIP MF12 = M3 * F12;
+    ArrayNIP MF13 = M3 * F13;
+    ArrayNIP MF21 = M3 * F21;
+    ArrayNIP MF22 = M3 * F22;
+    ArrayNIP MF23 = M3 * F23;
+    ArrayNIP MF31 = M3 * F31;
+    ArrayNIP MF32 = M3 * F32;
+    ArrayNIP MF33 = M3 * F33;
 
     unsigned int idx = 0;
-    for (unsigned int i = 0; i < (NSF-1); i++) {
-        ChVectorN<double, 3 * NIP> scaled_SD_row_i;
-        scaled_SD_row_i.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * sC11 +
-                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * sC12 +
-                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * sC13;
-        scaled_SD_row_i.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * sC12 +
-                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * sC22 +
-                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * sC23;
-        scaled_SD_row_i.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * sC13 +
-                                                        m_SD.block<1, NIP>(i, 1 * NIP).array() * sC23 +
-                                                        m_SD.block<1, NIP>(i, 2 * NIP).array() * sC33;
+    for (unsigned int i = 0; i < (NSF - 1); i++) {
+        //Calculate the scaled row of SD
+        ChVectorN<double, 3 * NIP> R;
+        R.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * MC11 +
+            m_SD.block<1, NIP>(i, 1 * NIP).array() * MC12 +
+            m_SD.block<1, NIP>(i, 2 * NIP).array() * MC13;
+        R.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * MC12 +
+            m_SD.block<1, NIP>(i, 1 * NIP).array() * MC22 +
+            m_SD.block<1, NIP>(i, 2 * NIP).array() * MC23;
+        R.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array() * MC13 +
+            m_SD.block<1, NIP>(i, 1 * NIP).array() * MC23 +
+            m_SD.block<1, NIP>(i, 2 * NIP).array() * MC33;
 
-        ChVectorN<double, 3 * NIP> scaled_B2_row_i;
-        scaled_B2_row_i.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 1 * NIP).array()*sF33 - m_SD.block<1, NIP>(i, 2 * NIP).array()*sF32;
-        scaled_B2_row_i.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 2 * NIP).array()*sF31 - m_SD.block<1, NIP>(i, 0 * NIP).array()*sF33;
-        scaled_B2_row_i.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array()*sF32 - m_SD.block<1, NIP>(i, 1 * NIP).array()*sF31;
+        //Calculate the scaled row of B2
+        ChVectorN<double, 3 * NIP> X;
+        X.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 1 * NIP).array()*MF33 - m_SD.block<1, NIP>(i, 2 * NIP).array()*MF32;
+        X.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 2 * NIP).array()*MF31 - m_SD.block<1, NIP>(i, 0 * NIP).array()*MF33;
+        X.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array()*MF32 - m_SD.block<1, NIP>(i, 1 * NIP).array()*MF31;
 
-        ChVectorN<double, 3 * NIP> scaled_B3_row_i;
-        scaled_B3_row_i.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 2 * NIP).array()*sF22 - m_SD.block<1, NIP>(i, 1 * NIP).array()*sF23;
-        scaled_B3_row_i.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array()*sF23 - m_SD.block<1, NIP>(i, 2 * NIP).array()*sF21;
-        scaled_B3_row_i.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 1 * NIP).array()*sF21 - m_SD.block<1, NIP>(i, 0 * NIP).array()*sF22;
+        //Calculate the scaled row of B3
+        ChVectorN<double, 3 * NIP> Y;
+        Y.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 2 * NIP).array()*MF22 - m_SD.block<1, NIP>(i, 1 * NIP).array()*MF23;
+        Y.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array()*MF23 - m_SD.block<1, NIP>(i, 2 * NIP).array()*MF21;
+        Y.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 1 * NIP).array()*MF21 - m_SD.block<1, NIP>(i, 0 * NIP).array()*MF22;
 
-        ChVectorN<double, 3 * NIP> scaled_B4_row_i;
-        scaled_B4_row_i.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 1 * NIP).array()*sF13 - m_SD.block<1, NIP>(i, 2 * NIP).array()*sF12;
-        scaled_B4_row_i.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 2 * NIP).array()*sF11 - m_SD.block<1, NIP>(i, 0 * NIP).array()*sF13;
-        scaled_B4_row_i.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array()*sF12 - m_SD.block<1, NIP>(i, 1 * NIP).array()*sF11;
+        //Calculate the scaled row of B4
+        ChVectorN<double, 3 * NIP> Z;
+        Z.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 1 * NIP).array()*MF13 - m_SD.block<1, NIP>(i, 2 * NIP).array()*MF12;
+        Z.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 2 * NIP).array()*MF11 - m_SD.block<1, NIP>(i, 0 * NIP).array()*MF13;
+        Z.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(i, 0 * NIP).array()*MF12 - m_SD.block<1, NIP>(i, 1 * NIP).array()*MF11;
 
-        double d_diag = Mfactor * m_MassMatrix(idx) + (scaled_SD_row_i.dot(m_SD.row(i)));
+        double d_diag = Mfactor * m_MassMatrix(idx) + (R.dot(m_SD.row(i)));
 
         Jac(3 * i, 3 * i) += d_diag;
         Jac(3 * i + 1, 3 * i + 1) += d_diag;
         Jac(3 * i + 2, 3 * i + 2) += d_diag;
         idx++;
 
-        for (unsigned int j = (i+1); j < NSF; j++) {
-            double d = Mfactor * m_MassMatrix(idx) + (scaled_SD_row_i.dot(m_SD.row(j)));
-            double B2 = scaled_B2_row_i.dot(m_SD.row(j));
-            double B3 = scaled_B3_row_i.dot(m_SD.row(j));
-            double B4 = scaled_B4_row_i.dot(m_SD.row(j));
+        for (unsigned int j = (i + 1); j < NSF; j++) {
+            double d = Mfactor * m_MassMatrix(idx) + (R.dot(m_SD.row(j)));
+            double B2 = X.dot(m_SD.row(j));
+            double B3 = Y.dot(m_SD.row(j));
+            double B4 = Z.dot(m_SD.row(j));
 
             Jac(3 * i + 0, 3 * j + 0) += d;
             Jac(3 * i + 0, 3 * j + 1) -= B2;
@@ -2050,18 +2069,18 @@ void ChElementHexaANCF_3843_MR_NoDamp::ComputeInternalJacobianNoDamping(ChMatrix
     }
 
     //No need to calculate B2, B3, or B4 for the last point since they equal 0
-    ChVectorN<double, 3 * NIP> scaled_SD_row_i;
-    scaled_SD_row_i.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(NSF-1, 0 * NIP).array() * sC11 +
-        m_SD.block<1, NIP>(NSF-1, 1 * NIP).array() * sC12 +
-        m_SD.block<1, NIP>(NSF-1, 2 * NIP).array() * sC13;
-    scaled_SD_row_i.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(NSF - 1, 0 * NIP).array() * sC12 +
-        m_SD.block<1, NIP>(NSF-1, 1 * NIP).array() * sC22 +
-        m_SD.block<1, NIP>(NSF-1, 2 * NIP).array() * sC23;
-    scaled_SD_row_i.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(NSF - 1, 0 * NIP).array() * sC13 +
-        m_SD.block<1, NIP>(NSF-1, 1 * NIP).array() * sC23 +
-        m_SD.block<1, NIP>(NSF-1, 2 * NIP).array() * sC33;
+    ChVectorN<double, 3 * NIP> R;
+    R.segment(0 * NIP, NIP).array() = m_SD.block<1, NIP>(NSF - 1, 0 * NIP).array() * MC11 +
+        m_SD.block<1, NIP>(NSF - 1, 1 * NIP).array() * MC12 +
+        m_SD.block<1, NIP>(NSF - 1, 2 * NIP).array() * MC13;
+    R.segment(1 * NIP, NIP).array() = m_SD.block<1, NIP>(NSF - 1, 0 * NIP).array() * MC12 +
+        m_SD.block<1, NIP>(NSF - 1, 1 * NIP).array() * MC22 +
+        m_SD.block<1, NIP>(NSF - 1, 2 * NIP).array() * MC23;
+    R.segment(2 * NIP, NIP).array() = m_SD.block<1, NIP>(NSF - 1, 0 * NIP).array() * MC13 +
+        m_SD.block<1, NIP>(NSF - 1, 1 * NIP).array() * MC23 +
+        m_SD.block<1, NIP>(NSF - 1, 2 * NIP).array() * MC33;
 
-    double d_diag = Mfactor * m_MassMatrix(idx) + (scaled_SD_row_i.dot(m_SD.row(NSF - 1)));
+    double d_diag = Mfactor * m_MassMatrix(idx) + (R.dot(m_SD.row(NSF - 1)));
 
     Jac(3 * (NSF - 1) + 0, 3 * (NSF - 1) + 0) += d_diag;
     Jac(3 * (NSF - 1) + 1, 3 * (NSF - 1) + 1) += d_diag;

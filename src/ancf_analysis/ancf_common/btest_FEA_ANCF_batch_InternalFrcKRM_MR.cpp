@@ -812,7 +812,7 @@ void Run_ANCFBeam_3243_Tests() {
 
     {
         ANCFBeam3243Test_MR<num_elements, ChElementBeamANCF_3243_MR_Damp> Test;
-        Test.PrintTimingResults("ChElementHBeamANCF_3243_MR_Damp", num_steps);
+        Test.PrintTimingResults("ChElementBeamANCF_3243_MR_Damp", num_steps);
     }
     {
         ANCFBeam3243Test_MR<num_elements, ChElementBeamANCF_3243_MR_NoDamp> Test;
@@ -1572,7 +1572,7 @@ void Run_ANCFBeam_3333_Tests() {
 
     {
         ANCFBeam3333Test_MR<num_elements, ChElementBeamANCF_3333_MR_Damp> Test;
-        Test.PrintTimingResults("ChElementHBeamANCF_3333_MR_Damp", num_steps);
+        Test.PrintTimingResults("ChElementBeamANCF_3333_MR_Damp", num_steps);
     }
     {
         ANCFBeam3333Test_MR<num_elements, ChElementBeamANCF_3333_MR_NoDamp> Test;
@@ -3923,7 +3923,7 @@ void ANCFHexa3843Test_MR<num_elements, ElementVersion>::PrintTimingResults(const
 void Run_ANCFHexa_3843_Tests() {
     const int num_elements = 1024;
     int num_steps = 1000;
-    //const int num_elements = 8;
+    //const int num_elements = 1024;
     //int num_steps = 10;
 
     {
@@ -3992,34 +3992,34 @@ int main(int argc, char* argv[]) {
     
     std::ios::sync_with_stdio(false);
 
-    //if (argc < 2) {
-        Run_ANCFBeam_3243_Tests();
-        Run_ANCFBeam_3333_Tests();
-        Run_ANCFShell_3443_Tests();
-        Run_ANCFShell_3833_Tests();
+    if (argc < 2) {
+        //Run_ANCFBeam_3243_Tests();
+        //Run_ANCFBeam_3333_Tests();
+        //Run_ANCFShell_3443_Tests();
+        //Run_ANCFShell_3833_Tests();
         Run_ANCFHexa_3843_Tests();
-    //}
-    //else{
-    //    switch (argv[1][0]) {
-    //        case int('1'):
-    //            Run_ANCFBeam_3243_Tests();
-    //            break;
-    //        case int('2'):
-    //            Run_ANCFBeam_3333_Tests();
-    //            break;
-    //        case int('3'):
-    //            Run_ANCFShell_3443_Tests();
-    //            break;
-    //        case int('4'):
-    //            Run_ANCFShell_3833_Tests();
-    //            break;
-    //        case int('5'):
-    //            Run_ANCFHexa_3843_Tests();
-    //            break;
-    //        default:
-    //            std::cout << "Error: Unknown Input.\n";
-    //    }
-    //}
+    }
+    else{
+        switch (argv[1][0]) {
+            case int('1'):
+                Run_ANCFBeam_3243_Tests();
+                break;
+            case int('2'):
+                Run_ANCFBeam_3333_Tests();
+                break;
+            case int('3'):
+                Run_ANCFShell_3443_Tests();
+                break;
+            case int('4'):
+                Run_ANCFShell_3833_Tests();
+                break;
+            case int('5'):
+                Run_ANCFHexa_3843_Tests();
+                break;
+            default:
+                std::cout << "Error: Unknown Input.\n";
+        }
+    }
 
     return (0);
 }

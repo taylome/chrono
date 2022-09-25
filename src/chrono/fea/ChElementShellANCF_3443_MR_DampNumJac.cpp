@@ -832,118 +832,121 @@ void ChElementShellANCF_3443_MR_DampNumJac::ComputeInternalForceDamping(ChVector
     QiCompact.setZero();
 
     for (size_t kl = 0; kl < m_numLayers; kl++) {
-    // =============================================================================
-    // Calculate the deformation gradient and time derivative of the deformation gradient for all Gauss quadrature
-    // points in a single matrix multiplication.  Note that since the shape function derivative matrix is ordered by
-    // columns, the resulting deformation gradient will be ordered by block matrix (column vectors) components
-    //      [F11     F12     F13    ]
-    //      [F21     F22     F23    ]
-    // FC = [F31     F32     F33    ]
-    //      [Fdot11  Fdot12  Fdot13 ]
-    //      [Fdot21  Fdot22  Fdot23 ]
-    //      [Fdot31  Fdot32  Fdot33 ]
-    // =============================================================================
+        // =============================================================================
+        // Calculate the deformation gradient and time derivative of the deformation gradient for all Gauss quadrature
+        // points in a single matrix multiplication.  Note that since the shape function derivative matrix is ordered by
+        // columns, the resulting deformation gradient will be ordered by block matrix (column vectors) components
+        //      [F11     F12     F13    ]
+        //      [F21     F22     F23    ]
+        // FC = [F31     F32     F33    ]
+        //      [Fdot11  Fdot12  Fdot13 ]
+        //      [Fdot21  Fdot22  Fdot23 ]
+        //      [Fdot31  Fdot32  Fdot33 ]
+        // =============================================================================
 
-    ChMatrixNM<double, 6, 3 * NIP> FC = ebar_ebardot * m_SD.block<NSF, 3 * NIP>(kl * NSF, 0);
+        ChMatrixNM<double, 6, 3 * NIP> FC = ebar_ebardot * m_SD.block<NSF, 3 * NIP>(kl * NSF, 0);
 
-    Eigen::Map<ArrayNIP> F11(FC.block<1, NIP>(0, 0 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> F12(FC.block<1, NIP>(0, 1 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> F13(FC.block<1, NIP>(0, 2 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F11(FC.block<1, NIP>(0, 0 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F12(FC.block<1, NIP>(0, 1 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F13(FC.block<1, NIP>(0, 2 * NIP).data(), 1, NIP);
 
-    Eigen::Map<ArrayNIP> F21(FC.block<1, NIP>(1, 0 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> F22(FC.block<1, NIP>(1, 1 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> F23(FC.block<1, NIP>(1, 2 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F21(FC.block<1, NIP>(1, 0 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F22(FC.block<1, NIP>(1, 1 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F23(FC.block<1, NIP>(1, 2 * NIP).data(), 1, NIP);
 
-    Eigen::Map<ArrayNIP> F31(FC.block<1, NIP>(2, 0 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> F32(FC.block<1, NIP>(2, 1 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> F33(FC.block<1, NIP>(2, 2 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F31(FC.block<1, NIP>(2, 0 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F32(FC.block<1, NIP>(2, 1 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F33(FC.block<1, NIP>(2, 2 * NIP).data(), 1, NIP);
 
-    Eigen::Map<ArrayNIP> Fdot11(FC.block<1, NIP>(3, 0 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> Fdot12(FC.block<1, NIP>(3, 1 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> Fdot13(FC.block<1, NIP>(3, 2 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> Fdot11(FC.block<1, NIP>(3, 0 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> Fdot12(FC.block<1, NIP>(3, 1 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> Fdot13(FC.block<1, NIP>(3, 2 * NIP).data(), 1, NIP);
 
-    Eigen::Map<ArrayNIP> Fdot21(FC.block<1, NIP>(4, 0 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> Fdot22(FC.block<1, NIP>(4, 1 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> Fdot23(FC.block<1, NIP>(4, 2 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> Fdot21(FC.block<1, NIP>(4, 0 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> Fdot22(FC.block<1, NIP>(4, 1 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> Fdot23(FC.block<1, NIP>(4, 2 * NIP).data(), 1, NIP);
 
-    Eigen::Map<ArrayNIP> Fdot31(FC.block<1, NIP>(5, 0 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> Fdot32(FC.block<1, NIP>(5, 1 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> Fdot33(FC.block<1, NIP>(5, 2 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> Fdot31(FC.block<1, NIP>(5, 0 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> Fdot32(FC.block<1, NIP>(5, 1 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> Fdot33(FC.block<1, NIP>(5, 2 * NIP).data(), 1, NIP);
 
 
-    //Calculate the Right Cauchy-Green deformation tensor (symmetric):
-    ArrayNIP C11 = F11 * F11 + F21 * F21 + F31 * F31;
-    ArrayNIP C22 = F12 * F12 + F22 * F22 + F32 * F32;
-    ArrayNIP C33 = F13 * F13 + F23 * F23 + F33 * F33;
-    ArrayNIP C12 = F11 * F12 + F21 * F22 + F31 * F32;
-    ArrayNIP C13 = F11 * F13 + F21 * F23 + F31 * F33;
-    ArrayNIP C23 = F12 * F13 + F22 * F23 + F32 * F33;
+        //Calculate the Right Cauchy-Green deformation tensor (symmetric):
+        ArrayNIP C11 = F11 * F11 + F21 * F21 + F31 * F31;
+        ArrayNIP C22 = F12 * F12 + F22 * F22 + F32 * F32;
+        ArrayNIP C33 = F13 * F13 + F23 * F23 + F33 * F33;
+        ArrayNIP C12 = F11 * F12 + F21 * F22 + F31 * F32;
+        ArrayNIP C13 = F11 * F13 + F21 * F23 + F31 * F33;
+        ArrayNIP C23 = F12 * F13 + F22 * F23 + F32 * F33;
 
-    //Calculate the 1st invariant of the Right Cauchy-Green deformation tensor: trace(C)
-    ArrayNIP I1 = C11 + C22 + C33;
+        //Calculate the 1st invariant of the Right Cauchy-Green deformation tensor: trace(C)
+        ArrayNIP I1 = C11 + C22 + C33;
 
-    //Calculate the 2nd invariant of the Right Cauchy-Green deformation tensor: 1/2*(trace(C)^2-trace(C^2))
-    ArrayNIP I2 = 0.5*(I1*I1 - C11 * C11 - C22 * C22 - C33 * C33) - C12 * C12 - C13 * C13 - C23 * C23;
+        //Calculate the 2nd invariant of the Right Cauchy-Green deformation tensor: 1/2*(trace(C)^2-trace(C^2))
+        ArrayNIP I2 = 0.5*(I1*I1 - C11 * C11 - C22 * C22 - C33 * C33) - C12 * C12 - C13 * C13 - C23 * C23;
 
-    //Calculate the determinate of F (commonly denoted as J)
-    ArrayNIP detF = F11 * F22*F33 + F12 * F23*F31 + F13 * F21*F32 - F11 * F23*F32 - F12 * F21*F33 - F13 * F22*F31;
+        //Calculate the determinate of F (commonly denoted as J)
+        ArrayNIP J = F11 * (F22*F33 - F23 * F32) + F12 * (F23*F31 - F21 * F33) + F13 * (F21*F32 - F22 * F31);
 
-    ArrayNIP detF_m2_3 = detF.pow(-2.0 / 3.0);
+        //Calculate the determinate of F to the -2/3 power -> J^(-2/3)
+        ArrayNIP J_m2_3 = J.pow(-2.0 / 3.0);
 
-    double c10 = m_layers[kl].GetMaterial()->Get_c10();
-    double c01 = m_layers[kl].GetMaterial()->Get_c01();
-    double k = m_layers[kl].GetMaterial()->Get_k();
-    double mu = m_layers[kl].GetMaterial()->Get_mu();
+        // Calculate the time derivative of the Greens-Lagrange strain tensor at the current point (symmetric):
+        ArrayNIP Edot11 = F11 * Fdot11 + F21 * Fdot21 + F31 * Fdot31;
+        ArrayNIP Edot22 = F12 * Fdot12 + F22 * Fdot22 + F32 * Fdot32;
+        ArrayNIP Edot33 = F13 * Fdot13 + F23 * Fdot23 + F33 * Fdot33;
+        ArrayNIP Edot12 = 0.5*(F11 * Fdot12 + F12 * Fdot11 + F21 * Fdot22 + F22 * Fdot21 + F31 * Fdot32 + F32 * Fdot31);
+        ArrayNIP Edot13 = 0.5*(F11 * Fdot13 + F13 * Fdot11 + F21 * Fdot23 + F23 * Fdot21 + F31 * Fdot33 + F33 * Fdot31);
+        ArrayNIP Edot23 = 0.5*(F12 * Fdot13 + F13 * Fdot12 + F22 * Fdot23 + F23 * Fdot22 + F32 * Fdot33 + F33 * Fdot32);
 
-    ArrayNIP kGQmu_over_detF3 = mu * m_kGQ.block<1, NIP>(0, kl * NIP) / (detF*detF*detF);
+        //Inverse of C times detF^2 (since all the detF terms will be handled together)
+        ArrayNIP CInv11 = C22 * C33 - C23 * C23;
+        ArrayNIP CInv22 = C11 * C33 - C13 * C13;
+        ArrayNIP CInv33 = C11 * C22 - C12 * C12;
+        ArrayNIP CInv12 = C13 * C23 - C12 * C33;
+        ArrayNIP CInv13 = C12 * C23 - C13 * C22;
+        ArrayNIP CInv23 = C13 * C12 - C11 * C23;
 
-    // Calculate the time derivative of the Greens-Lagrange strain tensor at the current point (symmetric):
-    ArrayNIP Edot11 = F11 * Fdot11 + F21 * Fdot21 + F31 * Fdot31;
-    ArrayNIP Edot22 = F12 * Fdot12 + F22 * Fdot22 + F32 * Fdot32;
-    ArrayNIP Edot33 = F13 * Fdot13 + F23 * Fdot23 + F33 * Fdot33;
-    ArrayNIP Edot12 = 0.5*(F11 * Fdot12 + F12 * Fdot11 + F21 * Fdot22 + F22 * Fdot21 + F31 * Fdot32 + F32 * Fdot31);
-    ArrayNIP Edot13 = 0.5*(F11 * Fdot13 + F13 * Fdot11 + F21 * Fdot23 + F23 * Fdot21 + F31 * Fdot33 + F33 * Fdot31);
-    ArrayNIP Edot23 = 0.5*(F12 * Fdot13 + F13 * Fdot12 + F22 * Fdot23 + F23 * Fdot22 + F32 * Fdot33 + F33 * Fdot32);
+        //Calculate the 2nd Piola-Kirchhoff Stress components from the simple non-linear Kevlin-Voigt viscosity law (S_Cauchy = mu*D, where D is the Rate of Deformation Tensor)
+        double mu = m_layers[kl].GetMaterial()->Get_mu();
+        ArrayNIP kGQmu_over_J3 = mu * m_kGQ / (J*J*J);
+        ArrayNIP SPK2_NLKV_1 = kGQmu_over_J3 * (Edot11*CInv11*CInv11 + 2.0 * Edot12*CInv11*CInv12 + 2.0 * Edot13*CInv11*CInv13 + Edot22 * CInv12*CInv12 + 2.0 * Edot23*CInv12*CInv13 + Edot33 * CInv13*CInv13);
+        ArrayNIP SPK2_NLKV_2 = kGQmu_over_J3 * (Edot11*CInv12*CInv12 + 2.0 * Edot12*CInv12*CInv22 + 2.0 * Edot13*CInv12*CInv23 + Edot22 * CInv22*CInv22 + 2.0 * Edot23*CInv22*CInv23 + Edot33 * CInv23*CInv23);
+        ArrayNIP SPK2_NLKV_3 = kGQmu_over_J3 * (Edot11*CInv13*CInv13 + 2.0 * Edot12*CInv13*CInv23 + 2.0 * Edot13*CInv13*CInv33 + Edot22 * CInv23*CInv23 + 2.0 * Edot23*CInv23*CInv33 + Edot33 * CInv33*CInv33);
+        ArrayNIP SPK2_NLKV_4 = kGQmu_over_J3 * (Edot11*CInv12*CInv13 + Edot12 * (CInv12*CInv23 + CInv22 * CInv13) + Edot13 * (CInv12*CInv33 + CInv13 * CInv23) + Edot22 * CInv22*CInv23 + Edot23 * (CInv23*CInv23 + CInv22 * CInv33) + Edot33 * CInv23*CInv33);
+        ArrayNIP SPK2_NLKV_5 = kGQmu_over_J3 * (Edot11*CInv11*CInv13 + Edot12 * (CInv11*CInv23 + CInv12 * CInv13) + Edot13 * (CInv13*CInv13 + CInv11 * CInv33) + Edot22 * CInv12*CInv23 + Edot23 * (CInv12*CInv33 + CInv13 * CInv23) + Edot33 * CInv13*CInv33);
+        ArrayNIP SPK2_NLKV_6 = kGQmu_over_J3 * (Edot11*CInv11*CInv12 + Edot12 * (CInv12*CInv12 + CInv11 * CInv22) + Edot13 * (CInv11*CInv23 + CInv12 * CInv13) + Edot22 * CInv12*CInv22 + Edot23 * (CInv12*CInv23 + CInv22 * CInv13) + Edot33 * CInv13*CInv23);
 
-    //Inverse of C times detF^2 (since all the detF terms will be handled together)
-    ArrayNIP CInv11 = C22 * C33 - C23 * C23;
-    ArrayNIP CInv22 = C11 * C33 - C13 * C13;
-    ArrayNIP CInv33 = C11 * C22 - C12 * C12;
-    ArrayNIP CInv12 = C13 * C23 - C12 * C33;
-    ArrayNIP CInv13 = C12 * C23 - C13 * C22;
-    ArrayNIP CInv23 = C13 * C12 - C11 * C23;
+        //Get the element's material properties
+        double c10 = m_layers[kl].GetMaterial()->Get_c10();
+        double c01 = m_layers[kl].GetMaterial()->Get_c01();
+        double k = m_layers[kl].GetMaterial()->Get_k();
 
-    //Calculate the Stress from the viscosity law
-    ArrayNIP SPK2_NLKV_1 = kGQmu_over_detF3 * (Edot11*CInv11*CInv11 + 2.0 * Edot12*CInv11*CInv12 + 2.0 * Edot13*CInv11*CInv13 + Edot22 * CInv12*CInv12 + 2.0 * Edot23*CInv12*CInv13 + Edot33 * CInv13*CInv13);
-    ArrayNIP SPK2_NLKV_2 = kGQmu_over_detF3 * (Edot11*CInv12*CInv12 + 2.0 * Edot12*CInv12*CInv22 + 2.0 * Edot13*CInv12*CInv23 + Edot22 * CInv22*CInv22 + 2.0 * Edot23*CInv22*CInv23 + Edot33 * CInv23*CInv23);
-    ArrayNIP SPK2_NLKV_3 = kGQmu_over_detF3 * (Edot11*CInv13*CInv13 + 2.0 * Edot12*CInv13*CInv23 + 2.0 * Edot13*CInv13*CInv33 + Edot22 * CInv23*CInv23 + 2.0 * Edot23*CInv23*CInv33 + Edot33 * CInv33*CInv33);
-    ArrayNIP SPK2_NLKV_4 = kGQmu_over_detF3 * (Edot11*CInv12*CInv13 + Edot12 * (CInv12*CInv23 + CInv22 * CInv13) + Edot13 * (CInv12*CInv33 + CInv13 * CInv23) + Edot22 * CInv22*CInv23 + Edot23 * (CInv23*CInv23 + CInv22 * CInv33) + Edot33 * CInv23*CInv33);
-    ArrayNIP SPK2_NLKV_5 = kGQmu_over_detF3 * (Edot11*CInv11*CInv13 + Edot12 * (CInv11*CInv23 + CInv12 * CInv13) + Edot13 * (CInv13*CInv13 + CInv11 * CInv33) + Edot22 * CInv12*CInv23 + Edot23 * (CInv12*CInv33 + CInv13 * CInv23) + Edot33 * CInv13*CInv33);
-    ArrayNIP SPK2_NLKV_6 = kGQmu_over_detF3 * (Edot11*CInv11*CInv12 + Edot12 * (CInv12*CInv12 + CInv11 * CInv22) + Edot13 * (CInv11*CInv23 + CInv12 * CInv13) + Edot22 * CInv12*CInv22 + Edot23 * (CInv12*CInv23 + CInv22 * CInv13) + Edot33 * CInv13*CInv23);
+        //Calculate the scale factors used for calculating the transpose of the 1st Piola-Kirchhoff Stress tensors
+        ArrayNIP M0 = 2.0 * m_kGQ * J_m2_3;
+        ArrayNIP M2 = -c01 * M0 * J_m2_3;
+        M0 *= c10;
+        ArrayNIP M1 = M0 - M2 * I1;
+        ArrayNIP M3 = k * (J - 1.0)*m_kGQ - (I1*M0 - 2 * I2 * M2) / (3.0 * J);
 
-    ArrayNIP s0 = 2.0 * m_kGQ.block<1, NIP>(0, kl * NIP) * detF_m2_3;
-    ArrayNIP s2 = -c01 * s0 * detF_m2_3;
-    s0 *= c10;
-    ArrayNIP s1 = s0 - s2 * I1;
-    ArrayNIP s3 = k * (detF - 1.0)*m_kGQ.block<1, NIP>(0, kl * NIP) - (I1*s0 - 2 * I2 * s2) / (3.0 * detF);
+        //Calculate the transpose of the 1st Piola-Kirchhoff Stress tensors grouped by Gauss-quadrature points
+        ChMatrixNMc<double, 3 * NIP, 3> P_Block;
+        P_Block.block<NIP, 1>(0, 0) = M3 * (F22 * F33 - F23 * F32) + (M1 + M2 * C11) * F11 + M2 * (C12 * F12 + C13 * F13) + F11 * SPK2_NLKV_1 + F12 * SPK2_NLKV_6 + F13 * SPK2_NLKV_5;
+        P_Block.block<NIP, 1>(NIP, 0) = M3 * (F23 * F31 - F21 * F33) + (M1 + M2 * C22) * F12 + M2 * (C12 * F11 + C23 * F13) + F11 * SPK2_NLKV_6 + F12 * SPK2_NLKV_2 + F13 * SPK2_NLKV_4;
+        P_Block.block<NIP, 1>(2 * NIP, 0) = M3 * (F21 * F32 - F22 * F31) + (M1 + M2 * C33) * F13 + M2 * (C13 * F11 + C23 * F12) + F11 * SPK2_NLKV_5 + F12 * SPK2_NLKV_4 + F13 * SPK2_NLKV_3;
+        P_Block.block<NIP, 1>(0, 1) = M3 * (F13 * F32 - F12 * F33) + (M1 + M2 * C11) * F21 + M2 * (C12 * F22 + C13 * F23) + F21 * SPK2_NLKV_1 + F22 * SPK2_NLKV_6 + F23 * SPK2_NLKV_5;
+        P_Block.block<NIP, 1>(NIP, 1) = M3 * (F11 * F33 - F13 * F31) + (M1 + M2 * C22) * F22 + M2 * (C12 * F21 + C23 * F23) + F21 * SPK2_NLKV_6 + F22 * SPK2_NLKV_2 + F23 * SPK2_NLKV_4;
+        P_Block.block<NIP, 1>(2 * NIP, 1) = M3 * (F12 * F31 - F11 * F32) + (M1 + M2 * C33) * F23 + M2 * (C13 * F21 + C23 * F22) + F21 * SPK2_NLKV_5 + F22 * SPK2_NLKV_4 + F23 * SPK2_NLKV_3;
+        P_Block.block<NIP, 1>(0, 2) = M3 * (F12 * F23 - F13 * F22) + (M1 + M2 * C11) * F31 + M2 * (C12 * F32 + C13 * F33) + F31 * SPK2_NLKV_1 + F32 * SPK2_NLKV_6 + F33 * SPK2_NLKV_5;
+        P_Block.block<NIP, 1>(NIP, 2) = M3 * (F13 * F21 - F11 * F23) + (M1 + M2 * C22) * F32 + M2 * (C12 * F31 + C23 * F33) + F31 * SPK2_NLKV_6 + F32 * SPK2_NLKV_2 + F33 * SPK2_NLKV_4;
+        P_Block.block<NIP, 1>(2 * NIP, 2) = M3 * (F11 * F22 - F12 * F21) + (M1 + M2 * C33) * F33 + M2 * (C13 * F31 + C23 * F32) + F31 * SPK2_NLKV_5 + F32 * SPK2_NLKV_4 + F33 * SPK2_NLKV_3;
 
-    ChMatrixNMc<double, 3 * NIP, 3> P_Block;
-    P_Block.block<NIP, 1>(0, 0) = s3 * (F22 * F33 - F23 * F32) + (s1 + s2 * C11) * F11 + s2 * (C12 * F12 + C13 * F13) + F11 * SPK2_NLKV_1 + F12 * SPK2_NLKV_6 + F13 * SPK2_NLKV_5;
-    P_Block.block<NIP, 1>(NIP, 0) = s3 * (F23 * F31 - F21 * F33) + (s1 + s2 * C22) * F12 + s2 * (C12 * F11 + C23 * F13) + F11 * SPK2_NLKV_6 + F12 * SPK2_NLKV_2 + F13 * SPK2_NLKV_4;
-    P_Block.block<NIP, 1>(2 * NIP, 0) = s3 * (F21 * F32 - F22 * F31) + (s1 + s2 * C33) * F13 + s2 * (C13 * F11 + C23 * F12) + F11 * SPK2_NLKV_5 + F12 * SPK2_NLKV_4 + F13 * SPK2_NLKV_3;
-    P_Block.block<NIP, 1>(0, 1) = s3 * (F13 * F32 - F12 * F33) + (s1 + s2 * C11) * F21 + s2 * (C12 * F22 + C13 * F23) + F21 * SPK2_NLKV_1 + F22 * SPK2_NLKV_6 + F23 * SPK2_NLKV_5;
-    P_Block.block<NIP, 1>(NIP, 1) = s3 * (F11 * F33 - F13 * F31) + (s1 + s2 * C22) * F22 + s2 * (C12 * F21 + C23 * F23) + F21 * SPK2_NLKV_6 + F22 * SPK2_NLKV_2 + F23 * SPK2_NLKV_4;
-    P_Block.block<NIP, 1>(2 * NIP, 1) = s3 * (F12 * F31 - F11 * F32) + (s1 + s2 * C33) * F23 + s2 * (C13 * F21 + C23 * F22) + F21 * SPK2_NLKV_5 + F22 * SPK2_NLKV_4 + F23 * SPK2_NLKV_3;
-    P_Block.block<NIP, 1>(0, 2) = s3 * (F12 * F23 - F13 * F22) + (s1 + s2 * C11) * F31 + s2 * (C12 * F32 + C13 * F33) + F31 * SPK2_NLKV_1 + F32 * SPK2_NLKV_6 + F33 * SPK2_NLKV_5;
-    P_Block.block<NIP, 1>(NIP, 2) = s3 * (F13 * F21 - F11 * F23) + (s1 + s2 * C22) * F32 + s2 * (C12 * F31 + C23 * F33) + F31 * SPK2_NLKV_6 + F32 * SPK2_NLKV_2 + F33 * SPK2_NLKV_4;
-    P_Block.block<NIP, 1>(2 * NIP, 2) = s3 * (F11 * F22 - F12 * F21) + (s1 + s2 * C33) * F33 + s2 * (C13 * F31 + C23 * F32) + F31 * SPK2_NLKV_5 + F32 * SPK2_NLKV_4 + F33 * SPK2_NLKV_3;
+        // =============================================================================
+        // Multiply the scaled first Piola-Kirchoff stresses by the shape function derivative matrix to get the
+        // generalized force vector in matrix form (in the correct order if its calculated in row-major memory layout)
+        // =============================================================================
 
-    // =============================================================================
-    // Multiply the scaled first Piola-Kirchoff stresses by the shape function derivative matrix to get the
-    // generalized force vector in matrix form (in the correct order if its calculated in row-major memory layout)
-    // =============================================================================
-
-    QiCompact.noalias() += m_SD.block<NSF, 3 * NIP>(kl * NSF, 0) * P_Block;
+        QiCompact.noalias() += m_SD.block<NSF, 3 * NIP>(kl * NSF, 0) * P_Block;
     }
 
     Eigen::Map<ChVectorN<double, 3 * NSF>> QiReshaped(QiCompact.data(), QiCompact.size());
@@ -958,81 +961,84 @@ void ChElementShellANCF_3443_MR_DampNumJac::ComputeInternalForceNoDamping(ChVect
     QiCompact.setZero();
 
     for (size_t kl = 0; kl < m_numLayers; kl++) {
-    // =============================================================================
-    // Calculate the deformation gradient for all Gauss quadrature points in a single matrix multiplication.  Note
-    // that since the shape function derivative matrix is ordered by columns, the resulting deformation gradient
-    // will be ordered by block matrix (row vectors) components
-    //      [F11     F12     F13    ]
-    // FC = [F21     F22     F23    ]
-    //      [F31     F32     F33    ]
-    // =============================================================================
+        // =============================================================================
+        // Calculate the deformation gradient for all Gauss quadrature points in a single matrix multiplication.  Note
+        // that since the shape function derivative matrix is ordered by columns, the resulting deformation gradient
+        // will be ordered by block matrix (row vectors) components
+        //      [F11     F12     F13    ]
+        // FC = [F21     F22     F23    ]
+        //      [F31     F32     F33    ]
+        // =============================================================================
 
-    ChMatrixNM<double, 3, 3 * NIP> FC = ebar * m_SD.block<NSF, 3 * NIP>(kl * NSF, 0);
+        ChMatrixNM<double, 3, 3 * NIP> FC = ebar * m_SD.block<NSF, 3 * NIP>(kl * NSF, 0);
 
-    Eigen::Map<ArrayNIP> F11(FC.block<1, NIP>(0, 0 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> F12(FC.block<1, NIP>(0, 1 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> F13(FC.block<1, NIP>(0, 2 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F11(FC.block<1, NIP>(0, 0 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F12(FC.block<1, NIP>(0, 1 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F13(FC.block<1, NIP>(0, 2 * NIP).data(), 1, NIP);
 
-    Eigen::Map<ArrayNIP> F21(FC.block<1, NIP>(1, 0 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> F22(FC.block<1, NIP>(1, 1 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> F23(FC.block<1, NIP>(1, 2 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F21(FC.block<1, NIP>(1, 0 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F22(FC.block<1, NIP>(1, 1 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F23(FC.block<1, NIP>(1, 2 * NIP).data(), 1, NIP);
 
-    Eigen::Map<ArrayNIP> F31(FC.block<1, NIP>(2, 0 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> F32(FC.block<1, NIP>(2, 1 * NIP).data(), 1, NIP);
-    Eigen::Map<ArrayNIP> F33(FC.block<1, NIP>(2, 2 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F31(FC.block<1, NIP>(2, 0 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F32(FC.block<1, NIP>(2, 1 * NIP).data(), 1, NIP);
+        Eigen::Map<ArrayNIP> F33(FC.block<1, NIP>(2, 2 * NIP).data(), 1, NIP);
 
-    //Calculate the Right Cauchy-Green deformation tensor (symmetric):
-    ArrayNIP C11 = F11 * F11 + F21 * F21 + F31 * F31;
-    ArrayNIP C22 = F12 * F12 + F22 * F22 + F32 * F32;
-    ArrayNIP C33 = F13 * F13 + F23 * F23 + F33 * F33;
-    ArrayNIP C12 = F11 * F12 + F21 * F22 + F31 * F32;
-    ArrayNIP C13 = F11 * F13 + F21 * F23 + F31 * F33;
-    ArrayNIP C23 = F12 * F13 + F22 * F23 + F32 * F33;
+        //Calculate the Right Cauchy-Green deformation tensor (symmetric):
+        ArrayNIP C11 = F11 * F11 + F21 * F21 + F31 * F31;
+        ArrayNIP C22 = F12 * F12 + F22 * F22 + F32 * F32;
+        ArrayNIP C33 = F13 * F13 + F23 * F23 + F33 * F33;
+        ArrayNIP C12 = F11 * F12 + F21 * F22 + F31 * F32;
+        ArrayNIP C13 = F11 * F13 + F21 * F23 + F31 * F33;
+        ArrayNIP C23 = F12 * F13 + F22 * F23 + F32 * F33;
 
-    //Calculate the 1st invariant of the Right Cauchy-Green deformation tensor: trace(C)
-    ArrayNIP I1 = C11 + C22 + C33;
+        //Calculate the 1st invariant of the Right Cauchy-Green deformation tensor: trace(C)
+        ArrayNIP I1 = C11 + C22 + C33;
 
-    //Calculate the 2nd invariant of the Right Cauchy-Green deformation tensor: 1/2*(trace(C)^2-trace(C^2))
-    ArrayNIP I2 = 0.5*(I1*I1 - C11 * C11 - C22 * C22 - C33 * C33) - C12 * C12 - C13 * C13 - C23 * C23;
+        //Calculate the 2nd invariant of the Right Cauchy-Green deformation tensor: 1/2*(trace(C)^2-trace(C^2))
+        ArrayNIP I2 = 0.5*(I1*I1 - C11 * C11 - C22 * C22 - C33 * C33) - C12 * C12 - C13 * C13 - C23 * C23;
 
-    //Calculate the determinate of F (commonly denoted as J)
-    ArrayNIP detF = F11 * F22*F33 + F12 * F23*F31 + F13 * F21*F32 - F11 * F23*F32 - F12 * F21*F33 - F13 * F22*F31;
+        //Calculate the determinate of F (commonly denoted as J)
+        ArrayNIP J = F11 * (F22*F33 - F23 * F32) + F12 * (F23*F31 - F21 * F33) + F13 * (F21*F32 - F22 * F31);
 
-    ArrayNIP detF_m2_3 = detF.pow(-2.0 / 3.0);
+        //Calculate the determinate of F to the -2/3 power -> J^(-2/3)
+        ArrayNIP J_m2_3 = J.pow(-2.0 / 3.0);
 
-    double c10 = m_layers[kl].GetMaterial()->Get_c10();
-    double c01 = m_layers[kl].GetMaterial()->Get_c01();
-    double k = m_layers[kl].GetMaterial()->Get_k();
+        //Get the element's material properties
+        double c10 = m_layers[kl].GetMaterial()->Get_c10();
+        double c01 = m_layers[kl].GetMaterial()->Get_c01();
+        double k = m_layers[kl].GetMaterial()->Get_k();
 
-    ArrayNIP s0 = 2.0 * m_kGQ.block<1, NIP>(0, kl * NIP) * detF_m2_3;
-    ArrayNIP s2 = -c01 * s0 * detF_m2_3;
-    s0 *= c10;
-    ArrayNIP s1 = s0 - s2 * I1;
-    ArrayNIP s3 = k * (detF - 1.0)*m_kGQ.block<1, NIP>(0, kl * NIP) - (I1*s0 - 2 * I2 * s2) / (3.0 * detF);
+        //Calculate the scale factors used for calculating the transpose of the 1st Piola-Kirchhoff Stress tensors
+        ArrayNIP M0 = 2.0 * m_kGQ * J_m2_3;
+        ArrayNIP M2 = -c01 * M0 * J_m2_3;
+        M0 *= c10;
+        ArrayNIP M1 = M0 - M2 * I1;
+        ArrayNIP M3 = k * (J - 1.0)*m_kGQ - (I1*M0 - 2 * I2 * M2) / (3.0 * J);
 
-    ChMatrixNMc<double, 3 * NIP, 3> P_Block;
-    P_Block.block<NIP, 1>(0, 0) = s3 * (F22 * F33 - F23 * F32) + (s1 + s2 * C11) * F11 + s2 * (C12 * F12 + C13 * F13);
-    P_Block.block<NIP, 1>(NIP, 0) = s3 * (F23 * F31 - F21 * F33) + (s1 + s2 * C22) * F12 + s2 * (C12 * F11 + C23 * F13);
-    P_Block.block<NIP, 1>(2 * NIP, 0) = s3 * (F21 * F32 - F22 * F31) + (s1 + s2 * C33) * F13 + s2 * (C13 * F11 + C23 * F12);
-    P_Block.block<NIP, 1>(0, 1) = s3 * (F13 * F32 - F12 * F33) + (s1 + s2 * C11) * F21 + s2 * (C12 * F22 + C13 * F23);
-    P_Block.block<NIP, 1>(NIP, 1) = s3 * (F11 * F33 - F13 * F31) + (s1 + s2 * C22) * F22 + s2 * (C12 * F21 + C23 * F23);
-    P_Block.block<NIP, 1>(2 * NIP, 1) = s3 * (F12 * F31 - F11 * F32) + (s1 + s2 * C33) * F23 + s2 * (C13 * F21 + C23 * F22);
-    P_Block.block<NIP, 1>(0, 2) = s3 * (F12 * F23 - F13 * F22) + (s1 + s2 * C11) * F31 + s2 * (C12 * F32 + C13 * F33);
-    P_Block.block<NIP, 1>(NIP, 2) = s3 * (F13 * F21 - F11 * F23) + (s1 + s2 * C22) * F32 + s2 * (C12 * F31 + C23 * F33);
-    P_Block.block<NIP, 1>(2 * NIP, 2) = s3 * (F11 * F22 - F12 * F21) + (s1 + s2 * C33) * F33 + s2 * (C13 * F31 + C23 * F32);
+        //Calculate the transpose of the 1st Piola-Kirchhoff Stress tensors grouped by Gauss-quadrature points
+        ChMatrixNMc<double, 3 * NIP, 3> P_Block;
+        P_Block.block<NIP, 1>(0, 0) = M3 * (F22 * F33 - F23 * F32) + (M1 + M2 * C11) * F11 + M2 * (C12 * F12 + C13 * F13);
+        P_Block.block<NIP, 1>(NIP, 0) = M3 * (F23 * F31 - F21 * F33) + (M1 + M2 * C22) * F12 + M2 * (C12 * F11 + C23 * F13);
+        P_Block.block<NIP, 1>(2 * NIP, 0) = M3 * (F21 * F32 - F22 * F31) + (M1 + M2 * C33) * F13 + M2 * (C13 * F11 + C23 * F12);
+        P_Block.block<NIP, 1>(0, 1) = M3 * (F13 * F32 - F12 * F33) + (M1 + M2 * C11) * F21 + M2 * (C12 * F22 + C13 * F23);
+        P_Block.block<NIP, 1>(NIP, 1) = M3 * (F11 * F33 - F13 * F31) + (M1 + M2 * C22) * F22 + M2 * (C12 * F21 + C23 * F23);
+        P_Block.block<NIP, 1>(2 * NIP, 1) = M3 * (F12 * F31 - F11 * F32) + (M1 + M2 * C33) * F23 + M2 * (C13 * F21 + C23 * F22);
+        P_Block.block<NIP, 1>(0, 2) = M3 * (F12 * F23 - F13 * F22) + (M1 + M2 * C11) * F31 + M2 * (C12 * F32 + C13 * F33);
+        P_Block.block<NIP, 1>(NIP, 2) = M3 * (F13 * F21 - F11 * F23) + (M1 + M2 * C22) * F32 + M2 * (C12 * F31 + C23 * F33);
+        P_Block.block<NIP, 1>(2 * NIP, 2) = M3 * (F11 * F22 - F12 * F21) + (M1 + M2 * C33) * F33 + M2 * (C13 * F31 + C23 * F32);
 
-    // =============================================================================
-    // Multiply the scaled first Piola-Kirchoff stresses by the shape function derivative matrix to get the
-    // generalized force vector in matrix form (in the correct order if its calculated in row-major memory layout)
-    // =============================================================================
+        // =============================================================================
+        // Multiply the scaled first Piola-Kirchoff stresses by the shape function derivative matrix to get the
+        // generalized force vector in matrix form (in the correct order if its calculated in row-major memory layout)
+        // =============================================================================
 
-    QiCompact.noalias() += m_SD.block<NSF, 3 * NIP>(kl * NSF, 0) * P_Block;
+        QiCompact.noalias() += m_SD.block<NSF, 3 * NIP>(kl * NSF, 0) * P_Block;
     }
 
     Eigen::Map<ChVectorN<double, 3 * NSF>> QiReshaped(QiCompact.data(), QiCompact.size());
     Fi.noalias() = QiReshaped;
 }
-
 
 // -----------------------------------------------------------------------------
 // Jacobians of internal forces

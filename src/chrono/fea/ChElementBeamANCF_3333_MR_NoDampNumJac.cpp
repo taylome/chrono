@@ -793,7 +793,7 @@ void ChElementBeamANCF_3333_MR_NoDampNumJac::ComputeInternalForceDamping(ChVecto
     //      [Fdot31_S  Fdot32_S  Fdot33_S  Fdot31_P  Fdot32_P  Fdot33_P ]
     // =============================================================================
 
-    ChMatrixNM<double, 6, 3 * NIP> FC = ebar_ebardot * m_SD;  // ChMatrixNM<double, 6, 3 * NIP>
+    ChMatrixNM<double, 6, 3 * NIP> FC = ebar_ebardot * m_SD;
 
     Eigen::Map<ArrayNIP_S> F11_S(FC.block<1, NIP_S>(0, 0 * NIP_S + 0 * NIP_P).data(), 1, NIP_S);
     Eigen::Map<ArrayNIP_S> F12_S(FC.block<1, NIP_S>(0, 1 * NIP_S + 0 * NIP_P).data(), 1, NIP_S);
@@ -853,16 +853,10 @@ void ChElementBeamANCF_3333_MR_NoDampNumJac::ComputeInternalForceDamping(ChVecto
     ArrayNIP_S I2 = 0.5*(I1*I1 - C11 * C11 - C22 * C22 - C33 * C33) - C12 * C12 - C13 * C13 - C23 * C23;
 
     //Calculate the determinate of F (commonly denoted as J)
-    ArrayNIP_S detF = F11_S * F22_S*F33_S + F12_S * F23_S*F31_S + F13_S * F21_S*F32_S - F11_S * F23_S*F32_S - F12_S * F21_S*F33_S - F13_S * F22_S*F31_S;
+    ArrayNIP_S J = F11_S * (F22_S*F33_S - F23_S * F32_S) + F12_S * (F23_S*F31_S - F21_S * F33_S) + F13_S * (F21_S*F32_S - F22_S * F31_S);
 
-    ArrayNIP_S detF_m2_3 = detF.pow(-2.0 / 3.0);
-
-    double c10 = GetMaterial()->Get_c10();
-    double c01 = GetMaterial()->Get_c01();
-    double k = GetMaterial()->Get_k();
-    double mu = GetMaterial()->Get_mu();
-
-    ArrayNIP_S kGQmu_over_detF3 = mu * m_kGQ_S / (detF*detF*detF);
+    //Calculate the determinate of F to the -2/3 power -> J^(-2/3)
+    ArrayNIP_S J_m2_3 = J.pow(-2.0 / 3.0);
 
     // Calculate the time derivative of the Greens-Lagrange strain tensor at the current point (symmetric):
     ArrayNIP_S Edot11 = F11_S * Fdot11_S + F21_S * Fdot21_S + F31_S * Fdot31_S;
@@ -881,47 +875,59 @@ void ChElementBeamANCF_3333_MR_NoDampNumJac::ComputeInternalForceDamping(ChVecto
     ArrayNIP_S CInv23 = C13 * C12 - C11 * C23;
 
     //Calculate the Stress from the viscosity law
-    ArrayNIP_S SPK2_NLKV_1 = kGQmu_over_detF3 * (Edot11*CInv11*CInv11 + 2.0 * Edot12*CInv11*CInv12 + 2.0 * Edot13*CInv11*CInv13 + Edot22 * CInv12*CInv12 + 2.0 * Edot23*CInv12*CInv13 + Edot33 * CInv13*CInv13);
-    ArrayNIP_S SPK2_NLKV_2 = kGQmu_over_detF3 * (Edot11*CInv12*CInv12 + 2.0 * Edot12*CInv12*CInv22 + 2.0 * Edot13*CInv12*CInv23 + Edot22 * CInv22*CInv22 + 2.0 * Edot23*CInv22*CInv23 + Edot33 * CInv23*CInv23);
-    ArrayNIP_S SPK2_NLKV_3 = kGQmu_over_detF3 * (Edot11*CInv13*CInv13 + 2.0 * Edot12*CInv13*CInv23 + 2.0 * Edot13*CInv13*CInv33 + Edot22 * CInv23*CInv23 + 2.0 * Edot23*CInv23*CInv33 + Edot33 * CInv33*CInv33);
-    ArrayNIP_S SPK2_NLKV_4 = kGQmu_over_detF3 * (Edot11*CInv12*CInv13 + Edot12 * (CInv12*CInv23 + CInv22 * CInv13) + Edot13 * (CInv12*CInv33 + CInv13 * CInv23) + Edot22 * CInv22*CInv23 + Edot23 * (CInv23*CInv23 + CInv22 * CInv33) + Edot33 * CInv23*CInv33);
-    ArrayNIP_S SPK2_NLKV_5 = kGQmu_over_detF3 * (Edot11*CInv11*CInv13 + Edot12 * (CInv11*CInv23 + CInv12 * CInv13) + Edot13 * (CInv13*CInv13 + CInv11 * CInv33) + Edot22 * CInv12*CInv23 + Edot23 * (CInv12*CInv33 + CInv13 * CInv23) + Edot33 * CInv13*CInv33);
-    ArrayNIP_S SPK2_NLKV_6 = kGQmu_over_detF3 * (Edot11*CInv11*CInv12 + Edot12 * (CInv12*CInv12 + CInv11 * CInv22) + Edot13 * (CInv11*CInv23 + CInv12 * CInv13) + Edot22 * CInv12*CInv22 + Edot23 * (CInv12*CInv23 + CInv22 * CInv13) + Edot33 * CInv13*CInv23);
+    double mu = GetMaterial()->Get_mu();
+    ArrayNIP_S kGQmu_over_J3 = mu * m_kGQ_S / (J*J*J);
+    ArrayNIP_S SPK2_NLKV_1 = kGQmu_over_J3 * (Edot11*CInv11*CInv11 + 2.0 * Edot12*CInv11*CInv12 + 2.0 * Edot13*CInv11*CInv13 + Edot22 * CInv12*CInv12 + 2.0 * Edot23*CInv12*CInv13 + Edot33 * CInv13*CInv13);
+    ArrayNIP_S SPK2_NLKV_2 = kGQmu_over_J3 * (Edot11*CInv12*CInv12 + 2.0 * Edot12*CInv12*CInv22 + 2.0 * Edot13*CInv12*CInv23 + Edot22 * CInv22*CInv22 + 2.0 * Edot23*CInv22*CInv23 + Edot33 * CInv23*CInv23);
+    ArrayNIP_S SPK2_NLKV_3 = kGQmu_over_J3 * (Edot11*CInv13*CInv13 + 2.0 * Edot12*CInv13*CInv23 + 2.0 * Edot13*CInv13*CInv33 + Edot22 * CInv23*CInv23 + 2.0 * Edot23*CInv23*CInv33 + Edot33 * CInv33*CInv33);
+    ArrayNIP_S SPK2_NLKV_4 = kGQmu_over_J3 * (Edot11*CInv12*CInv13 + Edot12 * (CInv12*CInv23 + CInv22 * CInv13) + Edot13 * (CInv12*CInv33 + CInv13 * CInv23) + Edot22 * CInv22*CInv23 + Edot23 * (CInv23*CInv23 + CInv22 * CInv33) + Edot33 * CInv23*CInv33);
+    ArrayNIP_S SPK2_NLKV_5 = kGQmu_over_J3 * (Edot11*CInv11*CInv13 + Edot12 * (CInv11*CInv23 + CInv12 * CInv13) + Edot13 * (CInv13*CInv13 + CInv11 * CInv33) + Edot22 * CInv12*CInv23 + Edot23 * (CInv12*CInv33 + CInv13 * CInv23) + Edot33 * CInv13*CInv33);
+    ArrayNIP_S SPK2_NLKV_6 = kGQmu_over_J3 * (Edot11*CInv11*CInv12 + Edot12 * (CInv12*CInv12 + CInv11 * CInv22) + Edot13 * (CInv11*CInv23 + CInv12 * CInv13) + Edot22 * CInv12*CInv22 + Edot23 * (CInv12*CInv23 + CInv22 * CInv13) + Edot33 * CInv13*CInv23);
 
-    ArrayNIP_S s0 = 2.0 * m_kGQ_S * detF_m2_3;
-    ArrayNIP_S s2 = -c01 * s0 * detF_m2_3;
-    s0 *= c10;
-    ArrayNIP_S s1 = s0 - s2 * I1;
-    ArrayNIP_S s3 = (2 * I2 * s2 - I1 * s0) / (3.0 * detF);
+    //Get the element's material properties
+    double c10 = GetMaterial()->Get_c10();
+    double c01 = GetMaterial()->Get_c01();
+    double k = GetMaterial()->Get_k();
 
+    //Calculate the scale factors used for calculating the transpose of the 1st Piola-Kirchhoff Stress tensors
+    ArrayNIP_S M0 = 2.0 * m_kGQ_S * J_m2_3;
+    ArrayNIP_S M2 = -c01 * M0 * J_m2_3;
+    M0 *= c10;
+    ArrayNIP_S M1 = M0 - M2 * I1;
+    ArrayNIP_S M3 = (2 * I2*M2 - I1 * M0) / (3.0 * J);
+
+    //Calculate the transpose of the 1st Piola-Kirchhoff Stress tensors grouped by Gauss-quadrature points for the terms excluding the volumetric penalty factor
     ChMatrixNMc<double, 3 * NIP, 3> P_Block;
-    P_Block.block<NIP_S, 1>(0 * NIP_S, 0) = s3 * (F22_S * F33_S - F23_S * F32_S) + (s1 + s2 * C11) * F11_S + s2 * (C12 * F12_S + C13 * F13_S) + F11_S * SPK2_NLKV_1 + F12_S * SPK2_NLKV_6 + F13_S * SPK2_NLKV_5;
-    P_Block.block<NIP_S, 1>(1 * NIP_S, 0) = s3 * (F23_S * F31_S - F21_S * F33_S) + (s1 + s2 * C22) * F12_S + s2 * (C12 * F11_S + C23 * F13_S) + F11_S * SPK2_NLKV_6 + F12_S * SPK2_NLKV_2 + F13_S * SPK2_NLKV_4;
-    P_Block.block<NIP_S, 1>(2 * NIP_S, 0) = s3 * (F21_S * F32_S - F22_S * F31_S) + (s1 + s2 * C33) * F13_S + s2 * (C13 * F11_S + C23 * F12_S) + F11_S * SPK2_NLKV_5 + F12_S * SPK2_NLKV_4 + F13_S * SPK2_NLKV_3;
-    P_Block.block<NIP_S, 1>(0 * NIP_S, 1) = s3 * (F13_S * F32_S - F12_S * F33_S) + (s1 + s2 * C11) * F21_S + s2 * (C12 * F22_S + C13 * F23_S) + F21_S * SPK2_NLKV_1 + F22_S * SPK2_NLKV_6 + F23_S * SPK2_NLKV_5;
-    P_Block.block<NIP_S, 1>(1 * NIP_S, 1) = s3 * (F11_S * F33_S - F13_S * F31_S) + (s1 + s2 * C22) * F22_S + s2 * (C12 * F21_S + C23 * F23_S) + F21_S * SPK2_NLKV_6 + F22_S * SPK2_NLKV_2 + F23_S * SPK2_NLKV_4;
-    P_Block.block<NIP_S, 1>(2 * NIP_S, 1) = s3 * (F12_S * F31_S - F11_S * F32_S) + (s1 + s2 * C33) * F23_S + s2 * (C13 * F21_S + C23 * F22_S) + F21_S * SPK2_NLKV_5 + F22_S * SPK2_NLKV_4 + F23_S * SPK2_NLKV_3;
-    P_Block.block<NIP_S, 1>(0 * NIP_S, 2) = s3 * (F12_S * F23_S - F13_S * F22_S) + (s1 + s2 * C11) * F31_S + s2 * (C12 * F32_S + C13 * F33_S) + F31_S * SPK2_NLKV_1 + F32_S * SPK2_NLKV_6 + F33_S * SPK2_NLKV_5;
-    P_Block.block<NIP_S, 1>(1 * NIP_S, 2) = s3 * (F13_S * F21_S - F11_S * F23_S) + (s1 + s2 * C22) * F32_S + s2 * (C12 * F31_S + C23 * F33_S) + F31_S * SPK2_NLKV_6 + F32_S * SPK2_NLKV_2 + F33_S * SPK2_NLKV_4;
-    P_Block.block<NIP_S, 1>(2 * NIP_S, 2) = s3 * (F11_S * F22_S - F12_S * F21_S) + (s1 + s2 * C33) * F33_S + s2 * (C13 * F31_S + C23 * F32_S) + F31_S * SPK2_NLKV_5 + F32_S * SPK2_NLKV_4 + F33_S * SPK2_NLKV_3;
+    P_Block.block<NIP_S, 1>(0 * NIP_S, 0) = M3 * (F22_S * F33_S - F23_S * F32_S) + (M1 + M2 * C11) * F11_S + M2 * (C12 * F12_S + C13 * F13_S) + F11_S * SPK2_NLKV_1 + F12_S * SPK2_NLKV_6 + F13_S * SPK2_NLKV_5;
+    P_Block.block<NIP_S, 1>(1 * NIP_S, 0) = M3 * (F23_S * F31_S - F21_S * F33_S) + (M1 + M2 * C22) * F12_S + M2 * (C12 * F11_S + C23 * F13_S) + F11_S * SPK2_NLKV_6 + F12_S * SPK2_NLKV_2 + F13_S * SPK2_NLKV_4;
+    P_Block.block<NIP_S, 1>(2 * NIP_S, 0) = M3 * (F21_S * F32_S - F22_S * F31_S) + (M1 + M2 * C33) * F13_S + M2 * (C13 * F11_S + C23 * F12_S) + F11_S * SPK2_NLKV_5 + F12_S * SPK2_NLKV_4 + F13_S * SPK2_NLKV_3;
+    P_Block.block<NIP_S, 1>(0 * NIP_S, 1) = M3 * (F13_S * F32_S - F12_S * F33_S) + (M1 + M2 * C11) * F21_S + M2 * (C12 * F22_S + C13 * F23_S) + F21_S * SPK2_NLKV_1 + F22_S * SPK2_NLKV_6 + F23_S * SPK2_NLKV_5;
+    P_Block.block<NIP_S, 1>(1 * NIP_S, 1) = M3 * (F11_S * F33_S - F13_S * F31_S) + (M1 + M2 * C22) * F22_S + M2 * (C12 * F21_S + C23 * F23_S) + F21_S * SPK2_NLKV_6 + F22_S * SPK2_NLKV_2 + F23_S * SPK2_NLKV_4;
+    P_Block.block<NIP_S, 1>(2 * NIP_S, 1) = M3 * (F12_S * F31_S - F11_S * F32_S) + (M1 + M2 * C33) * F23_S + M2 * (C13 * F21_S + C23 * F22_S) + F21_S * SPK2_NLKV_5 + F22_S * SPK2_NLKV_4 + F23_S * SPK2_NLKV_3;
+    P_Block.block<NIP_S, 1>(0 * NIP_S, 2) = M3 * (F12_S * F23_S - F13_S * F22_S) + (M1 + M2 * C11) * F31_S + M2 * (C12 * F32_S + C13 * F33_S) + F31_S * SPK2_NLKV_1 + F32_S * SPK2_NLKV_6 + F33_S * SPK2_NLKV_5;
+    P_Block.block<NIP_S, 1>(1 * NIP_S, 2) = M3 * (F13_S * F21_S - F11_S * F23_S) + (M1 + M2 * C22) * F32_S + M2 * (C12 * F31_S + C23 * F33_S) + F31_S * SPK2_NLKV_6 + F32_S * SPK2_NLKV_2 + F33_S * SPK2_NLKV_4;
+    P_Block.block<NIP_S, 1>(2 * NIP_S, 2) = M3 * (F11_S * F22_S - F12_S * F21_S) + (M1 + M2 * C33) * F33_S + M2 * (C13 * F31_S + C23 * F32_S) + F31_S * SPK2_NLKV_5 + F32_S * SPK2_NLKV_4 + F33_S * SPK2_NLKV_3;
 
 
-    ArrayNIP_P detF_P = F11_P * F22_P*F33_P + F12_P * F23_P*F31_P + F13_P * F21_P*F32_P - F11_P * F23_P*F32_P - F12_P * F21_P*F33_P - F13_P * F22_P*F31_P;
-    ArrayNIP_P s3_P = k * (detF_P - 1.0)*m_kGQ_P;
+    //Calculate the determinate of F (commonly denoted as J) for the volumentric penalty Gauss quadrature points
+    ArrayNIP_P J_P = F11_P * (F22_P*F33_P - F23_P * F32_P) + F12_P * (F23_P*F31_P - F21_P * F33_P) + F13_P * (F21_P*F32_P - F22_P * F31_P);
+    ArrayNIP_P M3_P = k * (J_P - 1.0)*m_kGQ_P;
 
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 0 * NIP_P, 0) = s3_P * (F22_P * F33_P - F23_P * F32_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 1 * NIP_P, 0) = s3_P * (F23_P * F31_P - F21_P * F33_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 2 * NIP_P, 0) = s3_P * (F21_P * F32_P - F22_P * F31_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 0 * NIP_P, 1) = s3_P * (F13_P * F32_P - F12_P * F33_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 1 * NIP_P, 1) = s3_P * (F11_P * F33_P - F13_P * F31_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 2 * NIP_P, 1) = s3_P * (F12_P * F31_P - F11_P * F32_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 0 * NIP_P, 2) = s3_P * (F12_P * F23_P - F13_P * F22_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 1 * NIP_P, 2) = s3_P * (F13_P * F21_P - F11_P * F23_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 2 * NIP_P, 2) = s3_P * (F11_P * F22_P - F12_P * F21_P);
+    //Calculate the transpose of the 1st Piola-Kirchhoff Stress tensors grouped by Gauss-quadrature points for the terms accounting for the volumetric penalty factor
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 0 * NIP_P, 0) = M3_P * (F22_P * F33_P - F23_P * F32_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 1 * NIP_P, 0) = M3_P * (F23_P * F31_P - F21_P * F33_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 2 * NIP_P, 0) = M3_P * (F21_P * F32_P - F22_P * F31_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 0 * NIP_P, 1) = M3_P * (F13_P * F32_P - F12_P * F33_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 1 * NIP_P, 1) = M3_P * (F11_P * F33_P - F13_P * F31_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 2 * NIP_P, 1) = M3_P * (F12_P * F31_P - F11_P * F32_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 0 * NIP_P, 2) = M3_P * (F12_P * F23_P - F13_P * F22_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 1 * NIP_P, 2) = M3_P * (F13_P * F21_P - F11_P * F23_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 2 * NIP_P, 2) = M3_P * (F11_P * F22_P - F12_P * F21_P);
 
-
-    Eigen::Map<MatrixNx3> FiCompact(Fi.data(), NSF, 3);
-    FiCompact.noalias() = m_SD * P_Block;
+    //Calculate the generalized internal force vector in matrix form and then reshape it into its required vector layout
+    MatrixNx3 QiCompact = m_SD * P_Block;
+    Eigen::Map<ChVectorN<double, 3 * NSF>> QiReshaped(QiCompact.data(), QiCompact.size());
+    Fi.noalias() = QiReshaped;
 }
 
 void ChElementBeamANCF_3333_MR_NoDampNumJac::ComputeInternalForceNoDamping(ChVectorDynamic<>& Fi, Matrix3xN& ebar) {
@@ -980,49 +986,54 @@ void ChElementBeamANCF_3333_MR_NoDampNumJac::ComputeInternalForceNoDamping(ChVec
     ArrayNIP_S I2 = 0.5*(I1*I1 - C11 * C11 - C22 * C22 - C33 * C33) - C12 * C12 - C13 * C13 - C23 * C23;
 
     //Calculate the determinate of F (commonly denoted as J)
-    ArrayNIP_S detF = F11_S * F22_S*F33_S + F12_S * F23_S*F31_S + F13_S * F21_S*F32_S - F11_S * F23_S*F32_S - F12_S * F21_S*F33_S - F13_S * F22_S*F31_S;
+    ArrayNIP_S J = F11_S * (F22_S*F33_S - F23_S * F32_S) + F12_S * (F23_S*F31_S - F21_S * F33_S) + F13_S * (F21_S*F32_S - F22_S * F31_S);
 
-    ArrayNIP_S detF_m2_3 = detF.pow(-2.0 / 3.0);
+    //Calculate the determinate of F to the -2/3 power -> J^(-2/3)
+    ArrayNIP_S J_m2_3 = J.pow(-2.0 / 3.0);
 
+    //Get the element's material properties
     double c10 = GetMaterial()->Get_c10();
     double c01 = GetMaterial()->Get_c01();
     double k = GetMaterial()->Get_k();
 
-    ArrayNIP_S s0 = 2.0 * m_kGQ_S * detF_m2_3;
-    ArrayNIP_S s2 = -c01 * s0 * detF_m2_3;
-    s0 *= c10;
-    ArrayNIP_S s1 = s0 - s2 * I1;
-    ArrayNIP_S s3 = (2 * I2 * s2 - I1 * s0) / (3.0 * detF);
+    //Calculate the scale factors used for calculating the transpose of the 1st Piola-Kirchhoff Stress tensors
+    ArrayNIP_S M0 = 2.0 * m_kGQ_S * J_m2_3;
+    ArrayNIP_S M2 = -c01 * M0 * J_m2_3;
+    M0 *= c10;
+    ArrayNIP_S M1 = M0 - M2 * I1;
+    ArrayNIP_S M3 = (2 * I2*M2 - I1 * M0) / (3.0 * J);
 
     ChMatrixNMc<double, 3 * NIP, 3> P_Block;
-    P_Block.block<NIP_S, 1>(0 * NIP_S, 0) = s3 * (F22_S * F33_S - F23_S * F32_S) + (s1 + s2 * C11) * F11_S + s2 * (C12 * F12_S + C13 * F13_S);
-    P_Block.block<NIP_S, 1>(1 * NIP_S, 0) = s3 * (F23_S * F31_S - F21_S * F33_S) + (s1 + s2 * C22) * F12_S + s2 * (C12 * F11_S + C23 * F13_S);
-    P_Block.block<NIP_S, 1>(2 * NIP_S, 0) = s3 * (F21_S * F32_S - F22_S * F31_S) + (s1 + s2 * C33) * F13_S + s2 * (C13 * F11_S + C23 * F12_S);
-    P_Block.block<NIP_S, 1>(0 * NIP_S, 1) = s3 * (F13_S * F32_S - F12_S * F33_S) + (s1 + s2 * C11) * F21_S + s2 * (C12 * F22_S + C13 * F23_S);
-    P_Block.block<NIP_S, 1>(1 * NIP_S, 1) = s3 * (F11_S * F33_S - F13_S * F31_S) + (s1 + s2 * C22) * F22_S + s2 * (C12 * F21_S + C23 * F23_S);
-    P_Block.block<NIP_S, 1>(2 * NIP_S, 1) = s3 * (F12_S * F31_S - F11_S * F32_S) + (s1 + s2 * C33) * F23_S + s2 * (C13 * F21_S + C23 * F22_S);
-    P_Block.block<NIP_S, 1>(0 * NIP_S, 2) = s3 * (F12_S * F23_S - F13_S * F22_S) + (s1 + s2 * C11) * F31_S + s2 * (C12 * F32_S + C13 * F33_S);
-    P_Block.block<NIP_S, 1>(1 * NIP_S, 2) = s3 * (F13_S * F21_S - F11_S * F23_S) + (s1 + s2 * C22) * F32_S + s2 * (C12 * F31_S + C23 * F33_S);
-    P_Block.block<NIP_S, 1>(2 * NIP_S, 2) = s3 * (F11_S * F22_S - F12_S * F21_S) + (s1 + s2 * C33) * F33_S + s2 * (C13 * F31_S + C23 * F32_S);
+    P_Block.block<NIP_S, 1>(0 * NIP_S, 0) = M3 * (F22_S * F33_S - F23_S * F32_S) + (M1 + M2 * C11) * F11_S + M2 * (C12 * F12_S + C13 * F13_S);
+    P_Block.block<NIP_S, 1>(1 * NIP_S, 0) = M3 * (F23_S * F31_S - F21_S * F33_S) + (M1 + M2 * C22) * F12_S + M2 * (C12 * F11_S + C23 * F13_S);
+    P_Block.block<NIP_S, 1>(2 * NIP_S, 0) = M3 * (F21_S * F32_S - F22_S * F31_S) + (M1 + M2 * C33) * F13_S + M2 * (C13 * F11_S + C23 * F12_S);
+    P_Block.block<NIP_S, 1>(0 * NIP_S, 1) = M3 * (F13_S * F32_S - F12_S * F33_S) + (M1 + M2 * C11) * F21_S + M2 * (C12 * F22_S + C13 * F23_S);
+    P_Block.block<NIP_S, 1>(1 * NIP_S, 1) = M3 * (F11_S * F33_S - F13_S * F31_S) + (M1 + M2 * C22) * F22_S + M2 * (C12 * F21_S + C23 * F23_S);
+    P_Block.block<NIP_S, 1>(2 * NIP_S, 1) = M3 * (F12_S * F31_S - F11_S * F32_S) + (M1 + M2 * C33) * F23_S + M2 * (C13 * F21_S + C23 * F22_S);
+    P_Block.block<NIP_S, 1>(0 * NIP_S, 2) = M3 * (F12_S * F23_S - F13_S * F22_S) + (M1 + M2 * C11) * F31_S + M2 * (C12 * F32_S + C13 * F33_S);
+    P_Block.block<NIP_S, 1>(1 * NIP_S, 2) = M3 * (F13_S * F21_S - F11_S * F23_S) + (M1 + M2 * C22) * F32_S + M2 * (C12 * F31_S + C23 * F33_S);
+    P_Block.block<NIP_S, 1>(2 * NIP_S, 2) = M3 * (F11_S * F22_S - F12_S * F21_S) + (M1 + M2 * C33) * F33_S + M2 * (C13 * F31_S + C23 * F32_S);
 
 
-    ArrayNIP_P detF_P = F11_P * F22_P*F33_P + F12_P * F23_P*F31_P + F13_P * F21_P*F32_P - F11_P * F23_P*F32_P - F12_P * F21_P*F33_P - F13_P * F22_P*F31_P;
-    ArrayNIP_P s3_P = k * (detF_P - 1.0)*m_kGQ_P;
+    //Calculate the determinate of F (commonly denoted as J) for the volumentric penalty Gauss quadrature points
+    ArrayNIP_P J_P = F11_P * (F22_P*F33_P - F23_P * F32_P) + F12_P * (F23_P*F31_P - F21_P * F33_P) + F13_P * (F21_P*F32_P - F22_P * F31_P);
+    ArrayNIP_P M3_P = k * (J_P - 1.0)*m_kGQ_P;
 
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 0 * NIP_P, 0) = s3_P * (F22_P * F33_P - F23_P * F32_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 1 * NIP_P, 0) = s3_P * (F23_P * F31_P - F21_P * F33_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 2 * NIP_P, 0) = s3_P * (F21_P * F32_P - F22_P * F31_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 0 * NIP_P, 1) = s3_P * (F13_P * F32_P - F12_P * F33_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 1 * NIP_P, 1) = s3_P * (F11_P * F33_P - F13_P * F31_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 2 * NIP_P, 1) = s3_P * (F12_P * F31_P - F11_P * F32_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 0 * NIP_P, 2) = s3_P * (F12_P * F23_P - F13_P * F22_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 1 * NIP_P, 2) = s3_P * (F13_P * F21_P - F11_P * F23_P);
-    P_Block.block<NIP_P, 1>(3 * NIP_S + 2 * NIP_P, 2) = s3_P * (F11_P * F22_P - F12_P * F21_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 0 * NIP_P, 0) = M3_P * (F22_P * F33_P - F23_P * F32_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 1 * NIP_P, 0) = M3_P * (F23_P * F31_P - F21_P * F33_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 2 * NIP_P, 0) = M3_P * (F21_P * F32_P - F22_P * F31_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 0 * NIP_P, 1) = M3_P * (F13_P * F32_P - F12_P * F33_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 1 * NIP_P, 1) = M3_P * (F11_P * F33_P - F13_P * F31_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 2 * NIP_P, 1) = M3_P * (F12_P * F31_P - F11_P * F32_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 0 * NIP_P, 2) = M3_P * (F12_P * F23_P - F13_P * F22_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 1 * NIP_P, 2) = M3_P * (F13_P * F21_P - F11_P * F23_P);
+    P_Block.block<NIP_P, 1>(3 * NIP_S + 2 * NIP_P, 2) = M3_P * (F11_P * F22_P - F12_P * F21_P);
 
-    Eigen::Map<MatrixNx3> FiCompact(Fi.data(), NSF, 3);
-    FiCompact.noalias() = m_SD * P_Block;
+    //Calculate the generalized internal force vector in matrix form and then reshape it into its required vector layout
+    MatrixNx3 QiCompact = m_SD * P_Block;
+    Eigen::Map<ChVectorN<double, 3 * NSF>> QiReshaped(QiCompact.data(), QiCompact.size());
+    Fi.noalias() = QiReshaped;
 }
-
 
 // -----------------------------------------------------------------------------
 // Jacobians of internal forces
