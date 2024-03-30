@@ -43,7 +43,16 @@ class CH_VEHICLE_API ChTrackShoeBandANCF : public ChTrackShoeBand {
   public:
     enum class ElementType {
         ANCF_4,  ///< 4-node ANCF shell element
-        ANCF_8   ///< 8-node ANCF shell element
+        ANCF_8,   ///< 8-node ANCF shell element
+        ANCF_8_CHRONO6,   ///< 8-node ANCF shell element, Chrono v6
+        ANCF_8_TR01,   ///< 8-node ANCF shell element, Method A
+        ANCF_8_TR05,   ///< 8-node ANCF shell element, Method B
+        ANCF_8_TR06,   ///< 8-node ANCF shell element, Method C
+        ANCF_8_TR07,   ///< 8-node ANCF shell element, Method E
+        ANCF_8_TR08,   ///< 8-node ANCF shell element, Method D
+        ANCF_8_TR09,   ///< 8-node ANCF shell element, Method L
+        ANCF_8_TR13,   ///< 8-node ANCF shell element, Method G
+        ANCF_8_M113,   ///< 8-node ANCF shell element, MR-A + D + MR-A
     };
 
     ChTrackShoeBandANCF(const std::string& name,                         ///< [in] name of the subsystem

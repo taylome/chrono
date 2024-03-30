@@ -37,7 +37,7 @@ double M113_SimpleMapPowertrain::GetMaxEngineSpeed() {
 }
 
 void M113_SimpleMapPowertrain::SetEngineTorqueMaps(ChFunction_Recorder& map0, ChFunction_Recorder& mapF) {
-    map0.AddPoint(-100 * rpm2rads, 0 * lbft2Nm);  // to start engine
+    map0.AddPoint(-100 * rpm2rads, 4*450 * lbft2Nm);  // to start engine
     map0.AddPoint(500 * rpm2rads, 450 * lbft2Nm);
     map0.AddPoint(1000 * rpm2rads, 450 * lbft2Nm);
     map0.AddPoint(1500 * rpm2rads, 445 * lbft2Nm);
@@ -47,7 +47,7 @@ void M113_SimpleMapPowertrain::SetEngineTorqueMaps(ChFunction_Recorder& map0, Ch
     map0.AddPoint(3000 * rpm2rads, 380 * lbft2Nm);
     map0.AddPoint(3200 * rpm2rads, -100 * lbft2Nm);  // fading out of engine torque
 
-    mapF.AddPoint(-100 * rpm2rads, 0 * lbft2Nm);  // to start engine
+    mapF.AddPoint(-100 * rpm2rads, 4*450 * lbft2Nm);  // to start engine
     mapF.AddPoint(500 * rpm2rads, 450 * lbft2Nm);
     mapF.AddPoint(1000 * rpm2rads, 450 * lbft2Nm);
     mapF.AddPoint(1500 * rpm2rads, 445 * lbft2Nm);

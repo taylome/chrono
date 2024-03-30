@@ -32,6 +32,16 @@
 #include "chrono/fea/ChContactSurfaceNodeCloud.h"
 #include "chrono/fea/ChElementShellANCF_3423.h"
 #include "chrono/fea/ChElementShellANCF_3833.h"
+#include "chrono/fea/ChElementShellANCF_3833_Chrono6.h"
+#include "chrono/fea/ChElementShellANCF_3833_TR01.h"
+#include "chrono/fea/ChElementShellANCF_3833_TR05.h"
+#include "chrono/fea/ChElementShellANCF_3833_TR06.h"
+#include "chrono/fea/ChElementShellANCF_3833_TR07.h"
+#include "chrono/fea/ChElementShellANCF_3833_TR08.h"
+#include "chrono/fea/ChElementShellANCF_3833_TR09.h"
+#include "chrono/fea/ChElementShellANCF_3833_TR13.h"
+#include "chrono/fea/ChElementShellANCF_3833_M113.h"
+
 #include "chrono/fea/ChLinkDirFrame.h"
 #include "chrono/fea/ChLinkPointFrame.h"
 #include "chrono/fea/ChMesh.h"
@@ -248,6 +258,771 @@ void ChTrackShoeBandANCF::Initialize(std::shared_ptr<ChBodyAuxRef> chassis,
 
             break;
         }
+        case ElementType::ANCF_8_CHRONO6: {
+            int N_x_edge = 2 * num_elements_length + 1;
+            int N_y_edge = 2 * num_elements_width + 1;
+            int N_y_mid = num_elements_width + 1;
+
+            double dx = GetWebLength() / (2 * num_elements_length);
+            double dy = GetBeltWidth() / (2 * num_elements_width);
+
+            double dz_steel = GetSteelLayerThickness();
+            double dz_rubber = (GetWebThickness() - dz_steel) / 2;
+
+            // Create and add the nodes
+            for (int x_idx = 0; x_idx < N_x_edge; x_idx++) {
+                for (int y_idx = 0; y_idx < N_y_edge; y_idx++) {
+                    if ((x_idx % 2 == 1) && (y_idx % 2 == 1))
+                        continue;
+
+                    // Node location
+                    auto node_loc = seg_loc + x_idx * dx * xdir + y_idx * dy * ydir;
+                    // Node direction
+                    auto node_dir = zdir;
+                    // Node direction derivative
+                    auto node_curv = ChVector<>(0.0, 0.0, 0.0);
+                    // Create the node
+                    auto node = chrono_types::make_shared<ChNodeFEAxyzDD>(node_loc, node_dir, node_curv);
+                    // No additional mass assigned to nodes
+                    node->SetMass(0);
+                    // Add node to mesh
+                    m_web_mesh->AddNode(node);
+                }
+            }
+
+            // Create the elements
+            for (int x_idx = 0; x_idx < num_elements_length; x_idx++) {
+                for (int y_idx = 0; y_idx < num_elements_width; y_idx++) {
+                    // Adjacent nodes
+                    /// The node numbering is in ccw fashion as in the following scheme:
+                    ///         v
+                    ///         ^
+                    /// D o-----G-----o C
+                    ///   |     |     |
+                    /// --H-----+-----F-> u
+                    ///   |     |     |
+                    /// A o-----E-----o B
+
+                    unsigned int node0 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid);
+                    unsigned int node1 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node2 = m_starting_node_index + 2 * (y_idx + 1) + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node3 = m_starting_node_index + 2 * (y_idx + 1) + x_idx * (N_y_edge + N_y_mid);
+
+                    unsigned int node4 = m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge;
+                    unsigned int node5 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid) + 1;
+                    unsigned int node6 =
+                        m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge + 1;
+                    unsigned int node7 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid) + 1;
+
+                    // Create the element and set its nodes.
+                    auto element = chrono_types::make_shared<ChElementShellANCF_3833_Chrono6>();
+                    element->SetNodes(std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node0)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node1)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node2)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node3)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node4)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node5)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node6)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node7)));
+
+                    // Set element dimensions
+                    element->SetDimensions(2 * dx, 2 * dy);
+
+                    // Add a single layers with a fiber angle of 0 degrees.
+                    element->AddLayer(dz_rubber, m_angle_1, m_rubber_mat);
+                    element->AddLayer(dz_steel, m_angle_2, m_steel_mat);
+                    element->AddLayer(dz_rubber, m_angle_3, m_rubber_mat);
+
+                    // Set other element properties
+                    element->SetAlphaDamp(m_alpha);
+
+                    // Add element to mesh
+                    m_web_mesh->AddElement(element);
+                }
+            }
+
+            break;
+        }
+        case ElementType::ANCF_8_TR01: {
+            int N_x_edge = 2 * num_elements_length + 1;
+            int N_y_edge = 2 * num_elements_width + 1;
+            int N_y_mid = num_elements_width + 1;
+
+            double dx = GetWebLength() / (2 * num_elements_length);
+            double dy = GetBeltWidth() / (2 * num_elements_width);
+
+            double dz_steel = GetSteelLayerThickness();
+            double dz_rubber = (GetWebThickness() - dz_steel) / 2;
+
+            // Create and add the nodes
+            for (int x_idx = 0; x_idx < N_x_edge; x_idx++) {
+                for (int y_idx = 0; y_idx < N_y_edge; y_idx++) {
+                    if ((x_idx % 2 == 1) && (y_idx % 2 == 1))
+                        continue;
+
+                    // Node location
+                    auto node_loc = seg_loc + x_idx * dx * xdir + y_idx * dy * ydir;
+                    // Node direction
+                    auto node_dir = zdir;
+                    // Node direction derivative
+                    auto node_curv = ChVector<>(0.0, 0.0, 0.0);
+                    // Create the node
+                    auto node = chrono_types::make_shared<ChNodeFEAxyzDD>(node_loc, node_dir, node_curv);
+                    // No additional mass assigned to nodes
+                    node->SetMass(0);
+                    // Add node to mesh
+                    m_web_mesh->AddNode(node);
+                }
+            }
+
+            // Create the elements
+            for (int x_idx = 0; x_idx < num_elements_length; x_idx++) {
+                for (int y_idx = 0; y_idx < num_elements_width; y_idx++) {
+                    // Adjacent nodes
+                    /// The node numbering is in ccw fashion as in the following scheme:
+                    ///         v
+                    ///         ^
+                    /// D o-----G-----o C
+                    ///   |     |     |
+                    /// --H-----+-----F-> u
+                    ///   |     |     |
+                    /// A o-----E-----o B
+
+                    unsigned int node0 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid);
+                    unsigned int node1 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node2 = m_starting_node_index + 2 * (y_idx + 1) + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node3 = m_starting_node_index + 2 * (y_idx + 1) + x_idx * (N_y_edge + N_y_mid);
+
+                    unsigned int node4 = m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge;
+                    unsigned int node5 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid) + 1;
+                    unsigned int node6 =
+                        m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge + 1;
+                    unsigned int node7 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid) + 1;
+
+                    // Create the element and set its nodes.
+                    auto element = chrono_types::make_shared<ChElementShellANCF_3833_TR01>();
+                    element->SetNodes(std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node0)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node1)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node2)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node3)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node4)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node5)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node6)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node7)));
+
+                    // Set element dimensions
+                    element->SetDimensions(2 * dx, 2 * dy);
+
+                    // Add a single layers with a fiber angle of 0 degrees.
+                    element->AddLayer(dz_rubber, m_angle_1, m_rubber_mat);
+                    element->AddLayer(dz_steel, m_angle_2, m_steel_mat);
+                    element->AddLayer(dz_rubber, m_angle_3, m_rubber_mat);
+
+                    // Set other element properties
+                    element->SetAlphaDamp(m_alpha);
+
+                    // Add element to mesh
+                    m_web_mesh->AddElement(element);
+                }
+            }
+
+            break;
+        }
+        case ElementType::ANCF_8_TR05: {
+            int N_x_edge = 2 * num_elements_length + 1;
+            int N_y_edge = 2 * num_elements_width + 1;
+            int N_y_mid = num_elements_width + 1;
+
+            double dx = GetWebLength() / (2 * num_elements_length);
+            double dy = GetBeltWidth() / (2 * num_elements_width);
+
+            double dz_steel = GetSteelLayerThickness();
+            double dz_rubber = (GetWebThickness() - dz_steel) / 2;
+
+            // Create and add the nodes
+            for (int x_idx = 0; x_idx < N_x_edge; x_idx++) {
+                for (int y_idx = 0; y_idx < N_y_edge; y_idx++) {
+                    if ((x_idx % 2 == 1) && (y_idx % 2 == 1))
+                        continue;
+
+                    // Node location
+                    auto node_loc = seg_loc + x_idx * dx * xdir + y_idx * dy * ydir;
+                    // Node direction
+                    auto node_dir = zdir;
+                    // Node direction derivative
+                    auto node_curv = ChVector<>(0.0, 0.0, 0.0);
+                    // Create the node
+                    auto node = chrono_types::make_shared<ChNodeFEAxyzDD>(node_loc, node_dir, node_curv);
+                    // No additional mass assigned to nodes
+                    node->SetMass(0);
+                    // Add node to mesh
+                    m_web_mesh->AddNode(node);
+                }
+            }
+
+            // Create the elements
+            for (int x_idx = 0; x_idx < num_elements_length; x_idx++) {
+                for (int y_idx = 0; y_idx < num_elements_width; y_idx++) {
+                    // Adjacent nodes
+                    /// The node numbering is in ccw fashion as in the following scheme:
+                    ///         v
+                    ///         ^
+                    /// D o-----G-----o C
+                    ///   |     |     |
+                    /// --H-----+-----F-> u
+                    ///   |     |     |
+                    /// A o-----E-----o B
+
+                    unsigned int node0 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid);
+                    unsigned int node1 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node2 = m_starting_node_index + 2 * (y_idx + 1) + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node3 = m_starting_node_index + 2 * (y_idx + 1) + x_idx * (N_y_edge + N_y_mid);
+
+                    unsigned int node4 = m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge;
+                    unsigned int node5 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid) + 1;
+                    unsigned int node6 =
+                        m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge + 1;
+                    unsigned int node7 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid) + 1;
+
+                    // Create the element and set its nodes.
+                    auto element = chrono_types::make_shared<ChElementShellANCF_3833_TR05>();
+                    element->SetNodes(std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node0)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node1)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node2)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node3)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node4)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node5)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node6)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node7)));
+
+                    // Set element dimensions
+                    element->SetDimensions(2 * dx, 2 * dy);
+
+                    // Add a single layers with a fiber angle of 0 degrees.
+                    element->AddLayer(dz_rubber, m_angle_1, m_rubber_mat);
+                    element->AddLayer(dz_steel, m_angle_2, m_steel_mat);
+                    element->AddLayer(dz_rubber, m_angle_3, m_rubber_mat);
+
+                    // Set other element properties
+                    element->SetAlphaDamp(m_alpha);
+
+                    // Add element to mesh
+                    m_web_mesh->AddElement(element);
+                }
+            }
+
+            break;
+        }
+        case ElementType::ANCF_8_TR06: {
+            int N_x_edge = 2 * num_elements_length + 1;
+            int N_y_edge = 2 * num_elements_width + 1;
+            int N_y_mid = num_elements_width + 1;
+
+            double dx = GetWebLength() / (2 * num_elements_length);
+            double dy = GetBeltWidth() / (2 * num_elements_width);
+
+            double dz_steel = GetSteelLayerThickness();
+            double dz_rubber = (GetWebThickness() - dz_steel) / 2;
+
+            // Create and add the nodes
+            for (int x_idx = 0; x_idx < N_x_edge; x_idx++) {
+                for (int y_idx = 0; y_idx < N_y_edge; y_idx++) {
+                    if ((x_idx % 2 == 1) && (y_idx % 2 == 1))
+                        continue;
+
+                    // Node location
+                    auto node_loc = seg_loc + x_idx * dx * xdir + y_idx * dy * ydir;
+                    // Node direction
+                    auto node_dir = zdir;
+                    // Node direction derivative
+                    auto node_curv = ChVector<>(0.0, 0.0, 0.0);
+                    // Create the node
+                    auto node = chrono_types::make_shared<ChNodeFEAxyzDD>(node_loc, node_dir, node_curv);
+                    // No additional mass assigned to nodes
+                    node->SetMass(0);
+                    // Add node to mesh
+                    m_web_mesh->AddNode(node);
+                }
+            }
+
+            // Create the elements
+            for (int x_idx = 0; x_idx < num_elements_length; x_idx++) {
+                for (int y_idx = 0; y_idx < num_elements_width; y_idx++) {
+                    // Adjacent nodes
+                    /// The node numbering is in ccw fashion as in the following scheme:
+                    ///         v
+                    ///         ^
+                    /// D o-----G-----o C
+                    ///   |     |     |
+                    /// --H-----+-----F-> u
+                    ///   |     |     |
+                    /// A o-----E-----o B
+
+                    unsigned int node0 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid);
+                    unsigned int node1 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node2 = m_starting_node_index + 2 * (y_idx + 1) + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node3 = m_starting_node_index + 2 * (y_idx + 1) + x_idx * (N_y_edge + N_y_mid);
+
+                    unsigned int node4 = m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge;
+                    unsigned int node5 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid) + 1;
+                    unsigned int node6 =
+                        m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge + 1;
+                    unsigned int node7 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid) + 1;
+
+                    // Create the element and set its nodes.
+                    auto element = chrono_types::make_shared<ChElementShellANCF_3833_TR06>();
+                    element->SetNodes(std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node0)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node1)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node2)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node3)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node4)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node5)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node6)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node7)));
+
+                    // Set element dimensions
+                    element->SetDimensions(2 * dx, 2 * dy);
+
+                    // Add a single layers with a fiber angle of 0 degrees.
+                    element->AddLayer(dz_rubber, m_angle_1, m_rubber_mat);
+                    element->AddLayer(dz_steel, m_angle_2, m_steel_mat);
+                    element->AddLayer(dz_rubber, m_angle_3, m_rubber_mat);
+
+                    // Set other element properties
+                    element->SetAlphaDamp(m_alpha);
+
+                    // Add element to mesh
+                    m_web_mesh->AddElement(element);
+                }
+            }
+
+            break;
+        }
+        case ElementType::ANCF_8_TR07: {
+            int N_x_edge = 2 * num_elements_length + 1;
+            int N_y_edge = 2 * num_elements_width + 1;
+            int N_y_mid = num_elements_width + 1;
+
+            double dx = GetWebLength() / (2 * num_elements_length);
+            double dy = GetBeltWidth() / (2 * num_elements_width);
+
+            double dz_steel = GetSteelLayerThickness();
+            double dz_rubber = (GetWebThickness() - dz_steel) / 2;
+
+            // Create and add the nodes
+            for (int x_idx = 0; x_idx < N_x_edge; x_idx++) {
+                for (int y_idx = 0; y_idx < N_y_edge; y_idx++) {
+                    if ((x_idx % 2 == 1) && (y_idx % 2 == 1))
+                        continue;
+
+                    // Node location
+                    auto node_loc = seg_loc + x_idx * dx * xdir + y_idx * dy * ydir;
+                    // Node direction
+                    auto node_dir = zdir;
+                    // Node direction derivative
+                    auto node_curv = ChVector<>(0.0, 0.0, 0.0);
+                    // Create the node
+                    auto node = chrono_types::make_shared<ChNodeFEAxyzDD>(node_loc, node_dir, node_curv);
+                    // No additional mass assigned to nodes
+                    node->SetMass(0);
+                    // Add node to mesh
+                    m_web_mesh->AddNode(node);
+                }
+            }
+
+            // Create the elements
+            for (int x_idx = 0; x_idx < num_elements_length; x_idx++) {
+                for (int y_idx = 0; y_idx < num_elements_width; y_idx++) {
+                    // Adjacent nodes
+                    /// The node numbering is in ccw fashion as in the following scheme:
+                    ///         v
+                    ///         ^
+                    /// D o-----G-----o C
+                    ///   |     |     |
+                    /// --H-----+-----F-> u
+                    ///   |     |     |
+                    /// A o-----E-----o B
+
+                    unsigned int node0 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid);
+                    unsigned int node1 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node2 = m_starting_node_index + 2 * (y_idx + 1) + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node3 = m_starting_node_index + 2 * (y_idx + 1) + x_idx * (N_y_edge + N_y_mid);
+
+                    unsigned int node4 = m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge;
+                    unsigned int node5 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid) + 1;
+                    unsigned int node6 =
+                        m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge + 1;
+                    unsigned int node7 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid) + 1;
+
+                    // Create the element and set its nodes.
+                    auto element = chrono_types::make_shared<ChElementShellANCF_3833_TR07>();
+                    element->SetNodes(std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node0)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node1)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node2)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node3)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node4)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node5)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node6)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node7)));
+
+                    // Set element dimensions
+                    element->SetDimensions(2 * dx, 2 * dy);
+
+                    // Add a single layers with a fiber angle of 0 degrees.
+                    element->AddLayer(dz_rubber, m_angle_1, m_rubber_mat);
+                    element->AddLayer(dz_steel, m_angle_2, m_steel_mat);
+                    element->AddLayer(dz_rubber, m_angle_3, m_rubber_mat);
+
+                    // Set other element properties
+                    element->SetAlphaDamp(m_alpha);
+
+                    // Add element to mesh
+                    m_web_mesh->AddElement(element);
+                }
+            }
+
+            break;
+        }
+        case ElementType::ANCF_8_TR08: {
+            int N_x_edge = 2 * num_elements_length + 1;
+            int N_y_edge = 2 * num_elements_width + 1;
+            int N_y_mid = num_elements_width + 1;
+
+            double dx = GetWebLength() / (2 * num_elements_length);
+            double dy = GetBeltWidth() / (2 * num_elements_width);
+
+            double dz_steel = GetSteelLayerThickness();
+            double dz_rubber = (GetWebThickness() - dz_steel) / 2;
+
+            // Create and add the nodes
+            for (int x_idx = 0; x_idx < N_x_edge; x_idx++) {
+                for (int y_idx = 0; y_idx < N_y_edge; y_idx++) {
+                    if ((x_idx % 2 == 1) && (y_idx % 2 == 1))
+                        continue;
+
+                    // Node location
+                    auto node_loc = seg_loc + x_idx * dx * xdir + y_idx * dy * ydir;
+                    // Node direction
+                    auto node_dir = zdir;
+                    // Node direction derivative
+                    auto node_curv = ChVector<>(0.0, 0.0, 0.0);
+                    // Create the node
+                    auto node = chrono_types::make_shared<ChNodeFEAxyzDD>(node_loc, node_dir, node_curv);
+                    // No additional mass assigned to nodes
+                    node->SetMass(0);
+                    // Add node to mesh
+                    m_web_mesh->AddNode(node);
+                }
+            }
+
+            // Create the elements
+            for (int x_idx = 0; x_idx < num_elements_length; x_idx++) {
+                for (int y_idx = 0; y_idx < num_elements_width; y_idx++) {
+                    // Adjacent nodes
+                    /// The node numbering is in ccw fashion as in the following scheme:
+                    ///         v
+                    ///         ^
+                    /// D o-----G-----o C
+                    ///   |     |     |
+                    /// --H-----+-----F-> u
+                    ///   |     |     |
+                    /// A o-----E-----o B
+
+                    unsigned int node0 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid);
+                    unsigned int node1 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node2 = m_starting_node_index + 2 * (y_idx + 1) + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node3 = m_starting_node_index + 2 * (y_idx + 1) + x_idx * (N_y_edge + N_y_mid);
+
+                    unsigned int node4 = m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge;
+                    unsigned int node5 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid) + 1;
+                    unsigned int node6 =
+                        m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge + 1;
+                    unsigned int node7 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid) + 1;
+
+                    // Create the element and set its nodes.
+                    auto element = chrono_types::make_shared<ChElementShellANCF_3833_TR08>();
+                    element->SetNodes(std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node0)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node1)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node2)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node3)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node4)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node5)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node6)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node7)));
+
+                    // Set element dimensions
+                    element->SetDimensions(2 * dx, 2 * dy);
+
+                    // Add a single layers with a fiber angle of 0 degrees.
+                    element->AddLayer(dz_rubber, m_angle_1, m_rubber_mat);
+                    element->AddLayer(dz_steel, m_angle_2, m_steel_mat);
+                    element->AddLayer(dz_rubber, m_angle_3, m_rubber_mat);
+
+                    // Set other element properties
+                    element->SetAlphaDamp(m_alpha);
+
+                    // Add element to mesh
+                    m_web_mesh->AddElement(element);
+                }
+            }
+
+            break;
+        }
+        case ElementType::ANCF_8_TR09: {
+            int N_x_edge = 2 * num_elements_length + 1;
+            int N_y_edge = 2 * num_elements_width + 1;
+            int N_y_mid = num_elements_width + 1;
+
+            double dx = GetWebLength() / (2 * num_elements_length);
+            double dy = GetBeltWidth() / (2 * num_elements_width);
+
+            double dz_steel = GetSteelLayerThickness();
+            double dz_rubber = (GetWebThickness() - dz_steel) / 2;
+
+            // Create and add the nodes
+            for (int x_idx = 0; x_idx < N_x_edge; x_idx++) {
+                for (int y_idx = 0; y_idx < N_y_edge; y_idx++) {
+                    if ((x_idx % 2 == 1) && (y_idx % 2 == 1))
+                        continue;
+
+                    // Node location
+                    auto node_loc = seg_loc + x_idx * dx * xdir + y_idx * dy * ydir;
+                    // Node direction
+                    auto node_dir = zdir;
+                    // Node direction derivative
+                    auto node_curv = ChVector<>(0.0, 0.0, 0.0);
+                    // Create the node
+                    auto node = chrono_types::make_shared<ChNodeFEAxyzDD>(node_loc, node_dir, node_curv);
+                    // No additional mass assigned to nodes
+                    node->SetMass(0);
+                    // Add node to mesh
+                    m_web_mesh->AddNode(node);
+                }
+            }
+
+            // Create the elements
+            for (int x_idx = 0; x_idx < num_elements_length; x_idx++) {
+                for (int y_idx = 0; y_idx < num_elements_width; y_idx++) {
+                    // Adjacent nodes
+                    /// The node numbering is in ccw fashion as in the following scheme:
+                    ///         v
+                    ///         ^
+                    /// D o-----G-----o C
+                    ///   |     |     |
+                    /// --H-----+-----F-> u
+                    ///   |     |     |
+                    /// A o-----E-----o B
+
+                    unsigned int node0 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid);
+                    unsigned int node1 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node2 = m_starting_node_index + 2 * (y_idx + 1) + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node3 = m_starting_node_index + 2 * (y_idx + 1) + x_idx * (N_y_edge + N_y_mid);
+
+                    unsigned int node4 = m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge;
+                    unsigned int node5 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid) + 1;
+                    unsigned int node6 =
+                        m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge + 1;
+                    unsigned int node7 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid) + 1;
+
+                    // Create the element and set its nodes.
+                    auto element = chrono_types::make_shared<ChElementShellANCF_3833_TR09>();
+                    element->SetNodes(std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node0)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node1)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node2)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node3)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node4)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node5)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node6)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node7)));
+
+                    // Set element dimensions
+                    element->SetDimensions(2 * dx, 2 * dy);
+
+                    // Add a single layers with a fiber angle of 0 degrees.
+                    element->AddLayer(dz_rubber, m_angle_1, m_rubber_mat);
+                    element->AddLayer(dz_steel, m_angle_2, m_steel_mat);
+                    element->AddLayer(dz_rubber, m_angle_3, m_rubber_mat);
+
+                    // Set other element properties
+                    element->SetAlphaDamp(m_alpha);
+
+                    // Add element to mesh
+                    m_web_mesh->AddElement(element);
+                }
+            }
+
+            break;
+        }
+        case ElementType::ANCF_8_TR13: {
+            int N_x_edge = 2 * num_elements_length + 1;
+            int N_y_edge = 2 * num_elements_width + 1;
+            int N_y_mid = num_elements_width + 1;
+
+            double dx = GetWebLength() / (2 * num_elements_length);
+            double dy = GetBeltWidth() / (2 * num_elements_width);
+
+            double dz_steel = GetSteelLayerThickness();
+            double dz_rubber = (GetWebThickness() - dz_steel) / 2;
+
+            // Create and add the nodes
+            for (int x_idx = 0; x_idx < N_x_edge; x_idx++) {
+                for (int y_idx = 0; y_idx < N_y_edge; y_idx++) {
+                    if ((x_idx % 2 == 1) && (y_idx % 2 == 1))
+                        continue;
+
+                    // Node location
+                    auto node_loc = seg_loc + x_idx * dx * xdir + y_idx * dy * ydir;
+                    // Node direction
+                    auto node_dir = zdir;
+                    // Node direction derivative
+                    auto node_curv = ChVector<>(0.0, 0.0, 0.0);
+                    // Create the node
+                    auto node = chrono_types::make_shared<ChNodeFEAxyzDD>(node_loc, node_dir, node_curv);
+                    // No additional mass assigned to nodes
+                    node->SetMass(0);
+                    // Add node to mesh
+                    m_web_mesh->AddNode(node);
+                }
+            }
+
+            // Create the elements
+            for (int x_idx = 0; x_idx < num_elements_length; x_idx++) {
+                for (int y_idx = 0; y_idx < num_elements_width; y_idx++) {
+                    // Adjacent nodes
+                    /// The node numbering is in ccw fashion as in the following scheme:
+                    ///         v
+                    ///         ^
+                    /// D o-----G-----o C
+                    ///   |     |     |
+                    /// --H-----+-----F-> u
+                    ///   |     |     |
+                    /// A o-----E-----o B
+
+                    unsigned int node0 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid);
+                    unsigned int node1 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node2 = m_starting_node_index + 2 * (y_idx + 1) + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node3 = m_starting_node_index + 2 * (y_idx + 1) + x_idx * (N_y_edge + N_y_mid);
+
+                    unsigned int node4 = m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge;
+                    unsigned int node5 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid) + 1;
+                    unsigned int node6 =
+                        m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge + 1;
+                    unsigned int node7 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid) + 1;
+
+                    // Create the element and set its nodes.
+                    auto element = chrono_types::make_shared<ChElementShellANCF_3833_TR13>();
+                    element->SetNodes(std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node0)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node1)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node2)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node3)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node4)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node5)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node6)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node7)));
+
+                    // Set element dimensions
+                    element->SetDimensions(2 * dx, 2 * dy);
+
+                    // Add a single layers with a fiber angle of 0 degrees.
+                    element->AddLayer(dz_rubber, m_angle_1, m_rubber_mat);
+                    element->AddLayer(dz_steel, m_angle_2, m_steel_mat);
+                    element->AddLayer(dz_rubber, m_angle_3, m_rubber_mat);
+
+                    // Set other element properties
+                    element->SetAlphaDamp(m_alpha);
+
+                    // Add element to mesh
+                    m_web_mesh->AddElement(element);
+                }
+            }
+
+            break;
+        }
+        case ElementType::ANCF_8_M113: {
+            int N_x_edge = 2 * num_elements_length + 1;
+            int N_y_edge = 2 * num_elements_width + 1;
+            int N_y_mid = num_elements_width + 1;
+
+            double dx = GetWebLength() / (2 * num_elements_length);
+            double dy = GetBeltWidth() / (2 * num_elements_width);
+
+            double dz_steel = GetSteelLayerThickness();
+            double dz_rubber = (GetWebThickness() - dz_steel) / 2;
+
+            // Create and add the nodes
+            for (int x_idx = 0; x_idx < N_x_edge; x_idx++) {
+                for (int y_idx = 0; y_idx < N_y_edge; y_idx++) {
+                    if ((x_idx % 2 == 1) && (y_idx % 2 == 1))
+                        continue;
+
+                    // Node location
+                    auto node_loc = seg_loc + x_idx * dx * xdir + y_idx * dy * ydir;
+                    // Node direction
+                    auto node_dir = zdir;
+                    // Node direction derivative
+                    auto node_curv = ChVector<>(0.0, 0.0, 0.0);
+                    // Create the node
+                    auto node = chrono_types::make_shared<ChNodeFEAxyzDD>(node_loc, node_dir, node_curv);
+                    // No additional mass assigned to nodes
+                    node->SetMass(0);
+                    // Add node to mesh
+                    m_web_mesh->AddNode(node);
+                }
+            }
+
+            // Create the elements
+            for (int x_idx = 0; x_idx < num_elements_length; x_idx++) {
+                for (int y_idx = 0; y_idx < num_elements_width; y_idx++) {
+                    // Adjacent nodes
+                    /// The node numbering is in ccw fashion as in the following scheme:
+                    ///         v
+                    ///         ^
+                    /// D o-----G-----o C
+                    ///   |     |     |
+                    /// --H-----+-----F-> u
+                    ///   |     |     |
+                    /// A o-----E-----o B
+
+                    unsigned int node0 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid);
+                    unsigned int node1 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node2 = m_starting_node_index + 2 * (y_idx + 1) + (x_idx + 1) * (N_y_edge + N_y_mid);
+                    unsigned int node3 = m_starting_node_index + 2 * (y_idx + 1) + x_idx * (N_y_edge + N_y_mid);
+
+                    unsigned int node4 = m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge;
+                    unsigned int node5 = m_starting_node_index + 2 * y_idx + (x_idx + 1) * (N_y_edge + N_y_mid) + 1;
+                    unsigned int node6 =
+                        m_starting_node_index + 1 * y_idx + x_idx * (N_y_edge + N_y_mid) + N_y_edge + 1;
+                    unsigned int node7 = m_starting_node_index + 2 * y_idx + x_idx * (N_y_edge + N_y_mid) + 1;
+
+                    // Create the element and set its nodes.
+                    auto element = chrono_types::make_shared<ChElementShellANCF_3833_M113>();
+                    element->SetNodes(std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node0)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node1)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node2)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node3)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node4)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node5)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node6)),
+                        std::dynamic_pointer_cast<ChNodeFEAxyzDD>(m_web_mesh->GetNode(node7)));
+
+                    // Set element dimensions
+                    element->SetDimensions(2 * dx, 2 * dy);
+
+                    // Add a single layers with a fiber angle of 0 degrees.
+                    element->AddLayer(dz_rubber, m_angle_1, m_rubber_mat);
+                    element->AddLayer(dz_steel, m_angle_2, m_steel_mat);
+                    element->AddLayer(dz_rubber, m_angle_3, m_rubber_mat);
+
+                    // Set other element properties
+                    element->SetAlphaDamp(m_alpha);
+
+                    // Add element to mesh
+                    m_web_mesh->AddElement(element);
+                }
+            }
+
+            break;
+        }
     }  // end switch
 }
 
@@ -303,7 +1078,17 @@ void ChTrackShoeBandANCF::Initialize(std::shared_ptr<ChBodyAuxRef> chassis,
 
             break;
         }
-        case ElementType::ANCF_8: {
+        case ElementType::ANCF_8:
+        case ElementType::ANCF_8_CHRONO6:
+        case ElementType::ANCF_8_TR01:
+        case ElementType::ANCF_8_TR05:
+        case ElementType::ANCF_8_TR06:
+        case ElementType::ANCF_8_TR07:
+        case ElementType::ANCF_8_TR08:
+        case ElementType::ANCF_8_TR09:
+        case ElementType::ANCF_8_TR13:
+        case ElementType::ANCF_8_M113:
+        {
             int N_x_edge = 2 * num_elements_length + 1;
             int N_y_edge = 2 * num_elements_width + 1;
 
@@ -428,7 +1213,17 @@ void ChTrackShoeBandANCF::Connect(std::shared_ptr<ChTrackShoe> next,
 
             break;
         }
-        case ElementType::ANCF_8: {
+        case ElementType::ANCF_8: 
+        case ElementType::ANCF_8_CHRONO6:
+        case ElementType::ANCF_8_TR01:
+        case ElementType::ANCF_8_TR05:
+        case ElementType::ANCF_8_TR06:
+        case ElementType::ANCF_8_TR07:
+        case ElementType::ANCF_8_TR08:
+        case ElementType::ANCF_8_TR09:
+        case ElementType::ANCF_8_TR13:
+        case ElementType::ANCF_8_M113:
+        {
             int N_y_edge = 2 * num_elements_width + 1;
             int N_y_mid = num_elements_width + 1;
 
