@@ -45,10 +45,10 @@ class ChApi ChMaterialShellANCF {
     /// Return the material density.
     double GetDensity() const { return m_rho; }
 
-  private:
     /// Return the matrix of elastic coefficients.
     const ChMatrix66d& Get_E_eps() const { return m_E_eps; }
 
+  private:
     /// Calculate the matrix of elastic coefficients.
     void Calc_E_eps(const ChVector3d& E, const ChVector3d& nu, const ChVector3d& G);
 

@@ -52,7 +52,6 @@ class ChApi ChMaterialBeamANCF {
     /// Return the material density.
     double GetDensity() const { return m_rho; }
 
-  private:
     /// Upper 3x3 block of the elasticity matrix with the terms contributing to the Poisson effect
     const ChMatrixNM<double, 3, 3>& Get_Dv() const { return m_Dv; }
 
@@ -68,6 +67,7 @@ class ChApi ChMaterialBeamANCF {
     /// Return the matrix of elastic coefficients: Diagonal terms. (For compatibility with ChElementBeam only)
     const ChMatrix66d& Get_E_eps() const { return m_E_eps; }
 
+  private:
     /// Calculate the matrix form of two stiffness tensors used by the ANCF beam for selective reduced integration of
     /// the Poisson effect k1 and k2 are Timoshenko shear correction factors.
     void Calc_D0_Dv(const ChVector3d& E, const ChVector3d& nu, const ChVector3d& G, double k1, double k2);
